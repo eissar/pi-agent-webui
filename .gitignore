@@ -1,0 +1,15 @@
+node_modules/
+out/
+dist/
+.DS_Store
+*.log
+.tsbuildinfo
+.cache/
+temp/
+.env
+.env.*
+.artifacts/
+build/toolchains/.core-cache/
+build/toolchains/core/
+build/herdr/bin/
+native/**/target/
