@@ -85,6 +85,7 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "lint-staged": "^17.0.8",
     "postcss": "^8",
+    "preact-render-to-string": "^6.8.1",
     "prettier": "^3.9.5",
     "react-test-renderer": "^19.2.7",
     "tailwindcss": "^4.2.2",
