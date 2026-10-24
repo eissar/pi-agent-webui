@@ -25,12 +25,12 @@ import { WebSocketMessagePort } from "./ws-port";
 
 const EMPTY_TOOLCHAIN_SNAPSHOT: ToolchainSnapshot = {
   revision: 1,
-  inventoryRevision: 1,
-  resolutionId: "standalone-init",
+  generatedAt: new Date().toISOString(),
   platform: process.platform,
   arch: process.arch,
-  coreReady: true,
-  state: {
+  candidates: [],
+  defaults: {},
+  publicState: {
     schemaVersion: 1,
     revision: 1,
     platform: process.platform,
