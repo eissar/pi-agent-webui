@@ -102,9 +102,6 @@ importers:
       '@types/react-syntax-highlighter':
         specifier: ^15.5.13
         version: 15.5.13
-      '@types/react-test-renderer':
-        specifier: ^19.1.0
-        version: 19.3.0
       '@types/semver':
         specifier: 7.7.1
         version: 7.7.1
@@ -141,9 +138,6 @@ importers:
       prettier:
         specifier: ^3.9.5
         version: 3.9.9
-      react-test-renderer:
-        specifier: ^19.2.7
-        version: 19.3.0(react@19.3.0)
       tailwindcss:
         specifier: ^4.2.2
         version: 4.3.3
@@ -2074,9 +2068,6 @@ packages:
   '@types/react-syntax-highlighter@15.5.13':
     resolution: {integrity: sha512-uLGJ87j6Sz8UaBAooU0T6lWJ0dBmjZgN1PZTrj05TNql2/XpC6+4HhMT5syIdFUUt+FASfCeLLv4kBygNU+8qA==}
 
-  '@types/react-test-renderer@19.3.0':
-    resolution: {integrity: sha512-TX4p2D4Z2oigM3SXU7+QyLSUnSR0vR1S1Pfxm/qFL9nHQ3jclgi6ioGoWQmlIr1DeKRVmPJrmNlhgM0JlWlLUg==}
-
   '@types/react@19.3.0':
     resolution: {integrity: sha512-N0rFCuH9YoxG9/m61l9MfpJKfmLOVU0em7ipIz6TRgSSkvReLB9vL85GB+yr8Bs5leqpvg96JSwF4ZS1s4viQg==}
 
@@ -3953,11 +3944,6 @@ packages:
     engines: {node: '>= 16.20.2'}
     peerDependencies:
       react: '>= 0.14.0'
-
-  react-test-renderer@19.3.0:
-    resolution: {integrity: sha512-AUxgv+hRbqjRgx4xVwiWL6cvDDKPAva1VWLXQIMoevqQn9us//C5TX9LEnBGH47D0zvJpjwjxb1umzgOMvE8Wg==}
-    peerDependencies:
-      react: ^19.3.0
 
   react-zoom-pan-pinch@4.2.0:
     resolution: {integrity: sha512-QSw1dvr6QGv5zHCUY7SEIY7EWRDbx1y6plylrWf2Nko9KOMW1MEoPC6oJ+Y/qOSeQjhvbkMV0m5bFF7pBxCH4A==}
@@ -6694,10 +6680,6 @@ snapshots:
     dependencies:
       '@types/react': 19.3.0
 
-  '@types/react-test-renderer@19.3.0':
-    dependencies:
-      '@types/react': 19.3.0
-
   '@types/react@19.3.0':
     dependencies:
       csstype: 3.2.3
@@ -9073,12 +9055,6 @@ snapshots:
       prismjs: 1.30.0
       react: 19.3.0
       refractor: 5.0.0
-
-  react-test-renderer@19.3.0(react@19.3.0):
-    dependencies:
-      react: 19.3.0
-      react-is: 19.3.0
-      scheduler: 0.28.0
 
   react-zoom-pan-pinch@4.2.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0):
     dependencies:
