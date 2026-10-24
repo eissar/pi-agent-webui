@@ -92,32 +92,6 @@ test("restricts installer and archive combinations", () => {
   const unsupportedCompression = validCatalog();
   unsupportedCompression.components[0].variants[0].archive = "tar.xz";
   assert.throws(() => parseRuntimeCatalog(unsupportedCompression), /must be one of/i);
-
-  const portableGit = validCatalog();
-  portableGit.components[0] = {
-    id: "portable-git",
-    version: "2.55.0.3",
-    provides: ["vcs.git", "shell.bash"],
-    license: {
-      name: "GNU GPL v2",
-      url: "https://github.com/git-for-windows/git/blob/main/COPYING",
-    },
-    variants: [
-      {
-        platform: "win32",
-        arch: "x64",
-        url: "https://github.com/git-for-windows/git/releases/download/v2.55.0.windows.3/PortableGit-2.55.0.3-64-bit.7z.exe",
-        sha256: "b".repeat(64),
-        downloadBytes: 62_000_000,
-        archive: "7z-sfx",
-        installer: "portable-git-sfx",
-      },
-    ],
-  };
-  assert.equal(parseRuntimeCatalog(portableGit).components[0].id, "portable-git");
-
-  portableGit.components[0].variants[0].platform = "darwin";
-  assert.throws(() => parseRuntimeCatalog(portableGit), /restricted to portable-git win32/i);
 });
 
 test("rejects unknown schema fields and duplicate component versions while allowing retained versions", () => {

@@ -10,10 +10,10 @@ export type ToolchainArch = (typeof TOOLCHAIN_ARCHES)[number];
 
 // Keep the schema equal to formats handled by the app-owned extractor. Adding a
 // format requires extractor tests before a production catalog can reference it.
-export const TOOLCHAIN_ARCHIVE_FORMATS = ["zip", "tar.gz", "7z-sfx", "binary"] as const;
+export const TOOLCHAIN_ARCHIVE_FORMATS = ["zip", "tar.gz", "binary"] as const;
 export type ToolchainArchiveFormat = (typeof TOOLCHAIN_ARCHIVE_FORMATS)[number];
 
-export const TOOLCHAIN_INSTALLERS = ["safe-archive", "single-binary", "portable-git-sfx"] as const;
+export const TOOLCHAIN_INSTALLERS = ["safe-archive", "single-binary"] as const;
 export type ToolchainInstallerId = (typeof TOOLCHAIN_INSTALLERS)[number];
 
 export interface RuntimeCatalogVariant {
@@ -45,7 +45,6 @@ export interface RuntimeCatalog {
 }
 
 const COMPONENT_URL_PREFIXES: Record<ManagedComponentId, readonly string[]> = {
-  "portable-git": ["https://github.com/git-for-windows/git/releases/download/"],
   "node-lts": ["https://nodejs.org/dist/"],
   cpython: ["https://github.com/astral-sh/python-build-standalone/releases/download/"],
   uv: ["https://github.com/astral-sh/uv/releases/download/", "https://releases.astral.sh/github/uv/"],
@@ -141,14 +140,6 @@ function parseVariant(value: unknown, componentId: ManagedComponentId, index: nu
   }
   if (installer === "single-binary" && archive !== "binary") {
     throw new Error(`Invalid toolchain catalog: ${path} single-binary requires archive=binary`);
-  }
-  if (
-    installer === "portable-git-sfx" &&
-    (componentId !== "portable-git" || platform !== "win32" || archive !== "7z-sfx")
-  ) {
-    throw new Error(
-      `Invalid toolchain catalog: ${path} portable-git-sfx is restricted to portable-git win32 7z-sfx assets`,
-    );
   }
 
   return {

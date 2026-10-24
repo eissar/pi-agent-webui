@@ -11,7 +11,6 @@ import type {
 } from "../shared/toolchains/types";
 import { ToolchainError } from "../shared/toolchains/errors.ts";
 import { callMain } from "./parent-rpc.ts";
-import { windowsNativePathToMsys } from "../shared/node/windows-path.ts";
 import { sanitizeToolEnvironment } from "./tool-environment.ts";
 
 const execFileAsync = promisify(execFile);
@@ -233,14 +232,13 @@ export class ToolchainRuntime {
     for (const capability of ENV_COMMAND_ORDER) {
       const descriptor = resolution.commands[capability];
       if (!descriptor) continue;
-      const shellOnly = descriptor.capability === "shell.bash" && descriptor.cwdSemantics === "msys";
       if (descriptor.pathEntries) {
         shellDirectories.push(...descriptor.pathEntries);
-        if (!shellOnly) nativeDirectories.push(...descriptor.pathEntries);
+        nativeDirectories.push(...descriptor.pathEntries);
       }
       if (descriptor.binDir) {
         shellDirectories.push(descriptor.binDir);
-        if (!shellOnly) nativeDirectories.push(descriptor.binDir);
+        nativeDirectories.push(descriptor.binDir);
       }
       if (descriptor.shellPathEntries) shellDirectories.push(...descriptor.shellPathEntries);
     }
@@ -255,12 +253,6 @@ export class ToolchainRuntime {
     for (const capability of ENV_COMMAND_ORDER) {
       const descriptor = resolution.commands[capability];
       if (descriptor?.shellEnvPatch) shellEnv = { ...shellEnv, ...descriptor.shellEnvPatch };
-    }
-    const shell = resolution.commands["shell.bash"];
-    if (this.platform === "win32" && shell?.cwdSemantics === "msys") {
-      shellEnv.PI_DESKTOP_SHELL_CWD_SEMANTICS = "msys";
-      const workspace = windowsNativePathToMsys(request.cwd);
-      if (workspace) shellEnv.PI_DESKTOP_WORKSPACE_MSYS_PATH = workspace;
     }
     return {
       inventoryRevision: resolution.inventoryRevision,

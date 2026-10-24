@@ -38,10 +38,7 @@ export function CapabilityRequired({
 }) {
   const [pending, setPending] = useState<"install" | "rescan" | "choose" | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const installAction = installActionForIssue(
-    issue,
-    typeof window === "undefined" ? "linux" : window.piBridge.platform,
-  );
+  const installAction = installActionForIssue(issue);
   const label = capabilityLabel(issue.capability);
 
   const installAndContinue = async (): Promise<void> => {
@@ -173,7 +170,6 @@ function capabilityFromCode(code: string): ToolCapabilityId | undefined {
 
 export function installActionForIssue(
   issue: CapabilityIssue,
-  platform: NodeJS.Platform,
 ): Extract<ToolchainActionRequest, { action: "install-profile" | "install-component" }> | undefined {
   if (issue.capability === "js.bun") return { action: "install-component", componentId: "bun" };
   if (["js.node", "js.npm", "js.npx"].includes(issue.capability ?? "")) {
@@ -181,9 +177,6 @@ export function installActionForIssue(
   }
   if (issue.capability?.startsWith("python.")) {
     return { action: "install-profile", profileId: "python-essentials" };
-  }
-  if (platform === "win32" && (issue.capability === "vcs.git" || issue.capability === "shell.bash")) {
-    return { action: "install-profile", profileId: "windows-shell-essentials" };
   }
   if (issue.capability === "data.jq") return { action: "install-profile", profileId: "cli-essentials" };
   return undefined;

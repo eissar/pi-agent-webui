@@ -39,7 +39,6 @@ const CAPABILITY_COMPONENTS: Partial<Record<ToolCapabilityId, ManagedComponentId
   "js.bun": "bun",
   "python.interpreter": "cpython",
   "python.uv": "uv",
-  "vcs.git": "portable-git",
   "search.rg": "ripgrep",
   "search.fd": "fd",
   "data.jq": "jq",
@@ -69,7 +68,6 @@ const CAPABILITY_LABELS: Record<ToolCapabilityId, string> = {
 };
 
 const COMPONENT_LABELS: Record<ManagedComponentId, string> = {
-  "portable-git": "PortableGit",
   "node-lts": "Node.js LTS + npm",
   cpython: "CPython",
   uv: "uv + uvx",

@@ -17,25 +17,11 @@ export const TOOL_CAPABILITY_IDS = [
 
 export type ToolCapabilityId = (typeof TOOL_CAPABILITY_IDS)[number];
 
-export const MANAGED_COMPONENT_IDS = [
-  "portable-git",
-  "node-lts",
-  "cpython",
-  "uv",
-  "ripgrep",
-  "fd",
-  "jq",
-  "bun",
-] as const;
+export const MANAGED_COMPONENT_IDS = ["node-lts", "cpython", "uv", "ripgrep", "fd", "jq", "bun"] as const;
 
 export type ManagedComponentId = (typeof MANAGED_COMPONENT_IDS)[number];
 
-export const TOOLCHAIN_PROFILE_IDS = [
-  "javascript-essentials",
-  "python-essentials",
-  "windows-shell-essentials",
-  "cli-essentials",
-] as const;
+export const TOOLCHAIN_PROFILE_IDS = ["javascript-essentials", "python-essentials", "cli-essentials"] as const;
 
 export type ToolchainProfileId = (typeof TOOLCHAIN_PROFILE_IDS)[number];
 
@@ -102,7 +88,7 @@ export interface ToolCandidate {
   binDir: string;
   version?: string;
   /** Execution path semantics established by the capability probe. */
-  cwdSemantics?: "native" | "msys" | "posix";
+  cwdSemantics?: "native" | "posix";
   componentId?: ManagedComponentId;
   componentRoot?: string;
   health: ToolHealth;
@@ -125,7 +111,7 @@ export interface CommandDescriptor {
   componentId?: ManagedComponentId;
   componentRoot?: string;
   version?: string;
-  cwdSemantics: "native" | "msys" | "posix";
+  cwdSemantics: "native" | "posix";
   envPatch: Record<string, string>;
   /** Applied only to the Agent shell process, never to native Git/npm/Python children. */
   shellEnvPatch?: Record<string, string>;
