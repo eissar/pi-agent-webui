@@ -151,10 +151,6 @@ test("zero-tool prompt remains empty through tool changes without mutating Agent
   await session.prompt("without tools again", { source: "rpc" });
   assert.equal(requestPrompt(requests.at(-1)), "");
   assert.deepEqual(requestToolNames(requests.at(-1)), []);
-
-  await wrapper.runExternalTurn({ runId: "im-prompt-fixture", message: "IM message", channel: "telegram" });
-  assert.equal(requestPrompt(requests.at(-1)), "");
-  assert.deepEqual(requestToolNames(requests.at(-1)), []);
 });
 
 test("late extension tool registration cannot reactivate a no-tools session", async (t) => {

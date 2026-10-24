@@ -30,14 +30,8 @@ test("external-turn follow starts near the bottom and stops only for a meaningfu
     now: 1_000,
     userIntentUntil: 2_000,
     programmaticScrollUntil: 1_500,
-    externalAutoFollow: true,
   };
-  assert.equal(shouldStopChatAutoFollow(decision), true, "upward input must beat an external follow frame");
-  assert.equal(
-    shouldStopChatAutoFollow({ ...decision, externalAutoFollow: false }),
-    false,
-    "local programmatic positioning must remain ignored",
-  );
+  assert.equal(shouldStopChatAutoFollow(decision), false, "local programmatic positioning must remain ignored");
   assert.equal(shouldStopChatAutoFollow({ ...decision, userIntentUntil: 999 }), false);
   assert.equal(shouldStopChatAutoFollow({ ...decision, currentScrollTop: 950 }), false);
 });

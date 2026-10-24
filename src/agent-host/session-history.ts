@@ -10,13 +10,7 @@ import type {
   ThinkingContent,
   ToolCallContent,
 } from "../shared/types";
-import {
-  buildSessionContext,
-  entryToUiMessage,
-  parseChannelSourceMarker,
-  parseRunId,
-  withUserMessageSource,
-} from "./session-reader";
+import { buildSessionContext, entryToUiMessage } from "./session-reader";
 
 const DEFAULT_MAX_TURNS = 20;
 const DEFAULT_MAX_BYTES = 1024 * 1024;
@@ -109,24 +103,9 @@ function deriveContextSettings(path: SessionEntry[]): Pick<PagedContextInfo, "th
 
 function projectDisplayMessages(path: SessionEntry[]): ProjectedMessage[] {
   const projected: ProjectedMessage[] = [];
-  let pendingChannelSource: ReturnType<typeof parseChannelSourceMarker> = null;
   path.forEach((entry, pathIndex) => {
-    if (entry.type === "custom" && entry.customType === "pi-desktop-channel-source") {
-      const marker = parseChannelSourceMarker(entry.data);
-      if (marker) pendingChannelSource = marker;
-      return;
-    }
-    if (entry.type === "custom" && entry.customType === "pi-desktop-channel-source-cancelled") {
-      const runId = parseRunId(entry.data);
-      if (!runId || pendingChannelSource?.runId === runId) pendingChannelSource = null;
-      return;
-    }
-    let message = entryToUiMessage(entry);
+    const message = entryToUiMessage(entry);
     if (!message) return;
-    if (message.role === "user") {
-      message = withUserMessageSource(message, pendingChannelSource?.channel, pendingChannelSource?.attachments);
-      pendingChannelSource = null;
-    }
     projected.push({ message, entryId: entry.id, pathIndex });
   });
   return projected;

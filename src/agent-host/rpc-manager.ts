@@ -13,13 +13,7 @@ import { assertSessionWritable } from "./session-readonly.ts";
 import { cacheSessionPath } from "./session-reader";
 import type { SlashCommandInfo } from "@earendil-works/pi-coding-agent";
 import type { AgentSessionLike, ExtensionUiContextLike, ToolInfo } from "../shared/pi-types";
-import type { ChannelId } from "../shared/channel-types";
-import type {
-  ChannelMessageAttachment,
-  ExtensionUiRequest,
-  ExtensionUiResponse,
-  ExtensionWidgetItem,
-} from "../shared/types";
+import type { ExtensionUiRequest, ExtensionUiResponse, ExtensionWidgetItem } from "../shared/types";
 import { toolchainRuntime } from "./toolchain-runtime";
 import { createToolchainBashOptions } from "./toolchain-bash";
 import { createDesktopSearchToolDefinitions } from "./toolchain-search";
@@ -38,7 +32,6 @@ import { createManagedProcessToolDefinitions } from "./managed-process/tools";
 import { installManagedProcessSessionRedaction } from "./managed-process/session-redaction";
 import { createDesktopPromptExtension, SessionPromptPolicy } from "./session-prompt-policy";
 import { createEphemeralContextExtension, SessionEphemeralContext } from "./session-ephemeral-context";
-import { createLegacyChannelContextExtension } from "./legacy-channel-context";
 
 // ============================================================================
 // Types
@@ -157,10 +150,6 @@ export class AgentSessionWrapper {
   private promptRunning = false;
   private queuedTurnCount = 0;
   private turnTail: Promise<void> = Promise.resolve();
-  private externalTurnActive = false;
-  private externalTurnChannel: ChannelId | null = null;
-  private externalTurnAttachments: ChannelMessageAttachment[] | null = null;
-  private externalTurnProgress: ((event: AgentEvent) => void) | null = null;
   private extensionsBound = false;
   private extensionBindingPromise: Promise<void> | null = null;
   private extensionBindingError: unknown = null;
@@ -216,13 +205,7 @@ export class AgentSessionWrapper {
   start(): void {
     this.unsubscribe = this.inner.subscribe((event: AgentEvent) => {
       this.resetIdleTimer();
-      const displayEvent = this.withExternalChannelSource(event);
-      this.emit(displayEvent);
-      try {
-        this.externalTurnProgress?.(displayEvent);
-      } catch {
-        // Channel progress is best-effort and must never interrupt the Agent.
-      }
+      this.emit(event);
       // Streaming / compaction / tool events flow through here; re-broadcast
       // the running-status snapshot so the sidebar can update live.
       notifyRunningChange();
@@ -243,20 +226,6 @@ export class AgentSessionWrapper {
 
   syncBrowserToolActivation(): void {
     this.syncDesktopToolActivation();
-  }
-
-  private withExternalChannelSource(event: AgentEvent): AgentEvent {
-    if (!this.externalTurnChannel || (event.type !== "message_start" && event.type !== "message_end")) return event;
-    const message = event.message;
-    if (!message || typeof message !== "object" || (message as { role?: unknown }).role !== "user") return event;
-    return {
-      ...event,
-      message: {
-        ...(message as Record<string, unknown>),
-        channelSource: this.externalTurnChannel,
-        ...(this.externalTurnAttachments?.length ? { channelAttachments: this.externalTurnAttachments } : {}),
-      },
-    };
   }
 
   setToolchainSummary(revision: number, summary: readonly string[]): void {
@@ -405,71 +374,6 @@ export class AgentSessionWrapper {
       () => undefined,
     );
     return run;
-  }
-
-  async runExternalTurn(params: {
-    runId: string;
-    message: string;
-    channel: ChannelId;
-    images?: Array<{ type: "image"; data: string; mimeType: string }>;
-    channelAttachments?: ChannelMessageAttachment[];
-    attachmentContext?: string;
-    onProgress?: (event: AgentEvent) => void;
-  }): Promise<{ runId: string; finalText: string }> {
-    return this.enqueueTurn(async () => {
-      this.emit({ type: "channel_turn_start", runId: params.runId });
-      this.externalTurnActive = true;
-      this.externalTurnChannel = params.channel;
-      this.externalTurnAttachments = params.channelAttachments ?? null;
-      setBrowserSessionSource(this.inner.sessionManager, "channel");
-      this.ephemeralContext?.beginChannelTurn(params.runId);
-      browserAgentRuntime.beginTurn(this.sessionId, "channel");
-      this.externalTurnProgress = params.onProgress ?? null;
-      try {
-        this.inner.sessionManager.appendCustomEntry("pi-desktop-channel-source", {
-          runId: params.runId,
-          channel: params.channel,
-          ...(params.channelAttachments?.length ? { attachments: params.channelAttachments } : {}),
-        });
-        if (params.attachmentContext) {
-          await this.inner.sendCustomMessage(
-            {
-              customType: "pi-desktop-channel-attachment-context",
-              content: params.attachmentContext,
-              display: false,
-            },
-            { deliverAs: "nextTurn" },
-          );
-        }
-        await this.inner.prompt(params.message, {
-          ...(params.images?.length ? { images: params.images } : {}),
-          expandPromptTemplates: false,
-          source: "rpc",
-        });
-        const finalText = this.inner.getLastAssistantText()?.trim() ?? "";
-        this.emit({ type: "channel_turn_end", runId: params.runId, finalText });
-        return { runId: params.runId, finalText };
-      } catch (error) {
-        try {
-          this.inner.sessionManager.appendCustomEntry("pi-desktop-channel-source-cancelled", { runId: params.runId });
-        } catch {
-          // A best-effort UI marker must never hide the original turn failure.
-        }
-        this.emit({
-          type: "channel_turn_error",
-          runId: params.runId,
-          errorMessage: error instanceof Error ? error.message : String(error),
-        });
-        throw error;
-      } finally {
-        this.externalTurnProgress = null;
-        this.externalTurnActive = false;
-        this.externalTurnChannel = null;
-        this.externalTurnAttachments = null;
-        this.ephemeralContext?.endChannelTurn();
-        setBrowserSessionSource(this.inner.sessionManager, "local");
-      }
-    });
   }
 
   private async reloadSessionResources(): Promise<void> {
@@ -1006,14 +910,6 @@ export class AgentSessionWrapper {
   }
 
   private requestExtensionCustomUi<T>(factory: unknown, options?: unknown): Promise<T> {
-    if (this.externalTurnActive) {
-      this.emit({
-        type: "channel_headless_ui_blocked",
-        feature: "custom",
-        errorMessage: "Interactive extension UI is unavailable for messaging-channel turns.",
-      });
-      return Promise.resolve(undefined as T);
-    }
     if (typeof factory !== "function") return Promise.resolve(undefined as T);
 
     const id = randomUUID();
@@ -1067,14 +963,6 @@ export class AgentSessionWrapper {
     timeout?: number,
     signal?: AbortSignal,
   ): Promise<T> {
-    if (this.externalTurnActive) {
-      this.emit({
-        type: "channel_headless_ui_blocked",
-        feature: request.method,
-        errorMessage: "Interactive extension UI is unavailable for messaging-channel turns.",
-      });
-      return Promise.resolve(defaultValue);
-    }
     if (signal?.aborted) return Promise.resolve(defaultValue);
 
     const id = randomUUID();
@@ -1454,7 +1342,6 @@ export async function startRpcSession(
       agentDir,
       resourceLoaderOptions: {
         extensionFactories: [
-          createLegacyChannelContextExtension(),
           createEphemeralContextExtension(ephemeralContext),
           createDesktopPromptExtension(promptPolicy),
         ],

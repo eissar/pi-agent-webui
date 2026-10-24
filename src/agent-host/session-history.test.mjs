@@ -149,32 +149,6 @@ test("oversized thinking and tool inputs cannot empty the newest page", () => {
   assert.deepEqual(readSessionEntryContent(entries, "entry-1", 1), toolCall);
 });
 
-test("channel markers cross page boundaries and settings match the active branch", () => {
-  const entries = chain([
-    user("old"),
-    assistant([{ type: "text", text: "old answer" }]),
-    { type: "thinking_level_change", thinkingLevel: "high" },
-    { type: "model_change", provider: "next-provider", modelId: "next-model" },
-    {
-      type: "custom",
-      customType: "pi-desktop-channel-source",
-      data: { channel: "telegram", runId: "external-turn" },
-    },
-    user("external"),
-    assistant([{ type: "text", text: "reply" }]),
-  ]);
-  const page = buildSessionHistoryPage({
-    entries,
-    historyWindow: { maxTurns: 1, maxBytes: 64 * 1024 },
-    historyRevision: "revision-three",
-  });
-  assert.equal(page.messages[0].role, "user");
-  assert.equal(page.messages[0].channelSource, "telegram");
-  assert.equal(page.thinkingLevel, "high");
-  // A later assistant message is authoritative, matching pi's context settings semantics.
-  assert.deepEqual(page.model, { provider: "provider", modelId: "model" });
-});
-
 test("compaction and branch summaries survive page boundaries with aligned entry ids", () => {
   const entries = chain([
     user("old"),

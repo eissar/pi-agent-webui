@@ -28,7 +28,7 @@ test("managed process tools activate only with a non-empty local tool selection"
   assert.deepEqual(withExtensionTools(session, ["read"]), ["read", "process_start", "process_stop", "extension_tool"]);
 });
 
-test("managed process tools reject messaging-channel turns and bound literal waits", () => {
+test("managed process tools reject non-local sessions and bound literal waits", () => {
   assert.match(toolsSource, /getBrowserSessionSource\(ctx\.sessionManager\) !== "local"/);
   assert.match(toolsSource, /maxLength: 256/);
   assert.match(toolsSource, /same runId and returned nextCursor/);

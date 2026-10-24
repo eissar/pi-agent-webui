@@ -394,27 +394,6 @@ test("a user extension's context replacement is not overwritten by live-result r
   assert.equal(JSON.stringify(requests[1].messages).includes(SENTINEL), false);
 });
 
-test("a channel result is live only in its own turn", async (t) => {
-  const { session, manager, ephemeral, requests } = await createFixture(t, "process_list");
-  setAgentSessionSource(manager, "channel");
-  ephemeral.beginChannelTurn("channel-run-1");
-  await session.prompt("Run the channel fixture tool", { source: "rpc" });
-  assert.match(JSON.stringify(requests[1].messages), /LIVE_TOOL_RESULT_42/);
-  const decision = {
-    type: "cache_warming_decision",
-    action: "warm",
-    warmCost: 0,
-    missCost: 1,
-    continuationProbability: 1,
-  };
-  assert.equal(await session.extensionRunner.emitCacheWarmingDecision(decision), "warm");
-  ephemeral.endChannelTurn();
-  assert.equal(await session.extensionRunner.emitCacheWarmingDecision(decision), "stop");
-  setAgentSessionSource(manager, "local");
-  await session.prompt("Continue locally", { source: "rpc" });
-  assert.equal(JSON.stringify(requests.at(-1).messages).includes(SENTINEL), false);
-});
-
 test("clearing a live result stops warming a request that still holds the old context", async (t) => {
   const { session, ephemeral } = await createFixture(t, "process_list");
   await session.prompt("Run the fixture tool", { source: "rpc" });

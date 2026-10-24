@@ -22,10 +22,6 @@ export const architecturePolicy = {
       maxLines: 2072,
       reason: "Existing rich text, attachment and tool rendering; no increase beyond this checkpoint.",
     },
-    "src/renderer/components/channels/ChannelsConfig.tsx": {
-      maxLines: 1924,
-      reason: "Existing account and pairing UI; preserve behavior while future work separates its forms.",
-    },
     "src/renderer/components/browser/BrowserSettings.tsx": {
       maxLines: 1592,
       reason: "Existing browser permission and profile settings; preserve their security checks.",

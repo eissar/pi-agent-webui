@@ -72,12 +72,6 @@ export class SessionEphemeralContext {
     this.installed = true;
   }
 
-  beginChannelTurn(runId: string): void {
-    if (!this.active) return;
-    this.scope = "channel:" + runId;
-    this.captureAllowed = true;
-  }
-
   beginLocalTurn(): void {
     if (!this.active) return;
     this.scope = "local";
@@ -88,15 +82,6 @@ export class SessionEphemeralContext {
     if (!this.active) return;
     this.captureAllowed = false;
     this.clear();
-  }
-
-  endChannelTurn(): void {
-    if (!this.active) return;
-    this.generation++;
-    for (const [entryId, record] of this.records) {
-      if (record.scope.startsWith("channel:")) this.remove(entryId);
-    }
-    this.scope = "local";
   }
 
   clear(): void {
@@ -115,7 +100,7 @@ export class SessionEphemeralContext {
     if (!request) return false;
     if (request.scope !== this.scope || request.generation !== this.generation) return true;
     const source = getAgentSessionSource(this.manager);
-    return this.scope === "local" ? source !== "local" : source !== "channel";
+    return source !== "local";
   }
 
   private remove(entryId: string): void {
@@ -130,7 +115,7 @@ export class SessionEphemeralContext {
   transform(messages: ProjectedMessage[]): ProjectedMessage[] {
     if (!this.active) return messages;
     const source = getAgentSessionSource(this.manager);
-    if ((this.scope === "local" && source !== "local") || (this.scope !== "local" && source !== "channel")) {
+    if (source !== "local") {
       return messages;
     }
     const projection = this.manager.buildSessionProjection();

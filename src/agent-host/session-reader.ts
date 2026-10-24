@@ -4,14 +4,7 @@ import {
   getAgentDir,
 } from "@earendil-works/pi-coding-agent";
 import { existsSync } from "node:fs";
-import type {
-  AgentMessage,
-  ChannelMessageAttachment,
-  SessionEntry,
-  SessionInfo,
-  SessionContext,
-  UserMessage,
-} from "../shared/types";
+import type { AgentMessage, SessionEntry, SessionInfo, SessionContext } from "../shared/types";
 import type { SessionEntry as PiSessionEntry, SessionInfo as PiSessionInfo } from "@earendil-works/pi-coding-agent";
 import { normalizeToolCalls } from "../shared/normalize";
 import { resolveProject, type ProjectInfo } from "../shared/worktree";
@@ -217,25 +210,9 @@ export function buildSessionContext(entries: SessionEntry[], leafId?: string | n
   // inline summary messages so the user still sees where context was compressed.
   const messages: AgentMessage[] = [];
   const entryIds: string[] = [];
-  let pendingChannelSource: ChannelSourceMarker | null = null;
   for (const e of path) {
-    if (e.type === "custom" && e.customType === "pi-desktop-channel-source") {
-      const marker = parseChannelSourceMarker(e.data);
-      if (marker) pendingChannelSource = marker;
-      continue;
-    }
-    if (e.type === "custom" && e.customType === "pi-desktop-channel-source-cancelled") {
-      const runId = parseRunId(e.data);
-      if (!runId || pendingChannelSource?.runId === runId) pendingChannelSource = null;
-      continue;
-    }
-
-    let m = entryToUiMessage(e);
+    const m = entryToUiMessage(e);
     if (m) {
-      if (m.role === "user") {
-        m = withUserMessageSource(m, pendingChannelSource?.channel, pendingChannelSource?.attachments);
-        pendingChannelSource = null;
-      }
       messages.push(m);
       entryIds.push(e.id);
     }
@@ -247,96 +224,6 @@ export function buildSessionContext(entries: SessionEntry[], leafId?: string | n
     thinkingLevel: piCtx.thinkingLevel,
     model: piCtx.model,
   };
-}
-
-export function parseRunId(data: unknown): string | undefined {
-  if (!data || typeof data !== "object") return undefined;
-  const runId = (data as { runId?: unknown }).runId;
-  return typeof runId === "string" ? runId : undefined;
-}
-
-export function parseChannelSourceMarker(data: unknown): ChannelSourceMarker | null {
-  if (!data || typeof data !== "object") return null;
-  const marker = data as { channel?: unknown; runId?: unknown; attachments?: unknown };
-  if (marker.channel !== "weixin" && marker.channel !== "telegram" && marker.channel !== "feishu") return null;
-  const attachments = parseChannelAttachments(marker.attachments);
-  return {
-    channel: marker.channel,
-    ...(typeof marker.runId === "string" ? { runId: marker.runId } : {}),
-    ...(attachments.length ? { attachments } : {}),
-  };
-}
-
-type ChannelSourceMarker = {
-  channel: NonNullable<UserMessage["channelSource"]>;
-  runId?: string;
-  attachments?: ChannelMessageAttachment[];
-};
-
-function parseChannelAttachments(value: unknown): ChannelMessageAttachment[] {
-  if (!Array.isArray(value)) return [];
-  return value.flatMap((candidate) => {
-    if (!candidate || typeof candidate !== "object") return [];
-    const attachment = candidate as { kind?: unknown; name?: unknown; mime?: unknown };
-    if (
-      attachment.kind !== "image" &&
-      attachment.kind !== "voice" &&
-      attachment.kind !== "file" &&
-      attachment.kind !== "video"
-    ) {
-      return [];
-    }
-    return [
-      {
-        kind: attachment.kind,
-        ...(typeof attachment.name === "string" && attachment.name.trim() ? { name: attachment.name } : {}),
-        ...(typeof attachment.mime === "string" && attachment.mime.trim() ? { mime: attachment.mime } : {}),
-      },
-    ];
-  });
-}
-
-export function withUserMessageSource(
-  message: UserMessage,
-  source?: NonNullable<UserMessage["channelSource"]>,
-  attachments?: ChannelMessageAttachment[],
-): UserMessage {
-  const legacy = parseLegacyChannelMessage(message);
-  return {
-    ...legacy.message,
-    ...(source || legacy.source ? { channelSource: source ?? legacy.source } : {}),
-    ...(attachments?.length ? { channelAttachments: attachments } : {}),
-  };
-}
-
-function parseLegacyChannelMessage(message: UserMessage): {
-  message: UserMessage;
-  source?: NonNullable<UserMessage["channelSource"]>;
-} {
-  const text =
-    typeof message.content === "string"
-      ? message.content
-      : message.content
-          .filter((block): block is { type: "text"; text: string } => block.type === "text")
-          .map((block) => block.text)
-          .join("\n");
-  const sourceLabel = text.match(/^\[外部消息来源：(微信|Telegram|飞书 \/ Lark)\]\n/)?.[1];
-  const delimiter = text.indexOf("\n---\n");
-  if (!sourceLabel || delimiter < 0) return { message };
-
-  const source = sourceLabel === "微信" ? "weixin" : sourceLabel === "Telegram" ? "telegram" : ("feishu" as const);
-  const actualText = text.slice(delimiter + "\n---\n".length);
-  if (typeof message.content === "string") {
-    return { message: { ...message, content: actualText }, source };
-  }
-
-  let replacedText = false;
-  const content = message.content.map((block) => {
-    if (block.type !== "text" || replacedText) return block;
-    replacedText = true;
-    return { ...block, text: actualText };
-  });
-  return { message: { ...message, content }, source };
 }
 
 function parseEntryTimestamp(timestamp: string): number | undefined {
@@ -371,7 +258,6 @@ export function entryToUiMessage(entry: SessionEntry): AgentMessage | null {
         timestamp: parseEntryTimestamp(entry.timestamp),
       };
     case "custom_message":
-      if (entry.customType === "pi-desktop-channel-attachment-context") return null;
       return {
         role: "custom",
         customType: entry.customType,

@@ -130,7 +130,6 @@ const DESKTOP_ONLY = new Set([
   "showFileContextMenu",
   "inspectLocalFiles",
   "selectDirectory",
-  "setChannelCredential",
   "saveFile",
   "saveBinaryFile",
   "createHtmlPreview",

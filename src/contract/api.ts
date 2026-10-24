@@ -29,20 +29,6 @@ import type {
   SkillSearchResult,
   SkillUpdateParams,
 } from "../shared/api-types";
-import type {
-  ChannelAccountConfig,
-  ChannelBinding,
-  ChannelBindingChange,
-  ChannelLoginEvent,
-  ChannelLoginStartRequest,
-  ChannelProbeResult,
-  ChannelsSnapshot,
-  ChannelStatus,
-  ChannelPairingRequest,
-  ChannelActivity,
-  ChannelId,
-  ChannelTestSendResult,
-} from "../shared/channel-types";
 import type { ToolCapabilityId, ToolProvider } from "../shared/toolchains/types";
 import type {
   ManagedProcessChangedEvent,
@@ -194,61 +180,6 @@ export interface Api {
       modelId?: string;
     };
     result: { title: string | null };
-  };
-
-  // Messaging channels
-  "channels.list": { params: void; result: ChannelsSnapshot };
-  "channels.accountUpsert": {
-    params: { account: ChannelAccountConfig };
-    result: ChannelsSnapshot;
-  };
-  "channels.accountConnect": {
-    params: { account: ChannelAccountConfig };
-    result: ChannelsSnapshot;
-  };
-  "channels.accountDelete": {
-    params: { accountId: string };
-    result: ChannelsSnapshot;
-  };
-  "channels.start": { params: { accountId: string }; result: { ok: true } };
-  "channels.stop": { params: { accountId: string }; result: { ok: true } };
-  "channels.restart": { params: { accountId: string }; result: { ok: true } };
-  "channels.probe": { params: { accountId: string }; result: ChannelProbeResult };
-  "channels.loginStart": {
-    params: ChannelLoginStartRequest;
-    result: ChannelLoginEvent;
-  };
-  "channels.loginWait": {
-    params: { channel: ChannelId; sessionKey: string };
-    result: ChannelLoginEvent;
-  };
-  "channels.loginSubmitCode": {
-    params: { channel: ChannelId; sessionKey: string; code: string };
-    result: { ok: true };
-  };
-  "channels.loginCancel": {
-    params: { channel: ChannelId; sessionKey: string };
-    result: { ok: true };
-  };
-  "channels.pairingApprove": {
-    params: { pairingId: string };
-    result: ChannelsSnapshot;
-  };
-  "channels.pairingReject": {
-    params: { pairingId: string };
-    result: ChannelsSnapshot;
-  };
-  "channels.bindingUpsert": {
-    params: { binding: ChannelBinding };
-    result: ChannelsSnapshot;
-  };
-  "channels.bindingDelete": {
-    params: { bindingId: string };
-    result: ChannelsSnapshot;
-  };
-  "channels.testSend": {
-    params: { accountId: string; peerId: string; message: string };
-    result: ChannelTestSendResult;
   };
 
   // Files
@@ -432,11 +363,6 @@ export interface Streams {
     size?: number;
     message?: string;
   };
-  "channels.status": ChannelStatus;
-  "channels.login": ChannelLoginEvent;
-  "channels.pairing": ChannelPairingRequest;
-  "channels.binding": ChannelBindingChange;
-  "channels.activity": ChannelActivity;
   "processes.changed": ManagedProcessChangedEvent;
   "processes.output": ManagedProcessOutputEvent;
 }

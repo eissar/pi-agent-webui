@@ -63,17 +63,7 @@ export type AssistantContentBlock = TextContent | ImageContent | ThinkingContent
 export interface UserMessage {
   role: "user";
   content: string | (TextContent | ImageContent)[];
-  /** UI-only origin metadata. It is never projected into the model prompt. */
-  channelSource?: "weixin" | "telegram" | "feishu";
-  /** UI-only attachment metadata retained by channel source markers. */
-  channelAttachments?: ChannelMessageAttachment[];
   timestamp?: number;
-}
-
-export interface ChannelMessageAttachment {
-  kind: "image" | "voice" | "file" | "video";
-  name?: string;
-  mime?: string;
 }
 
 export interface AssistantMessage {

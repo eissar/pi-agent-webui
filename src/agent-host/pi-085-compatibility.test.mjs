@@ -12,11 +12,10 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import { EXCLUDED_PI_TOOLS, validateDesktopToolNames, filterDesktopToolNames } from "../shared/pi-tool-policy.ts";
 import { readSessionSnapshot, assertSessionWritable } from "./session-readonly.ts";
-const { DesktopSessionToolStore, ChannelConfigStore } = await importTestBundle("pi-085-stores", {
+const { DesktopSessionToolStore } = await importTestBundle("pi-085-stores", {
   packages: "external",
   stdin: {
-    contents:
-      'export { DesktopSessionToolStore } from "./session-tool-store.ts"; export { ChannelConfigStore } from "./channels/config-store.ts";',
+    contents: 'export { DesktopSessionToolStore } from "./session-tool-store.ts";',
     resolveDir: import.meta.dirname,
     loader: "ts",
   },
@@ -118,7 +117,7 @@ test("SDK denylist survives defaultTools, same-name extension activation and rel
   assert.deepEqual(events, ["start", "end"]);
 });
 
-test("legacy Desktop and Channel permissions are filtered without rewriting their source", (t) => {
+test("legacy Desktop permissions are filtered without rewriting their source", (t) => {
   const directory = fixture(t);
   const file = path.join(directory, "tools.json");
   const raw = JSON.stringify({
@@ -131,16 +130,6 @@ test("legacy Desktop and Channel permissions are filtered without rewriting thei
   assert.equal(readFileSync(file, "utf8"), raw);
   store.set("fixture", ["powershell", "read"]);
   assert.deepEqual(JSON.parse(readFileSync(file, "utf8")).sessions.fixture.toolNames, ["read"]);
-  const channelFile = path.join(directory, "channels.json");
-  const account = { id: "fixture", channel: "telegram", toolNames: ["powershell", "read"] };
-  const channelRaw = JSON.stringify({ version: 1, accounts: [account], bindings: [] });
-  writeFileSync(channelFile, channelRaw);
-  const channels = new ChannelConfigStore(channelFile);
-  assert.deepEqual(channels.getAccount("fixture").toolNames, ["read"]);
-  assert.equal(readFileSync(channelFile, "utf8"), channelRaw);
-  assert.throws(() => channels.upsertAccount(account), /not supported/);
-  assert.throws(() => channels.upsertBinding({ toolNames: ["powershell"] }), /not supported/);
-  assert.equal(readFileSync(channelFile, "utf8"), channelRaw);
 });
 
 test("read-only JSONL projection preserves header, labels, compaction and original bytes", (t) => {

@@ -6,8 +6,6 @@ import { SkillsConfig, type SkillsConfigHandle } from "./SkillsConfig";
 import { PluginsConfig } from "./PluginsConfig";
 import { ToolchainsConfig } from "./ToolchainsConfig";
 import { BrowserSettings } from "./browser/BrowserSettings";
-import { ChannelsConfig } from "./channels/ChannelsConfig";
-import type { ChannelsSnapshot } from "@shared/channel-types";
 import type { ChatAppearancePreferences, ChatAssistantWidth, ChatFontSize, ChatLayout } from "@shared/chat-appearance";
 import { APP_WEBSITE_URL } from "@shared/app-links";
 import type { DesktopUpdateState } from "../../contract/desktop";
@@ -17,7 +15,7 @@ import appIconUrl from "../../../build/icon.png";
 import { isAutoSessionTitleEnabled, setAutoSessionTitleEnabled } from "../lib/auto-session-title";
 import { getCacheWarmingStatus, setCacheWarmingMode } from "../lib/api-client";
 
-export type SettingsTab = "general" | "browser" | "channels" | "models" | "tools" | "skills" | "plugins" | "about";
+export type SettingsTab = "general" | "browser" | "models" | "tools" | "skills" | "plugins" | "about";
 
 interface SettingsConfigProps {
   cwd: string | null;
@@ -27,7 +25,6 @@ interface SettingsConfigProps {
   onClose: () => void;
   onModelsChanged: () => void;
   onPluginsReloaded: () => void;
-  onChannelsChanged: (snapshot: ChannelsSnapshot) => void;
   chatAppearance: ChatAppearancePreferences;
   chatAppearanceSaving: boolean;
   onChatAppearanceChange: (preferences: ChatAppearancePreferences) => Promise<void>;
@@ -41,7 +38,6 @@ export function SettingsConfig({
   onClose,
   onModelsChanged,
   onPluginsReloaded,
-  onChannelsChanged,
   chatAppearance,
   chatAppearanceSaving,
   onChatAppearanceChange,
@@ -92,7 +88,6 @@ export function SettingsConfig({
     { id: "skills", label: "Skills" },
     { id: "plugins", label: "Plugins" },
     { id: "browser", label: "Browser" },
-    { id: "channels", label: "Channels" },
     { id: "tools", label: "Developer Tools" },
     { id: "about", label: "About" },
   ];
@@ -299,7 +294,6 @@ export function SettingsConfig({
               <ModelsConfig embedded cwd={cwd} onClose={() => undefined} onChanged={onModelsChanged} />
             )}
             {activeTab === "tools" && <ToolchainsConfig cwd={cwd} />}
-            {activeTab === "channels" && <ChannelsConfig onSnapshotChange={onChannelsChanged} />}
             {activeTab === "skills" &&
               (cwd ? (
                 <SkillsConfig ref={skillsConfigRef} embedded cwd={cwd} onClose={() => undefined} />
@@ -925,10 +919,6 @@ function GeneralSettings({
   chatAppearanceSaving: boolean;
   onChatAppearanceChange: (preferences: ChatAppearancePreferences) => Promise<void>;
 }) {
-  const [backgroundMode, setBackgroundMode] = useState(true);
-  const [backgroundModeLoading, setBackgroundModeLoading] = useState(true);
-  const [backgroundModeSaving, setBackgroundModeSaving] = useState(false);
-  const [backgroundModeError, setBackgroundModeError] = useState<"load" | "save" | null>(null);
   const [managedProcessesEnabled, setManagedProcessesEnabled] = useState(false);
   const [managedProcessesLoading, setManagedProcessesLoading] = useState(true);
   const [managedProcessesSaving, setManagedProcessesSaving] = useState(false);
@@ -940,7 +930,6 @@ function GeneralSettings({
   const [cacheWarmingSaving, setCacheWarmingSaving] = useState(false);
   const [cacheWarmingError, setCacheWarmingError] = useState<"load" | "save" | "partial" | null>(null);
   const [chatAppearanceError, setChatAppearanceError] = useState(false);
-  const backgroundModeControlId = useId();
   const managedProcessesControlId = useId();
   const autoSessionTitleControlId = useId();
   const cacheWarmingControlId = useId();
@@ -971,20 +960,17 @@ function GeneralSettings({
     void Promise.all([window.piBridge.getUiState(), window.piBridge.getManagedProcessCapability()])
       .then(([state, capability]) => {
         if (!disposed) {
-          setBackgroundMode(state.backgroundMode !== false);
           setManagedProcessesEnabled(state.managedProcessesEnabled === true);
           setManagedProcessCapability(capability);
         }
       })
       .catch(() => {
         if (!disposed) {
-          setBackgroundModeError("load");
           setManagedProcessesError("load");
         }
       })
       .finally(() => {
         if (!disposed) {
-          setBackgroundModeLoading(false);
           setManagedProcessesLoading(false);
         }
       });
@@ -993,20 +979,6 @@ function GeneralSettings({
     };
   }, []);
 
-  const saveBackgroundMode = async (next: boolean): Promise<void> => {
-    const previous = backgroundMode;
-    setBackgroundMode(next);
-    setBackgroundModeSaving(true);
-    setBackgroundModeError(null);
-    try {
-      await window.piBridge.setUiState({ backgroundMode: next });
-    } catch {
-      setBackgroundMode(previous);
-      setBackgroundModeError("save");
-    } finally {
-      setBackgroundModeSaving(false);
-    }
-  };
   const saveManagedProcesses = async (next: boolean): Promise<void> => {
     const previous = managedProcessesEnabled;
     setManagedProcessesEnabled(next);
@@ -1121,52 +1093,6 @@ function GeneralSettings({
             {managedProcessesError === "save"
               ? "Managed process settings could not be saved. The previous setting was restored."
               : "Managed process settings could not be loaded. The feature remains disabled."}
-          </p>
-        )}
-      </section>
-
-      <div style={{ height: 1, background: "var(--border)", maxWidth: 620, margin: "28px 0" }} />
-
-      <section style={{ maxWidth: 620 }}>
-        <h2 style={{ margin: 0, fontSize: 14, color: "var(--text)" }}>{"Background mode"}</h2>
-        <p style={{ margin: "6px 0 16px", fontSize: 12, lineHeight: 1.6, color: "var(--text-dim)" }}>
-          {"Keep messaging channels connected when the window is closed."}
-        </p>
-        <SettingRow label={"Close window to tray"} controlId={backgroundModeControlId}>
-          <label
-            htmlFor={backgroundModeControlId}
-            style={{
-              width: 36,
-              height: 36,
-              display: "grid",
-              placeItems: "center",
-              flexShrink: 0,
-              cursor: "pointer",
-            }}
-          >
-            <input
-              id={backgroundModeControlId}
-              type="checkbox"
-              checked={backgroundMode}
-              disabled={backgroundModeLoading || backgroundModeSaving}
-              onChange={(event) => {
-                void saveBackgroundMode(event.target.checked);
-              }}
-              style={{
-                width: 18,
-                height: 18,
-                margin: 0,
-                accentColor: "var(--accent)",
-                cursor: backgroundModeLoading || backgroundModeSaving ? "not-allowed" : "pointer",
-              }}
-            />
-          </label>
-        </SettingRow>
-        {backgroundModeError && (
-          <p role="alert" style={{ margin: "8px 0 0", fontSize: 12, lineHeight: 1.55, color: "#f87171" }}>
-            {backgroundModeError === "save"
-              ? "Background mode could not be saved. The previous setting was restored."
-              : "Background mode could not be loaded. The default remains selected."}
           </p>
         )}
       </section>

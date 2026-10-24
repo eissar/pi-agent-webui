@@ -10,10 +10,7 @@ import {
   isEmptyTextBlock,
   isEmptyThinkingBlock,
 } from "@/lib/message-display";
-import { getUserBubbleStyle } from "@/lib/channel-message-style";
-import { CHANNEL_ATTACHMENT_PROMPT_PLACEHOLDER, channelAttachmentCopyText } from "@shared/channel-message";
 import { parseSkillInvocation, skillInvocationCommandText, type SkillInvocation } from "@shared/skill-invocation";
-import { useTheme } from "@/hooks/useTheme";
 import { ThinkingExpansionStore } from "@/lib/thinking-expansion-store";
 import { parseUnifiedPatch, type SplitDiffCell } from "@/lib/patch";
 import type {
@@ -215,7 +212,6 @@ function UserMessageView({
   onEditContent?: (content: string) => void;
   onLoadDeferredContent?: (entryId: string, blockIndex?: number) => Promise<void>;
 }) {
-  const { isDark } = useTheme();
   const [hovered, setHovered] = useState(false);
   const { copied, copy } = useCopyFeedback();
 
@@ -233,24 +229,12 @@ function UserMessageView({
       ? []
       : message.content.filter((b): b is ImageContent => b.type === "image" && !b.deferredContent);
 
-  const isChannelAttachmentPlaceholder = !!message.channelSource && content === CHANNEL_ATTACHMENT_PROMPT_PLACEHOLDER;
-  const attachmentCopyContent = isChannelAttachmentPlaceholder
-    ? channelAttachmentCopyText(message.channelAttachments, imageBlocks)
-    : "";
-  const visibleContent = isChannelAttachmentPlaceholder
-    ? imageBlocks.length > 0
-      ? ""
-      : attachmentCopyContent || "Attachment"
-    : skillInvocation
-      ? (skillInvocation.userMessage ?? "")
-      : content;
+  const visibleContent = skillInvocation ? (skillInvocation.userMessage ?? "") : content;
   const skillCommand = skillInvocation ? skillInvocationCommandText(content) : null;
-  const copyableContent = isChannelAttachmentPlaceholder ? attachmentCopyContent : (skillCommand ?? visibleContent);
+  const copyableContent = skillCommand ?? visibleContent;
   const editableContent = skillCommand ?? content;
 
   const time = formatTime(message.timestamp);
-  const messageSource = message.channelSource ?? "local";
-  const bubbleStyle = getUserBubbleStyle(message.channelSource, isDark);
   const canFork = !!entryId && !!onFork;
   const canNavigate = !!prevAssistantEntryId && !!onNavigate;
 
@@ -273,16 +257,13 @@ function UserMessageView({
         }}
       >
         <div
-          data-message-source={messageSource}
           style={{
             minWidth: 0,
             maxWidth: "100%",
-            background: bubbleStyle.background,
             borderRadius: "10px 10px 2px 10px",
             padding: "9px 13px",
             fontSize: scaledChatFont(13.5),
             lineHeight: 1.55,
-            color: bubbleStyle.foreground,
             wordBreak: "break-word",
           }}
         >

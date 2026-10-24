@@ -225,24 +225,6 @@ test("editing cursor keys and pinch zoom do not permanently release follow", asy
   assert.ok(fixture.calls.some((call) => call.target === "live"));
 });
 
-test("external turns respect a reader away from the bottom and explicit touch gestures", async (t) => {
-  const fixture = await mount(t);
-  fixture.container.scrollTop = 100;
-  fixture.current.beginExternalTurn();
-  await fixture.update({ agentRunning: true, streamState: stream("one") });
-  await fixture.flush();
-  assert.deepEqual(fixture.calls, []);
-  fixture.current.reattachAutoFollow();
-  fixture.calls.length = 0;
-  fixture.container.emit("touchstart", { touches: [{ clientY: 100 }] });
-  fixture.container.emit("touchmove", { touches: [{ clientY: 130 }] });
-  fixture.container.emit("touchend", { touches: [] });
-  fixture.advance(2000);
-  await fixture.update({ streamState: stream("two") });
-  await fixture.flush();
-  assert.deepEqual(fixture.calls, []);
-});
-
 test("prepend anchors yield to new local turns and cannot write after unmount", async (t) => {
   const fixture = await mount(t);
   fixture.container.scrollTop = 300;

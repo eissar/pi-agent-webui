@@ -113,7 +113,6 @@ export interface BrowserAutomationSettings {
   defaultPermission: BrowserPersistentDefaultPermission;
   sensitiveActions: "always-ask" | "deny";
   userTakeover: "cancel-agent-action" | "wait";
-  allowChannelSessions: boolean;
   showActionHighlight: boolean;
 }
 
@@ -141,7 +140,6 @@ export interface BrowserAdvancedSettingsV1 {
   customUserAgentValue: string;
   customUserAgentPlatform: string;
   cdpAllowedMethods: string[];
-  allowApprovedChannelSessions: boolean;
 }
 
 export interface BrowserSettingsV1 {
@@ -300,7 +298,7 @@ export interface BrowserBoundsInput {
 export interface BrowserSessionGrantInput {
   sessionId: string;
   permission: BrowserPermissionLevel;
-  source: "local" | "channel";
+  source: "local";
   expiresInMs?: number;
 }
 
@@ -322,7 +320,7 @@ export interface BrowserRuntimeSessionGrant {
 export interface BrowserAgentAuthorizationRequest {
   id: string;
   sessionId: string;
-  source: "local" | "channel";
+  source: "local";
   methodCategory: "read" | "interact" | "advanced";
   minimumPermission: "read" | "interact" | "advanced";
   createdAt: number;
@@ -733,7 +731,7 @@ export interface BrowserHostRpc {
   "browser.requestAuthorization": {
     params: {
       sessionId: string;
-      source: "local" | "channel";
+      source: "local";
       targetMethod: string;
       requestId: string;
     };

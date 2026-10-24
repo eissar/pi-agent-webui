@@ -1,1 +1,0 @@
-export { QuickChannelBinding } from "./ChannelsConfig";

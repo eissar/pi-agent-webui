@@ -1,12 +1,10 @@
 import { useSessionList } from "@/hooks/useSessionList";
-import { call, subscribe } from "@/lib/api-client";
 import { useState, useCallback, useRef, useEffect } from "react";
 import { SessionSidebar } from "./SessionSidebar";
 import { ChatWindow } from "./ChatWindow";
 import { SessionInfoPanel } from "./SessionInfoPanel";
 import { SessionPresentationStore } from "@/lib/session-presentation-store";
 import { SettingsConfig, type SettingsTab } from "./SettingsConfig";
-import { QuickChannelBinding } from "./channels/QuickChannelBinding";
 import { BrowserAuthorizationDialog } from "./browser/BrowserAuthorizationDialog";
 import { useTheme } from "@/hooks/useTheme";
 import { useIsMobile } from "@/hooks/useIsMobile";
@@ -17,12 +15,9 @@ import { SessionProfiler } from "./SessionProfiler";
 import { ThinkingExpansionRegistry } from "@/lib/thinking-expansion-store";
 import type { SessionInfo } from "@/lib/types";
 import type { ChatInputHandle } from "./ChatInput";
-import type { ChannelsSnapshot } from "@shared/channel-types";
 import type { ChatAppearancePreferences } from "@shared/chat-appearance";
 import { worktreePathsEqual } from "@shared/worktree-path";
 import type { BrowserAgentAuthorizationRequest, BrowserAgentAuthorizationDecision } from "../../contract/browser";
-
-const EMPTY_CHANNELS: ChannelsSnapshot = { accounts: [], statuses: [], pairings: [], bindings: [], activities: [] };
 
 export function AppShell({
   chatAppearance,
@@ -52,7 +47,6 @@ export function AppShell({
   const [settingsNavigationRequestId, setSettingsNavigationRequestId] = useState(0);
   const [authorizationSettingsSessionId, setAuthorizationSettingsSessionId] = useState<string | null>(null);
   const [browserAuthorization, setBrowserAuthorization] = useState<BrowserAgentAuthorizationRequest | null>(null);
-  const [channelSnapshot, setChannelSnapshot] = useState<ChannelsSnapshot>(EMPTY_CHANNELS);
   const [modelsRefreshKey, setModelsRefreshKey] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileSidebarReady, setMobileSidebarReady] = useState(false);
@@ -68,33 +62,6 @@ export function AppShell({
   const chatInputRef = useRef<ChatInputHandle | null>(null);
   const thinkingExpansionRegistryRef = useRef(new ThinkingExpansionRegistry());
   const processDetailsExpansionRegistryRef = useRef(new ThinkingExpansionRegistry());
-
-  const refreshChannelSnapshot = useCallback(async () => {
-    try {
-      setChannelSnapshot(await call("channels.list"));
-    } catch {
-      // Channels are optional; the rest of the desktop remains usable if Host is still starting.
-    }
-  }, []);
-
-  useEffect(() => {
-    let disposed = false;
-    const unsubs: Array<() => void> = [];
-    void refreshChannelSnapshot();
-    void Promise.all([
-      subscribe("channels.binding", "*", () => void refreshChannelSnapshot()),
-      subscribe("channels.status", "*", () => void refreshChannelSnapshot()),
-    ])
-      .then((items) => {
-        if (disposed) items.forEach((unsubscribe) => unsubscribe());
-        else unsubs.push(...items);
-      })
-      .catch(() => undefined);
-    return () => {
-      disposed = true;
-      unsubs.forEach((unsubscribe) => unsubscribe());
-    };
-  }, [refreshChannelSnapshot]);
 
   const [activeTopPanel, setActiveTopPanel] = useState<"session" | null>(null);
 
@@ -675,14 +642,6 @@ export function AppShell({
                 {getSessionDisplayTitle(displayedSession ?? selectedSession)}
               </div>
             )}
-            {selectedSession && (
-              <QuickChannelBinding
-                sessionId={selectedSession.id}
-                snapshot={channelSnapshot}
-                isMobile={isMobile}
-                onSnapshotChange={setChannelSnapshot}
-              />
-            )}
             <SessionInfoPanel
               store={presentationStore}
               showChat={showChat}
@@ -785,7 +744,6 @@ export function AppShell({
           }}
           onModelsChanged={() => setModelsRefreshKey((key) => key + 1)}
           onPluginsReloaded={() => setSessionKey((key) => key + 1)}
-          onChannelsChanged={setChannelSnapshot}
           chatAppearance={chatAppearance}
           chatAppearanceSaving={chatAppearanceSaving}
           onChatAppearanceChange={onChatAppearanceChange}

@@ -1,4 +1,3 @@
-import type { ChannelId } from "../shared/channel-types";
 import type { ManagedProcessCapability } from "./processes";
 import type { ChatAppearancePreferences } from "../shared/chat-appearance";
 import type { PublicToolchainState, ToolchainActionRequest } from "../shared/toolchains/types";
@@ -73,17 +72,6 @@ export interface DesktopUpdateState {
   error?: { code: UpdateErrorCode; message: string };
 }
 
-export interface ChannelCredentialWrite {
-  channel: ChannelId;
-  accountId: string;
-  credential: {
-    token: string;
-    providerAccountId: string;
-    providerUsername?: string;
-    baseUrl: string;
-  };
-}
-
 export interface SaveTextFileOptions {
   content: string;
   defaultPath?: string;
@@ -119,7 +107,6 @@ export interface LocalFileInspection {
 }
 
 export interface DesktopUiState {
-  backgroundMode?: boolean;
   managedProcessesEnabled?: boolean;
   chatAppearance?: ChatAppearancePreferences;
 }
@@ -149,7 +136,6 @@ export interface PiBridge {
   /** Resolve the absolute filesystem path for a dropped/injected File object. */
   getPathForFile?: (file: File) => string | null;
   selectDirectory: () => Promise<string | null>;
-  setChannelCredential: (payload: ChannelCredentialWrite) => Promise<void>;
   saveFile: (opts: SaveTextFileOptions) => Promise<string | null>;
   saveBinaryFile: (opts: SaveBinaryFileOptions) => Promise<string | null>;
   createHtmlPreview: (content: string, filePath: string, sourceSessionId?: string | null) => Promise<string>;

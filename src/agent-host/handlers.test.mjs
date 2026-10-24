@@ -154,7 +154,7 @@ test("model connection tests use isolated configuration and preserve success and
 test("registerHandlers exposes every contract method exactly once", async () => {
   const { handlers } = await captureHandlers();
   // Keep in sync with src/contract/api.ts: one handler per contract method.
-  assert.equal(Object.keys(handlers).length, 83);
+  assert.equal(Object.keys(handlers).length, 66);
   for (const method of [
     "host.ping",
     "host.toolchain",
@@ -164,8 +164,6 @@ test("registerHandlers exposes every contract method exactly once", async () => 
     "worktrees.list",
     "git.status",
     "agent.state",
-    "channels.list",
-    "channels.accountConnect",
     "files.list",
     "files.download",
     "models.list",
@@ -286,22 +284,6 @@ test("conditional auto-title writes never replace a manual session name", async 
     handlers["sessions.rename"]({ id: concurrentSessionId, name: "Concurrent manual title" }),
   ]);
   assert.equal(SessionManager.open(concurrentPath).getSessionName(), "Concurrent manual title");
-});
-
-test("channel initialization failure is reported without an unhandled rejection", async () => {
-  const { initializeChannels } = await loadHandlersModule();
-  const reports = [];
-  initializeChannels(
-    {
-      async initialize() {
-        throw new Error("media init failed?token=sensitive-token");
-      },
-    },
-    (message) => reports.push(message),
-  );
-  await new Promise((resolve) => setImmediate(resolve));
-
-  assert.deepEqual(reports, ["media init failed?token=[REDACTED]"]);
 });
 
 test("credential mutation failures distinguish committed state from an unverified mutation", async () => {

@@ -415,24 +415,6 @@ test("a resumed view accepts completion from the client run created by its previ
   assert.equal(fixture.completions, 1);
 });
 
-test("local client IDs still reject unrelated completion and cannot stop a later channel turn", async (t) => {
-  const fixture = await mountRuntime(t, runtimeDetail({ running: false }));
-  testApi.queueCommand("prompt", {});
-  await act(async () => fixture.current.handleSend("local fixture"));
-  await fixture.emit({ type: "agent_start" });
-  await fixture.emit({ type: "prompt_done", clientRunId: 99 });
-  assert.equal(fixture.current.agentRunning, true);
-  assert.equal(fixture.completions, 0);
-  await fixture.emit({ type: "prompt_done", clientRunId: 1 });
-  assert.equal(fixture.current.agentRunning, false);
-  assert.equal(fixture.completions, 1);
-  await fixture.emit({ type: "channel_turn_start", runId: "external" });
-  await fixture.emit({ type: "agent_start" });
-  await fixture.emit({ type: "prompt_done", clientRunId: 1 });
-  assert.equal(fixture.current.agentRunning, true);
-  assert.equal(fixture.completions, 1);
-});
-
 test("a newer history-only refresh does not discard the initial runtime hydration", async (t) => {
   const initial = createDeferred();
   const fixture = await mountRuntime(t, initial.promise);
@@ -487,29 +469,6 @@ test("an older initial snapshot cannot clear a newer stream projection", async (
   });
   assert.deepEqual(fixture.current.streamState.streamingMessage, message);
   assert.equal(fixture.current.agentPhase, null);
-});
-
-test("a slow external completion cannot replace history or settle the next external run", async (t) => {
-  const fixture = await mountRuntime(t, runtimeDetail({ running: false }));
-  await fixture.emit({ type: "channel_turn_start", runId: "first" });
-  await fixture.emit({ type: "agent_start" });
-  const finishing = createDeferred();
-  testApi.setHistory(finishing.promise, undefined);
-  await fixture.emit({ type: "channel_turn_end", runId: "first" });
-  await fixture.emit({ type: "channel_turn_start", runId: "second" });
-  await fixture.emit({ type: "agent_start" });
-  const message = { role: "user", content: "new external turn" };
-  await fixture.emit({ type: "message_end", message });
-  await act(async () => {
-    finishing.resolve(runtimeDetail({ running: false }));
-  });
-  assert.equal(fixture.current.agentRunning, true);
-  assert.deepEqual(fixture.current.messages, [message]);
-  assert.equal(fixture.completions, 0);
-  testApi.setHistory(runtimeDetail({ running: false }, [message]), undefined);
-  await fixture.emit({ type: "channel_turn_end", runId: "second" });
-  assert.equal(fixture.current.agentRunning, false);
-  assert.equal(fixture.completions, 1);
 });
 
 test("an idle reconciliation read cannot override events received while it was in flight", async (t) => {

@@ -112,9 +112,8 @@ export class BrowserAgentRuntime {
     this.requestRouteBypass = requestRouteBypass;
   }
 
-  beginTurn(sessionId: string, source: "local" | "channel"): void {
+  beginTurn(sessionId: string, _source: "local"): void {
     const prior = this.sessions.get(sessionId);
-    if (source === "channel" && prior?.budgetExhausted) return;
     this.sessions.set(sessionId, createState((prior?.turn ?? 0) + 1));
   }
 

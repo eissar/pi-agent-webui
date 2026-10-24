@@ -21,7 +21,7 @@ const { AgentSessionWrapper } = await importTestBundle("pi-prompt-boundary", {
   entryPoints: [path.join(import.meta.dirname, "rpc-manager.ts")],
 });
 
-test("Desktop settles once after extension continuation, provider retry, and an IM turn", async (t) => {
+test("Desktop settles once after extension continuation and provider retry", async (t) => {
   const directory = mkdtempSync(path.join(tmpdir(), "pi-desktop-boundary-"));
   t.after(() => rmSync(directory, { recursive: true, force: true }));
   let continued = false;
@@ -105,15 +105,9 @@ test("Desktop settles once after extension continuation, provider retry, and an 
     const timeout = setTimeout(() => reject(new Error("prompt_done not received")), 3000);
     wrapper.onEvent((event) => {
       if (
-        ![
-          "agent_start",
-          "agent_end",
-          "agent_settled",
-          "prompt_done",
-          "channel_turn_end",
-          "auto_retry_start",
-          "auto_retry_end",
-        ].includes(event.type)
+        !["agent_start", "agent_end", "agent_settled", "prompt_done", "auto_retry_start", "auto_retry_end"].includes(
+          event.type,
+        )
       )
         return;
       events.push(event);
@@ -132,21 +126,6 @@ test("Desktop settles once after extension continuation, provider retry, and an 
   );
   assert.equal(events.at(-1).clientRunId, 17);
 
-  continued = false;
-  const external = await wrapper.runExternalTurn({
-    runId: "im-boundary",
-    channel: "telegram",
-    message: "continue from an IM channel",
-  });
-  assert.equal(requests, 4);
-  assert.equal(external.finalText, "response-4");
-  assert.deepEqual(
-    events.slice(6).map((event) => event.type),
-    ["agent_start", "agent_end", "agent_start", "agent_end", "agent_settled", "channel_turn_end"],
-  );
-  assert.equal(events.filter((event) => event.type === "prompt_done").length, 1);
-  assert.equal(events.filter((event) => event.type === "channel_turn_end").length, 1);
-
   continued = true;
   failNextRequest = true;
   const retryStart = events.length;
@@ -161,7 +140,7 @@ test("Desktop settles once after extension continuation, provider retry, and an 
   });
   await wrapper.send({ type: "prompt", message: "retry after rate limit", clientRunId: 18 });
   await retryCompleted;
-  assert.equal(requests, 6);
+  assert.equal(requests, 4);
   const retryEvents = events.slice(retryStart);
   assert.equal(retryEvents.filter((event) => event.type === "prompt_done").length, 1);
   assert.equal(
@@ -177,7 +156,7 @@ test("Desktop settles once after extension continuation, provider retry, and an 
     true,
   );
   assert.equal(retryEvents.at(-1).type, "prompt_done");
-  assert.equal(session.getLastAssistantText(), "response-6");
+  assert.equal(session.getLastAssistantText(), "response-4");
   assert.equal(
     session.sessionManager.getEntries().some((entry) => entry.type === "context_edit"),
     true,

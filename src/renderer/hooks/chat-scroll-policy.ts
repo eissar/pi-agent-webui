@@ -54,11 +54,10 @@ export interface AutoFollowStopInput {
   now: number;
   userIntentUntil: number;
   programmaticScrollUntil: number;
-  externalAutoFollow: boolean;
 }
 
 export function shouldStopChatAutoFollow(input: AutoFollowStopInput): boolean {
   if (input.now > input.userIntentUntil) return false;
-  if (input.now < input.programmaticScrollUntil && !input.externalAutoFollow) return false;
+  if (input.now < input.programmaticScrollUntil) return false;
   return didUserScrollUp(input.previousScrollTop, input.currentScrollTop);
 }

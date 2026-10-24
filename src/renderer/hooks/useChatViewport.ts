@@ -66,7 +66,6 @@ export function useChatViewport({
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const lastScrollTopRef = useRef(0);
   const touchStartClientYRef = useRef<number | null>(null);
-  const externalTurnAutoFollowRef = useRef(false);
   // Set when the user explicitly re-attaches the viewport to the newest
   // content (clicks "scroll to bottom"); live-follow then stays engaged until
   // the user scrolls away again or the run ends.
@@ -93,17 +92,6 @@ export function useChatViewport({
     interactionRevisionRef.current++;
     pendingScrollToUserRef.current = true;
     completionScrollAllowedRef.current = true;
-  }, []);
-  const beginExternalTurn = useCallback(() => {
-    if (!activeRef.current) return;
-    const container = scrollContainerRef.current;
-    const shouldFollow = container ? isNearBottomExcludingSpacer(container) : true;
-    externalTurnAutoFollowRef.current = shouldFollow;
-    completionScrollAllowedRef.current = shouldFollow;
-    if (container) lastScrollTopRef.current = container.scrollTop;
-  }, []);
-  const endExternalTurn = useCallback(() => {
-    externalTurnAutoFollowRef.current = false;
   }, []);
   const prepareSessionChange = useCallback(() => {
     sessionChangeIgnoreScrollUntilRef.current = Date.now() + 1500;
@@ -198,7 +186,6 @@ export function useChatViewport({
     interactionRevisionRef.current++;
     pendingHistoryPrependRef.current = false;
     completionScrollAllowedRef.current = true;
-    externalTurnAutoFollowRef.current = false;
     autoFollowMagnetRef.current = true;
     setScrollMagnetEngaged(true);
     pendingScrollToUserRef.current = false;
@@ -210,7 +197,6 @@ export function useChatViewport({
   const disengageAutoFollowForExplicitUpwardGesture = useCallback(() => {
     if (!activeRef.current) return;
     completionScrollAllowedRef.current = false;
-    externalTurnAutoFollowRef.current = false;
     autoFollowMagnetRef.current = false;
     setScrollMagnetEngaged(false);
   }, []);
@@ -309,11 +295,9 @@ export function useChatViewport({
         now,
         userIntentUntil: userScrollIntentUntilRef.current,
         programmaticScrollUntil: ignoreProgrammaticScrollUntilRef.current,
-        externalAutoFollow: externalTurnAutoFollowRef.current,
       })
     ) {
       completionScrollAllowedRef.current = false;
-      externalTurnAutoFollowRef.current = false;
       // shouldStopChatAutoFollow only accepts explicit user intent, so it must
       // win even while a session-transition guard is active.
       autoFollowMagnetRef.current = false;
@@ -379,10 +363,10 @@ export function useChatViewport({
 
   useEffect(() => {
     if (!agentRunning || !completionScrollAllowedRef.current) return;
-    if (!externalTurnAutoFollowRef.current && !autoFollowMagnetRef.current) return;
+    if (!autoFollowMagnetRef.current) return;
     const frame = requestAnimationFrame(() => {
       if (!completionScrollAllowedRef.current) return;
-      if (!externalTurnAutoFollowRef.current && !autoFollowMagnetRef.current) return;
+      if (!autoFollowMagnetRef.current) return;
       if (Date.now() <= userScrollIntentUntilRef.current) return;
       scrollLiveContentToBottom();
     });
@@ -423,8 +407,6 @@ export function useChatViewport({
     reattachAutoFollow,
     capturePrependAnchor,
     beginLocalTurn,
-    beginExternalTurn,
-    endExternalTurn,
     prepareSessionChange,
     restoreFollowAfterLoad,
     messagesEndRef,

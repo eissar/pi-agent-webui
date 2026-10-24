@@ -9,8 +9,6 @@ const stubs = {
     "export const createFileWatchService = () => {init('files'); return {};}; export const stopAllFileWatches = () => step('files-stop');",
   "auth-login":
     "export const createAuthLoginService = () => {init('auth'); return {start: unexpected, cancel() {}, dispose() {step('auth-stop');}};}; export const resolveLoginCode = () => false;",
-  "channels/channel-manager":
-    "export class ChannelManager {constructor() {init('channels');} async initialize() {} shutdown() {return step('channels-stop');}}",
   "managed-process/runtime":
     "export const initializeManagedProcessService = () => {init('processes'); return {stopAll: () => step('processes-stop')};};",
   "rpc-manager":
@@ -75,8 +73,8 @@ test("the actual registrar owns one service set and releases subscriptions and s
     handle: (next) => Object.assign(methods, next),
     emit: (...args) => events.push(args),
   });
-  assert.deepEqual(control.state.created, ["files", "auth", "channels", "processes"]);
-  assert.equal(Object.keys(methods).length, 83);
+  assert.deepEqual(control.state.created, ["files", "auth", "processes"]);
+  assert.equal(Object.keys(methods).length, 66);
   assert.equal(control.state.running.size, 1);
   await methods["agent.command"]({ sessionId: "fixture", command: { type: "get_state" } });
   const running = [...control.state.running][0];
@@ -106,7 +104,6 @@ test("the actual registrar owns one service set and releases subscriptions and s
     "auth-stop",
     "models-stop",
     "processes-stop",
-    "channels-stop",
     "files-stop",
     "sessions-stop",
   ]);

@@ -12,12 +12,9 @@ import { createSessionHandlers } from "./handlers/sessions";
 import { createTitleHandlers } from "./handlers/agent-title";
 import { createAgentHandlers } from "./handlers/agent";
 import { resourceHandlers } from "./handlers/resources";
-import { createChannelHandlers, initializeChannels } from "./handlers/channels";
 import { createProcessHandlers } from "./handlers/processes";
 export { generateSessionTitleWithFallback, applySessionNameIfEmpty } from "./handlers/agent-title";
 export { createAgentNewLockKey } from "./handlers/agent";
-export { initializeChannels } from "./handlers/channels";
-
 
 export { projectModelsList } from "./handlers/model-catalog";
 export { credentialMutationFailure } from "./handlers/auth";
@@ -33,11 +30,8 @@ import { createFileWatchService, stopAllFileWatches } from "./file-watch";
 import { createAuthLoginService } from "./auth-login";
 import { modelCatalogRefreshCoordinator } from "./model-runtime";
 
-import { ChannelManager } from "./channels/channel-manager";
-
 import { initializeManagedProcessService } from "./managed-process/runtime";
 import { ManagedProcessError } from "./managed-process/service";
-
 
 export function registerHandlers(server: RpcServer): () => Promise<void> {
   const bindings = createSessionEventBindings(server);
@@ -46,8 +40,6 @@ export function registerHandlers(server: RpcServer): () => Promise<void> {
   const fileHandlers = createFileHandlers(fileWatch);
   const authLogin = createAuthLoginService(server);
   const authHandlers = createAuthHandlers(authLogin);
-  const channelManager = new ChannelManager(server, (session, sessionId) => bindings.ensure(session, sessionId));
-  initializeChannels(channelManager);
   const managedProcesses = initializeManagedProcessService(server);
   const worktreeHandlers = createWorktreeHandlers(managedProcesses);
   const sessionHandlers = createSessionHandlers({ server, managedProcesses, clearSessionEventBinding: bindings.clear });
@@ -77,7 +69,6 @@ export function registerHandlers(server: RpcServer): () => Promise<void> {
     bindEvents: (session, id) => bindings.ensure(session, id),
   });
   const titleHandlers = createTitleHandlers(server);
-  const channelHandlers = createChannelHandlers(channelManager);
   const processHandlers = createProcessHandlers(managedProcesses, managedCall);
 
   const guard =
@@ -89,27 +80,6 @@ export function registerHandlers(server: RpcServer): () => Promise<void> {
 
   server.handle({
     "host.ping": guard(() => ({ ok: true as const, ts: Date.now() })),
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     "host.toolchain": guard(resourceHandlers.toolchain),
 
@@ -164,40 +134,6 @@ export function registerHandlers(server: RpcServer): () => Promise<void> {
     "agent.state": guard(agentHandlers.state),
 
     "agent.generateTitle": guard(titleHandlers.generate),
-
-    "channels.list": guard(channelHandlers.list),
-
-    "channels.accountUpsert": guard(channelHandlers.accountUpsert),
-
-    "channels.accountConnect": guard(channelHandlers.accountConnect),
-
-    "channels.accountDelete": guard(channelHandlers.accountDelete),
-
-    "channels.start": guard(channelHandlers.start),
-
-    "channels.stop": guard(channelHandlers.stop),
-
-    "channels.restart": guard(channelHandlers.restart),
-
-    "channels.probe": guard(channelHandlers.probe),
-
-    "channels.loginStart": guard(channelHandlers.loginStart),
-
-    "channels.loginWait": guard(channelHandlers.loginWait),
-
-    "channels.loginSubmitCode": guard(channelHandlers.loginSubmitCode),
-
-    "channels.loginCancel": guard(channelHandlers.loginCancel),
-
-    "channels.pairingApprove": guard(channelHandlers.pairingApprove),
-
-    "channels.pairingReject": guard(channelHandlers.pairingReject),
-
-    "channels.bindingUpsert": guard(channelHandlers.bindingUpsert),
-
-    "channels.bindingDelete": guard(channelHandlers.bindingDelete),
-
-    "channels.testSend": guard(channelHandlers.testSend),
 
     "files.list": guard(fileHandlers.list),
 
@@ -280,7 +216,6 @@ export function registerHandlers(server: RpcServer): () => Promise<void> {
     { name: "authentication flows", stop: () => authLogin.dispose() },
     { name: "model refreshes", stop: () => modelCatalogRefreshCoordinator.cancelAll() },
     { name: "managed processes", stop: () => managedProcesses.stopAll("host") },
-    { name: "channels", stop: () => channelManager.shutdown() },
     { name: "file watches", stop: stopAllFileWatches },
     { name: "Agent sessions", stop: disposeAllRpcSessions },
   ]);

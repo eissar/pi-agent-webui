@@ -72,11 +72,6 @@ test("Browser budgets issue one replan checkpoint and stop before call 61", () =
     () => runtime.beforeCall("session", "browser.listTabs", { marker: 61 }, 1),
     (error) => error.code === "BROWSER_CALL_BUDGET_EXCEEDED",
   );
-  runtime.beginTurn("session", "channel");
-  assert.throws(
-    () => runtime.beforeCall("session", "browser.listTabs", { marker: "channel-cannot-reset" }, 1),
-    (error) => error.code === "BROWSER_CALL_BUDGET_EXCEEDED",
-  );
   runtime.beginTurn("session", "local");
   const resumed = runtime.beforeCall("session", "browser.listTabs", {}, 1);
   runtime.afterSuccess("session", resumed.attemptKey, { ok: true });

@@ -3,7 +3,6 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const componentFiles = [
-  "components/channels/ChannelsConfig.tsx",
   "components/ChatInput.tsx",
   "components/composer/ComposerToolbar.tsx",
   "components/PluginsConfig.tsx",

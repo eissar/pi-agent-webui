@@ -249,7 +249,6 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
   // The counter is local to this view. A restored run belongs to an earlier
   // mount and may legitimately complete with a different clientRunId.
   const ownedPromptRunIdRef = useRef<number | null>(null);
-  const externalTurnRunIdRef = useRef<string | null>(null);
   const optimisticUserMessageKeyRef = useRef<string | null>(null);
   const prependAnchorRef = useRef<ReturnType<typeof useChatViewport>["capturePrependAnchor"] | null>(null);
   const capturePrependAnchor = useCallback(() => prependAnchorRef.current?.(), []);
@@ -340,8 +339,6 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
     isAwayFromBottom,
     reattachAutoFollow,
     beginLocalTurn,
-    beginExternalTurn,
-    endExternalTurn,
     prepareSessionChange,
     restoreFollowAfterLoad,
     messagesEndRef,
@@ -599,37 +596,17 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
       if (
         (event.type === "prompt_done" || event.type === "prompt_error") &&
         typeof event.clientRunId === "number" &&
-        ((ownedPromptRunIdRef.current !== null && event.clientRunId !== ownedPromptRunIdRef.current) ||
-          externalTurnRunIdRef.current !== null)
+        ownedPromptRunIdRef.current !== null &&
+        event.clientRunId !== ownedPromptRunIdRef.current
       )
         return;
-      if (
-        (event.type === "channel_turn_end" || event.type === "channel_turn_error") &&
-        externalTurnRunIdRef.current !== event.runId
-      )
-        return;
-      if (event.type === "agent_start" || event.type === "channel_turn_start") runtimeGate.beginRun();
-      if (event.type === "prompt_done" || event.type === "channel_turn_end" || event.type === "channel_turn_error")
-        runtimeGate.touch("run");
+      if (event.type === "agent_start") runtimeGate.beginRun();
+      if (event.type === "prompt_done") runtimeGate.touch("run");
       if (event.type === "queue_update") runtimeGate.touch("queue");
       if (["auto_compaction_start", "compaction_start", "auto_compaction_end", "compaction_end"].includes(event.type))
         runtimeGate.touch("compaction");
       dispatchTurn({ type: "event", event });
       switch (event.type) {
-        case "channel_turn_start": {
-          ownedPromptRunIdRef.current = null;
-          externalTurnRunIdRef.current = typeof event.runId === "string" ? event.runId : null;
-          beginExternalTurn();
-          break;
-        }
-        case "channel_turn_end":
-        case "channel_turn_error": {
-          if (externalTurnRunIdRef.current !== event.runId) break;
-          externalTurnRunIdRef.current = null;
-          endExternalTurn();
-          if (agentRunningRef.current) void finishPromptWithoutStream(sessionIdRef.current);
-          break;
-        }
         case "agent_start":
           agentRunningRef.current = true;
           break;
@@ -695,17 +672,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
           break;
       }
     },
-    [
-      addNotice,
-      beginExternalTurn,
-      endExternalTurn,
-      finishPromptWithoutStream,
-      handleExtensionUiRequest,
-      isActive,
-      loadSession,
-      runtimeGate,
-      updateHistory,
-    ],
+    [addNotice, finishPromptWithoutStream, handleExtensionUiRequest, isActive, loadSession, runtimeGate, updateHistory],
   );
   handleAgentEventRef.current = handleAgentEvent;
 
@@ -734,7 +701,6 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
       optimisticUserMessageKeyRef.current = userMessageKey(userMsg);
       promptRunIdRef.current = promptRunId;
       ownedPromptRunIdRef.current = promptRunId;
-      externalTurnRunIdRef.current = null;
       agentRunningRef.current = true;
       dispatchTurn({ type: "start", phase: isSlashCommandPrompt ? "running_command" : "waiting_model" });
       beginLocalTurn();
