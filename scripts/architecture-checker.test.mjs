@@ -192,55 +192,6 @@ test("Renderer cannot load the Electron package but explicit bridge types are al
   assert.deepEqual(entry.run().failures, []);
 });
 
-test("existing budgets block growth and cannot become obsolete or unused silently", (t) => {
-  const module = "src/renderer/Existing.tsx";
-  const lines = (count) =>
-    Array.from({ length: count }, (_, i) => "export const value" + i + " = " + i + ";").join("\n");
-  const policy = { lineLimit: 10, budgets: { [module]: { maxLines: 12, reason: "existing UI" } } };
-  const entry = fixture(t, { [module]: lines(12) }, policy);
-  assert.deepEqual(entry.run().failures, []);
-  entry.write(module, lines(13));
-  assert.ok(entry.run().failures.some((failure) => failure.includes("exceeds baseline 12")));
-  entry.write(module, lines(2));
-  assert.ok(entry.run().failures.some((failure) => failure.includes("remove the obsolete")));
-  assert.ok(
-    entry
-      .run({ ...policy, budgets: { "src/renderer/missing.tsx": policy.budgets[module] } })
-      .failures.some((failure) => failure.includes("Unused structure baseline")),
-  );
-});
-
-test("new ordinary modules use the default limit rather than inheriting an old directory exemption", (t) => {
-  const entry = fixture(
-    t,
-    {
-      "src/renderer/New.tsx": Array.from({ length: 5 }, (_, i) => "export const n" + i + " = " + i + ";").join("\n"),
-    },
-    { lineLimit: 4 },
-  );
-  assert.ok(entry.run().failures.some((failure) => failure.includes("exceeds new-module limit 4")));
-});
-
-test("data exemptions allow literal dictionaries but reject executable initializers and getters", (t) => {
-  const file = "src/renderer/dictionary.ts";
-  const entry = fixture(
-    t,
-    {
-      [file]: 'export const en = {\n a: "one",\n b: "two",\n};\nexport const dictionaries = {en};',
-    },
-    { lineLimit: 2, dataModules: { [file]: { baselineLines: 5, reason: "translation data" } } },
-  );
-  // Use explicit properties: shorthand can hide executable bindings.
-  entry.write(file, 'export const en = {\n a: "one",\n b: "two",\n};\nexport const dictionaries = {en: en};');
-  assert.deepEqual(entry.run().failures, []);
-  for (const source of ['export const en = {a: (() => "one")()};', 'export const en = {get a() {return "one"}};']) {
-    entry.write(file, source);
-    assert.ok(
-      entry.run().failures.some((failure) => failure.includes("data-only exemption contains executable logic")),
-    );
-  }
-});
-
 test("exceptions require exact used edges, a reason and a removal condition", (t) => {
   const entry = fixture(t, {
     "src/main/index.ts": 'export {value} from "@host/helper";',

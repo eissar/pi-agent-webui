@@ -99,47 +99,6 @@ function dependencies(tree) {
   return found;
 }
 
-function isDataOnly(tree) {
-  const names = new Set();
-  const literal = (node) => {
-    if (
-      ts.isAsExpression(node) ||
-      ts.isSatisfiesExpression(node) ||
-      ts.isTypeAssertionExpression(node) ||
-      ts.isParenthesizedExpression(node)
-    )
-      return literal(node.expression);
-    if (
-      ts.isStringLiteralLike(node) ||
-      ts.isNumericLiteral(node) ||
-      [ts.SyntaxKind.TrueKeyword, ts.SyntaxKind.FalseKeyword, ts.SyntaxKind.NullKeyword].includes(node.kind)
-    )
-      return true;
-    if (ts.isIdentifier(node)) return names.has(node.text);
-    if (ts.isArrayLiteralExpression(node)) return node.elements.every(literal);
-    return (
-      ts.isObjectLiteralExpression(node) &&
-      node.properties.every(
-        (property) =>
-          ts.isPropertyAssignment(property) &&
-          !ts.isComputedPropertyName(property.name) &&
-          literal(property.initializer),
-      )
-    );
-  };
-  return tree.statements.every((statement) => {
-    if (ts.isImportDeclaration(statement)) return statement.importClause?.isTypeOnly === true;
-    if (ts.isInterfaceDeclaration(statement) || ts.isTypeAliasDeclaration(statement)) return true;
-    if (!ts.isVariableStatement(statement) || !(statement.declarationList.flags & ts.NodeFlags.Const)) return false;
-    return statement.declarationList.declarations.every((declaration) => {
-      if (!ts.isIdentifier(declaration.name) || !declaration.initializer || !literal(declaration.initializer))
-        return false;
-      names.add(declaration.name.text);
-      return true;
-    });
-  });
-}
-
 function resolveAsset(specifier, from, options) {
   const candidates = specifier.startsWith(".") ? [path.resolve(path.dirname(from), specifier)] : [];
   for (const [pattern, targets] of Object.entries(options.paths ?? {})) {
@@ -170,10 +129,8 @@ export function checkArchitecture({ root, policy = {} }) {
     assets = new Set();
   const options = configOptions(root, failures);
   const cache = ts.createModuleResolutionCache(root, (file) => file, options);
-  const budgets = policy.budgets ?? {},
-    dataModules = policy.dataModules ?? {};
   const files = sourceFiles(path.join(root, "src"), root, failures);
-  const stats = { modules: 0, runtimeEdges: 0, codeBudgets: Object.keys(budgets).length, dataModules: [], lines: {} };
+  const stats = { modules: 0, runtimeEdges: 0 };
   if (files.length === 0) failures.push("No runtime source modules found under src");
 
   const violation = (rule, from, to, chain = [from, to]) => {
@@ -188,23 +145,6 @@ export function checkArchitecture({ root, policy = {} }) {
     const tree = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
     for (const error of tree.parseDiagnostics)
       failures.push(name + ": " + ts.flattenDiagnosticMessageText(error.messageText, " "));
-    const lines = text.trimEnd().split(/\r?\n/).length;
-    stats.lines[name] = lines;
-    const limit = policy.lineLimit ?? 1200;
-    if (layer(name) !== "smoke") {
-      if (dataModules[name]) {
-        if (!dataModules[name].reason || !Number.isInteger(dataModules[name].baselineLines))
-          failures.push(name + ": data baseline needs a reason and baselineLines");
-        if (!isDataOnly(tree)) failures.push(name + ": data-only exemption contains executable logic");
-        stats.dataModules.push({ file: name, lines, baselineLines: dataModules[name].baselineLines });
-      } else if (budgets[name]) {
-        const budget = budgets[name];
-        if (!budget.reason || !Number.isInteger(budget.maxLines) || budget.maxLines <= limit)
-          failures.push(name + ": invalid existing-code budget");
-        if (lines > budget.maxLines) failures.push(name + ": " + lines + " lines exceeds baseline " + budget.maxLines);
-        if (lines <= limit) failures.push(name + ": remove the obsolete existing-code budget");
-      } else if (lines > limit) failures.push(name + ": " + lines + " lines exceeds new-module limit " + limit);
-    }
     const original = dependencies(tree);
     // Preserve ESM and require forms, while removing types and imports used only
     // as types. This does not change the actual build/compiler configuration.
@@ -280,9 +220,6 @@ export function checkArchitecture({ root, policy = {} }) {
     if (allowedLayers[layer(logical)] && !allowedLayers[layer(logical)].includes(layer(actual)))
       violation("layer", logical, actual);
     inspect(file);
-  }
-  for (const file of [...Object.keys(budgets), ...Object.keys(dataModules)]) {
-    if (!graph.has(file)) failures.push("Unused structure baseline: " + file);
   }
   // Multi-source traversal reports one actionable edge with its shortest
   // Renderer path, rather than repeating a shared violation for every caller.

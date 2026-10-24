@@ -12,15 +12,7 @@ else if (result.failures.length) {
   for (const failure of result.failures) console.error("- " + failure);
 } else {
   console.log(
-    "Architecture OK: " +
-      result.stats.modules +
-      " modules, " +
-      result.stats.runtimeEdges +
-      " runtime dependencies; " +
-      result.stats.codeBudgets +
-      " fixed code ceilings and " +
-      result.stats.dataModules.length +
-      " checked data module(s)",
+    "Architecture OK: " + result.stats.modules + " modules, " + result.stats.runtimeEdges + " runtime dependencies",
   );
 }
 if (result.failures.length) process.exitCode = 1;
