@@ -58,6 +58,7 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
     allowedHosts: ["mini-server"],
+    hmr: false,
     proxy: {
       "/rpc": {
         target: "http://127.0.0.1:7860",
