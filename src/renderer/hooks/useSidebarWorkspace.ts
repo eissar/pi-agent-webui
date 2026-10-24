@@ -53,7 +53,6 @@ export function useSidebarWorkspace({
   const [selectedCwd, setSelectedCwd] = useState<string | null>(null);
   const [homeDir, setHomeDir] = useState<string>("");
   const [worktreeState, setWorktreeState] = useState<WorktreeState | null>(null);
-  const [worktreeLoadingCwd, setWorktreeLoadingCwd] = useState<string | null>(null);
   useEffect(() => {
     call("system.home")
       .then((d: { home?: string }) => {
@@ -98,20 +97,16 @@ export function useSidebarWorkspace({
   }, [selectedCwdProp]);
 
   // Load worktrees for the current effective cwd
-  const [wtRefreshKey, setWtRefreshKey] = useState(0);
   useLayoutEffect(() => {
     if (!selectedCwd) {
       setWorktreeState(null);
-      setWorktreeLoadingCwd(null);
       return;
     }
     let cancelled = false;
-    setWorktreeLoadingCwd(selectedCwd);
     void import("@/lib/api-client")
       .then(({ call }) => call("worktrees.list", { projectRoot: selectedCwd }))
       .then((d) => {
         if (cancelled) return;
-        setWorktreeLoadingCwd(null);
         setWorktreeState({
           forCwd: selectedCwd,
           projectRoot: d.projectRoot,
@@ -126,40 +121,18 @@ export function useSidebarWorkspace({
       })
       .catch(() => {
         if (!cancelled) {
-          setWorktreeLoadingCwd(null);
           setWorktreeState(null);
         }
       });
     return () => {
       cancelled = true;
     };
-  }, [selectedCwd, wtRefreshKey, worktreesRefreshKey, projectInfoRevision]);
+  }, [selectedCwd, worktreesRefreshKey, projectInfoRevision]);
 
-  const registerCreatedWorktree = useCallback((worktreePath: string, branch: string) => {
-    // Optimistically register the new worktree so projectRootFor() resolves
-    // it to the main repo before the refetch lands (keeps AppShell from
-    // treating the new cwd as a different project).
-    setWorktreeState((prev) =>
-      prev
-        ? {
-            ...prev,
-            forCwd: worktreePath,
-            worktrees: [...prev.worktrees, { path: worktreePath, branch, isMain: false }],
-          }
-        : prev,
-    );
-    setSelectedCwd(worktreePath);
-    setWtRefreshKey((k) => k + 1);
-  }, []);
-  const refreshWorktrees = useCallback(() => setWtRefreshKey((key) => key + 1), []);
   return {
     selectedCwd,
     setSelectedCwd,
     selectedProject: projectRootFor(selectedCwd),
     homeDir,
-    worktreeState,
-    worktreeLoadingCwd,
-    registerCreatedWorktree,
-    refreshWorktrees,
   };
 }

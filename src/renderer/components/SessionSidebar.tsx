@@ -81,10 +81,6 @@ export function SessionSidebar({
     setSelectedCwd,
     selectedProject,
     homeDir,
-    worktreeState,
-    worktreeLoadingCwd,
-    registerCreatedWorktree,
-    refreshWorktrees,
   } = useSidebarWorkspace({
     allSessions,
     selectedCwd: selectedCwdProp,

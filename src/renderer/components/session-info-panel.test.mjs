@@ -75,7 +75,6 @@ async function mount(t) {
         showChat: true,
         activeTopPanel: "session",
         toggleTopPanel() {},
-        rightPanelOpen: false,
         isMobile: false,
       }),
     );
