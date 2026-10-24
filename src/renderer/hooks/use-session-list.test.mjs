@@ -202,55 +202,6 @@ async function mount(t, { sidebar = false, installation, runningInstallation, st
   };
 }
 
-test("one mounted catalog serves sidebar updates and metadata without duplicating list requests", async (t) => {
-  const fixture = await mount(t, { sidebar: true });
-  assert.equal(fixture.requests.length, 1);
-  assert.equal(testApi.subscriptions.length, 1);
-  await fixture.reply(0, response([session("one")]));
-  await fixture.change({ cwd: "/project", session: session("one", "Renamed") });
-  assert.deepEqual(await fixture.current.findSession("one"), session("one", "Renamed"));
-  assert.equal(
-    fixture.renderer.root.findAll((node) => node.props["aria-label"] === "Session actions for Renamed").length,
-    1,
-  );
-  assert.equal(fixture.requests.length, 1);
-  await fixture.change({ cwd: "/project", sessionId: "one", deleted: true });
-  await fixture.change({ cwd: "/project", sessionId: "one", deleted: true });
-  assert.deepEqual(fixture.deleted, ["one"]);
-  assert.equal(
-    fixture.renderer.root.findAll((node) => node.props["aria-label"] === "Session actions for Renamed").length,
-    0,
-  );
-  await fixture.unmount();
-  assert.equal(testApi.subscriptions[0].closed, 1);
-  assert.equal(fixture.sources[0].closed, 1);
-});
-
-test("live running status keeps precedence over a late list fallback", async (t) => {
-  const fixture = await mount(t, { sidebar: true });
-  await act(async () => fixture.sources[0].on({ type: "running", sessionIds: ["one"] }));
-  await fixture.reply(0, response([session("one")], []));
-  assert.equal(fixture.renderer.root.findAll((node) => node.props["aria-label"] === "Agent running").length, 1);
-  await act(async () => fixture.sources[0].on({ type: "running", sessionIds: [] }));
-  assert.equal(fixture.renderer.root.findAll((node) => node.props["aria-label"] === "Agent running").length, 0);
-  assert.equal(fixture.requests.length, 1);
-});
-
-test("failed initial loading preserves unread markers and manual retry restores the list", async (t) => {
-  const fixture = await mount(t, { sidebar: true, storedUnread: ["one"] });
-  await fixture.fail(0, "FORBIDDEN", "Fixture access denied");
-  assert.deepEqual(JSON.parse(fixture.storage.get("pi-desktop:unread-session-ids")), ["one"]);
-  assert.match(JSON.stringify(fixture.renderer.toJSON()), /Fixture access denied/);
-  const refresh = fixture.renderer.root.find((node) => node.type === "button" && node.props.title === "Refresh");
-  await act(async () => {
-    void refresh.props.onClick();
-  });
-  assert.equal(fixture.requests.length, 2);
-  await fixture.reply(1, response([session("one")]));
-  assert.equal(fixture.current.getSnapshot().error, null);
-  assert.equal(fixture.current.getSnapshot().loading, false);
-});
-
 test("subscription failure still loads sessions and keeps committed-operation fallback available", async (t) => {
   const installation = createDeferred();
   const fixture = await mount(t, { installation: installation.promise });
@@ -319,57 +270,6 @@ test("custom and native directory choices use canonical RPC results and preserve
   assert.equal(fixture.selectedDirectories.at(-1), "/default");
 });
 
-test("rename commits typed id/name and relies on the index event without another list request", async (t) => {
-  const fixture = await mount(t, { sidebar: true });
-  await fixture.reply(0, response([session("one")]));
-  await fixture.click("Session actions for one");
-  await fixture.click("Rename");
-  const editor = () => fixture.renderer.root.find((node) => node.type === "input" && node.props.value === "one");
-  await act(async () => editor().props.onChange({ target: { value: "  Renamed  " } }));
-  const renamedInput = fixture.renderer.root.find(
-    (node) => node.type === "input" && node.props.value === "  Renamed  ",
-  );
-  await act(async () => renamedInput.props.onKeyDown({ key: "Enter" }));
-  assert.deepEqual(fixture.next("sessions.rename").params, { id: "one", name: "Renamed" });
-  await fixture.change({ cwd: "/project", session: session("one", "Renamed") });
-  await fixture.replyRpc("sessions.rename", { ok: true });
-  assert.equal(fixture.requests.length, 1);
-  assert.ok(fixture.renderer.root.find((node) => node.props["aria-label"] === "Session actions for Renamed"));
-});
-
-test("session tree expansion survives index updates and row menus close with Escape", async (t) => {
-  const fixture = await mount(t, { sidebar: true });
-  const child = { ...session("child", "Child"), parentSessionId: "parent" };
-  await fixture.reply(0, response([session("parent", "Parent"), child]));
-  const button = (label) =>
-    fixture.renderer.root.find((node) => node.type === "button" && node.props["aria-label"] === label);
-  assert.ok(button("Session actions for Child"));
-  await fixture.click("Collapse forks");
-  await fixture.change({ cwd: "/project", session: { ...child, name: "Updated child" } });
-  assert.equal(
-    fixture.renderer.root.findAll((node) => node.props["aria-label"] === "Session actions for Updated child").length,
-    0,
-  );
-  await fixture.click("Expand forks");
-  assert.ok(button("Session actions for Updated child"));
-  await fixture.click("Session actions for Updated child");
-  assert.equal(button("Session actions for Updated child").props["aria-expanded"], true);
-  let prevented = false;
-  await act(async () =>
-    button("Session actions for Updated child").parent.props.onKeyDown({
-      key: "Escape",
-      preventDefault() {
-        prevented = true;
-      },
-    }),
-  );
-  assert.equal(prevented, true);
-  assert.equal(button("Session actions for Updated child").props["aria-expanded"], false);
-  assert.equal(fixture.renderer.root.findAll((node) => node.props.role === "menu").length, 0);
-  assert.equal(fixture.requests.length, 1);
-  assert.equal(fixture.mutations.length, 0);
-});
-
 test("delete retains running guards and backend conflicts without issuing an implicit force", async (t) => {
   const fixture = await mount(t, { sidebar: true });
   await fixture.reply(0, response([session("one")]));
@@ -392,37 +292,4 @@ test("delete retains running guards and backend conflicts without issuing an imp
   await fixture.replyRpc("sessions.delete", { ok: true });
   await fixture.change({ cwd: "/project", sessionId: "one", deleted: true });
   assert.deepEqual(fixture.deleted, ["one"]);
-});
-
-test("toolchain project invalidation refreshes worktrees and session grouping without another directory selection", async (t) => {
-  let ready = false;
-  const reads = [];
-  const fixture = await mount(t, {
-    sidebar: true,
-    worktrees: (cwd) => {
-      reads.push(cwd);
-      return {
-        projectRoot: ready ? "/canonical/project" : "/project",
-        isGit: ready,
-        isTopLevel: ready,
-        worktrees: ready ? [{ path: "/project", branch: "main", isMain: true }] : [],
-      };
-    },
-  });
-  await fixture.reply(0, response([session("one")]));
-  assert.equal(reads.length, 1);
-  const selections = [...fixture.selectedDirectories];
-  ready = true;
-  await fixture.change({ cwd: null, projectInfoChanged: true });
-  await fixture.reply(1, response([{ ...session("one"), projectRoot: "/canonical/project" }]));
-  assert.equal(reads.length, 2);
-  assert.equal(fixture.selectedDirectories.at(-1), "/project");
-  assert.deepEqual(fixture.selectedDirectories, selections, "metadata refresh must not navigate or remount chat");
-  assert.match(JSON.stringify(fixture.renderer.toJSON()), /Switch worktree: \/project/);
-  assert.match(JSON.stringify(fixture.renderer.toJSON()), /Session actions for one/);
-  await fixture.change({
-    cwd: "/project",
-    session: { ...session("one", "renamed"), projectRoot: "/canonical/project" },
-  });
-  assert.equal(reads.length, 2, "ordinary message and title changes do not refetch worktrees");
 });

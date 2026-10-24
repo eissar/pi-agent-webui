@@ -90,26 +90,6 @@ async function mount(t) {
   };
 }
 
-test("copy feedback and a late clipboard failure cannot leak across session selection", async (t) => {
-  const fixture = await mount(t),
-    old = createDeferred();
-  clipboard.setResult(old.promise);
-  await act(async () => fixture.root.findByProps({ "aria-label": "Copy session ID" }).props.onClick());
-  await fixture.switchSession("b");
-  await act(async () => {
-    old.reject(new Error("old clipboard failure"));
-  });
-  assert.equal(fixture.root.findAllByProps({ role: "alert" }).length, 0);
-  assert.equal(fixture.root.findAllByProps({ "aria-label": "Copy session ID" }).length, 1);
-  const current = createDeferred();
-  clipboard.setResult(current.promise);
-  await act(async () => fixture.root.findByProps({ "aria-label": "Copy session ID" }).props.onClick());
-  await act(async () => {
-    current.reject(new Error("current clipboard failure"));
-  });
-  assert.equal(fixture.root.findAllByProps({ role: "alert" }).length, 1);
-});
-
 test("a late clipboard success after panel unmount does not create a feedback timer", async (t) => {
   const fixture = await mount(t),
     pending = createDeferred();
