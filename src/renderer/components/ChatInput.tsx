@@ -8,6 +8,7 @@ import { buildAtInsertText, extractAtQuery, type AtQueryMatch, type FileIndexEnt
 import { useFileSuggestions } from "@/hooks/useFileSuggestions";
 import { FolderIcon, getFileIcon } from "./FileIcons";
 import { useIsMobile } from "@/hooks/useIsMobile";
+import { useConnectionStatus } from "@/hooks/useConnectionStatus";
 import { useI18n } from "@/i18n";
 import { localFilePathKey, splitLocalFileReferenceMarkdown } from "@/lib/file-url";
 
@@ -192,6 +193,7 @@ const ChatInputComponent = forwardRef<ChatInputHandle, Props>(function ChatInput
 ) {
   const isMobile = useIsMobile();
   const { t, language } = useI18n();
+  const disconnected = useConnectionStatus().status !== "connected";
   const [slashMenuOpen, setSlashMenuOpen] = useState(false);
   const [slashActiveIndex, setSlashActiveIndex] = useState(0);
   const [atQuery, setAtQuery] = useState<AtQueryMatch | null>(null);
@@ -1341,6 +1343,7 @@ const ChatInputComponent = forwardRef<ChatInputHandle, Props>(function ChatInput
             <textarea
               ref={textareaRef}
               value={value}
+              disabled={disconnected}
               onChange={(e) => {
                 setValue(e.target.value);
                 updateAtQuery(e.target.value, e.target.selectionStart);
@@ -1390,7 +1393,7 @@ const ChatInputComponent = forwardRef<ChatInputHandle, Props>(function ChatInput
                 {onSteer && (
                   <button
                     onClick={() => sendQueued("steer")}
-                    disabled={!canQueueStreamingMessage}
+                    disabled={disconnected || !canQueueStreamingMessage}
                     title={
                       attachedImages.length
                         ? t("imageQueueUnavailable", "Image attachments cannot be queued while the agent is running")
@@ -1431,7 +1434,7 @@ const ChatInputComponent = forwardRef<ChatInputHandle, Props>(function ChatInput
                 {onFollowUp && (
                   <button
                     onClick={() => sendQueued("followup")}
-                    disabled={!canQueueStreamingMessage}
+                    disabled={disconnected || !canQueueStreamingMessage}
                     title={
                       attachedImages.length
                         ? t("imageQueueUnavailable", "Image attachments cannot be queued while the agent is running")
@@ -1474,7 +1477,7 @@ const ChatInputComponent = forwardRef<ChatInputHandle, Props>(function ChatInput
             ) : (
               <button
                 onClick={handleSend}
-                disabled={!value.trim() && !attachedImages.length && !attachedFiles.length}
+                disabled={disconnected || (!value.trim() && !attachedImages.length && !attachedFiles.length)}
                 style={{
                   flexShrink: 0,
                   alignSelf: "flex-end",

@@ -56,8 +56,12 @@ function discoverSessionFiles(root: string): string[] {
     }
     for (const entry of entries) {
       const candidate = path.join(directory, entry.name);
-      if (entry.isDirectory()) directories.push(candidate);
-      else if (entry.isFile() && entry.name.endsWith(".jsonl")) files.push(candidate);
+      // Subagent sessions live under sessions/subagent/<token>/<...>.jsonl;
+      // they are internal child sessions and must not appear in the session list.
+      if (entry.isDirectory()) {
+        if (directory === root && entry.name === "subagent") continue;
+        directories.push(candidate);
+      } else if (entry.isFile() && entry.name.endsWith(".jsonl")) files.push(candidate);
     }
   }
   return files;

@@ -5,10 +5,78 @@
 import { createRpcClient, type PiRpc } from "@contract/rpc";
 import type { ApiMethod, ApiParams, ApiResult, StreamTopic, Streams } from "@contract/api";
 import type { AgentCommand } from "@contract/types";
+import { notify } from "./notifications";
 import { createWebSocketPort, getStoredToken, resolveRpcUrl } from "./ws-transport";
 
 let rpc: PiRpc | null = null;
 let connectPromise: Promise<PiRpc> | null = null;
+
+// ---------------------------------------------------------------------------
+// Connection status (standalone WebSocket mode): the UI stays mounted on drop,
+// disables inputs, and we reconnect + resubscribe in the background.
+// ---------------------------------------------------------------------------
+
+export type ConnectionStatus = "connected" | "reconnecting";
+export interface ConnectionSnapshot {
+  status: ConnectionStatus;
+  attempt: number;
+  /** ms until next retry (0 while an attempt is in flight) */
+  nextRetryMs: number;
+}
+
+let connection: ConnectionSnapshot = { status: "connected", attempt: 0, nextRetryMs: 0 };
+const connectionListeners = new Set<() => void>();
+function setConnection(next: ConnectionSnapshot): void {
+  connection = next;
+  for (const l of [...connectionListeners]) l();
+}
+export function subscribeConnection(listener: () => void): () => void {
+  connectionListeners.add(listener);
+  return () => connectionListeners.delete(listener);
+}
+export function getConnectionSnapshot(): ConnectionSnapshot {
+  return connection;
+}
+
+type LiveSub = { topic: StreamTopic; key: string; on: (ev: never) => void; off: (() => void) | null };
+const liveSubs = new Set<LiveSub>();
+let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+
+function handleSocketClosed(client: PiRpc): void {
+  if (rpc !== client) return; // intentional reset or stale client
+  rpc = null;
+  connectPromise = null;
+  for (const s of liveSubs) s.off = null; // server-side subs died with the socket
+  notify.error("Lost connection to backend", "connection");
+  scheduleReconnect(1);
+}
+
+function scheduleReconnect(attempt: number): void {
+  const delay = Math.min(1000 * 2 ** Math.min(attempt - 1, 4), 15_000);
+  setConnection({ status: "reconnecting", attempt, nextRetryMs: delay });
+  if (reconnectTimer) clearTimeout(reconnectTimer);
+  reconnectTimer = setTimeout(() => attemptReconnect(attempt), delay);
+}
+
+function attemptReconnect(attempt: number): void {
+  if (reconnectTimer) clearTimeout(reconnectTimer);
+  reconnectTimer = null;
+  setConnection({ status: "reconnecting", attempt, nextRetryMs: 0 });
+  ensureRpc().then(
+    (client) => {
+      for (const s of liveSubs) s.off = client.subscribe(s.topic, s.key, s.on as never);
+      setConnection({ status: "connected", attempt: 0, nextRetryMs: 0 });
+      notify.success("Reconnected to backend", "connection");
+    },
+    () => scheduleReconnect(attempt + 1),
+  );
+}
+
+/** Retry immediately (used by the "Retry now" button). */
+export function reconnectNow(): void {
+  if (connection.status !== "reconnecting" || connection.nextRetryMs === 0) return;
+  attemptReconnect(connection.attempt);
+}
 
 /** Drop RPC client so the next ensureRpc() re-connects (Host crash recovery). */
 export function resetRpc(): void {
@@ -50,6 +118,7 @@ async function connectOverWebSocket(): Promise<PiRpc> {
   const client = createRpcClient(port as never);
   await withTimeout(client.call("host.ping"), PING_TIMEOUT_MS, "host.ping failed");
   rpc = client;
+  port.addEventListener("close", () => handleSocketClosed(client));
   return client;
 }
 
@@ -171,7 +240,14 @@ export async function subscribe<T extends StreamTopic>(
   on: (ev: Streams[T]) => void,
 ): Promise<() => void> {
   const client = await ensureRpc();
-  return client.subscribe(topic, key, on);
+  const entry: LiveSub = { topic, key, on: on as (ev: never) => void, off: null };
+  entry.off = client.subscribe(topic, key, on);
+  liveSubs.add(entry);
+  return () => {
+    liveSubs.delete(entry);
+    entry.off?.();
+    entry.off = null;
+  };
 }
 
 // ---------------------------------------------------------------------------

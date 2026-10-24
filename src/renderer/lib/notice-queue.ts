@@ -42,6 +42,17 @@ function fillPendingNotices(visible: NoticeItem[], pending: NoticeItem[], now: n
 export function noticeReducer(state: NoticeState, action: NoticeAction): NoticeState {
   switch (action.type) {
     case "add": {
+      // Same id (e.g. a repeated extension request) replaces instead of duplicating,
+      // so React keys stay unique and "remove" can't drop two bubbles at once.
+      if (state.visible.some((n) => n.id === action.notice.id)) {
+        return {
+          ...state,
+          visible: state.visible.map((n) => (n.id === action.notice.id ? { ...action.notice, exiting: false } : n)),
+        };
+      }
+      if (state.pending.some((n) => n.id === action.notice.id)) {
+        return { ...state, pending: state.pending.map((n) => (n.id === action.notice.id ? action.notice : n)) };
+      }
       if (state.visible.some((notice) => notice.exiting) || state.visible.length >= MAX_VISIBLE_NOTICES) {
         return {
           visible: state.visible.some((notice) => notice.exiting)

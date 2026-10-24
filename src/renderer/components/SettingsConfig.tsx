@@ -15,6 +15,7 @@ import type { DesktopUpdateState } from "../../contract/desktop";
 import type { ManagedProcessCapability } from "../../contract/processes";
 import { APP_AUTHOR, APP_DISPLAY_NAME, APP_GITHUB_URL, APP_VERSION, PI_VERSION } from "@/lib/app-version";
 import appIconUrl from "../../../build/icon.png";
+import { errorMessage, notify } from "../lib/notifications";
 import { isAutoSessionTitleEnabled, setAutoSessionTitleEnabled } from "../lib/auto-session-title";
 import { getCacheWarmingStatus, setCacheWarmingMode } from "../lib/api-client";
 import { HerdrSettings } from "./herdr/HerdrSettings";
@@ -1044,9 +1045,10 @@ function GeneralSettings({
     setBackgroundModeError(null);
     try {
       await window.piBridge.setUiState({ backgroundMode: next });
-    } catch {
+    } catch (error) {
       setBackgroundMode(previous);
       setBackgroundModeError("save");
+      notify.error(`Couldn't save setting: ${errorMessage(error)}`, "settings-save");
     } finally {
       setBackgroundModeSaving(false);
     }
@@ -1058,9 +1060,10 @@ function GeneralSettings({
     setManagedProcessesError(null);
     try {
       await window.piBridge.setUiState({ managedProcessesEnabled: next });
-    } catch {
+    } catch (error) {
       setManagedProcessesEnabled(previous);
       setManagedProcessesError("save");
+      notify.error(`Couldn't save setting: ${errorMessage(error)}`, "settings-save");
     } finally {
       setManagedProcessesSaving(false);
     }
@@ -1069,8 +1072,9 @@ function GeneralSettings({
     setChatAppearanceError(false);
     try {
       await onChatAppearanceChange(next);
-    } catch {
+    } catch (error) {
       setChatAppearanceError(true);
+      notify.error(`Couldn't save appearance: ${errorMessage(error)}`, "settings-save");
     }
   };
   const saveCacheWarming = async (next: "off" | "streaming" | "idle"): Promise<void> => {
@@ -1089,6 +1093,7 @@ function GeneralSettings({
       } catch {
         setCacheWarmingModeState(previous);
         setCacheWarmingError("save");
+        notify.error("Couldn't save cache warming setting", "settings-save");
       }
     } finally {
       setCacheWarmingSaving(false);

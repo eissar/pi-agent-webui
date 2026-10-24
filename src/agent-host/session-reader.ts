@@ -4,6 +4,7 @@ import {
   getAgentDir,
 } from "@earendil-works/pi-coding-agent";
 import { existsSync } from "node:fs";
+import path from "node:path";
 import type {
   AgentMessage,
   ChannelMessageAttachment,
@@ -32,7 +33,13 @@ export async function listAllSessions(): Promise<SessionInfo[]> {
 }
 
 async function listAllSessionsFallback(): Promise<SessionInfo[]> {
-  const piSessions: PiSessionInfo[] = await SessionManager.listAll();
+  const sessionsRoot = path.resolve(
+    process.env.PI_CODING_AGENT_SESSION_DIR || path.join(getAgentDir(), "sessions"),
+  );
+  const subagentRoot = path.join(sessionsRoot, "subagent");
+  const piSessions: PiSessionInfo[] = (await SessionManager.listAll()).filter(
+    (s) => !s.path.startsWith(`${subagentRoot}${path.sep}`),
+  );
   const pathToId = new Map<string, string>();
   for (const s of piSessions) pathToId.set(s.path, s.id);
 

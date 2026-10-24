@@ -1,6 +1,8 @@
 import { Component, type CSSProperties, type ErrorInfo, type ReactNode, useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { ensureRpc, resetRpc } from "@/lib/api-client";
+import { NotificationHost } from "@/components/NotificationHost";
+import { ConnectionStatusDialog } from "@/components/ConnectionStatusDialog";
 import { useChatAppearance } from "@/hooks/useChatAppearance";
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
@@ -116,6 +118,8 @@ export function App() {
         chatAppearanceSaving={chatAppearance.saving}
         onChatAppearanceChange={chatAppearance.update}
       />
+      <ConnectionStatusDialog />
+      <NotificationHost />
     </ErrorBoundary>
   );
 }
