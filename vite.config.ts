@@ -30,7 +30,26 @@ const piVersion = readPiVersion();
 
 export default defineConfig({
   root: path.resolve(__dirname, "src/renderer"),
-  plugins: [preact()],
+  plugins: [
+    preact(),
+    {
+      // server.hmr:false doesn't stop the Vite client from opening its vite-hmr
+      // socket; when that socket drops and the tab becomes visible again the
+      // client pings the server and calls location.reload(). We don't use HMR,
+      // so replace the client module with an inert stub (CSS still applied).
+      name: "stub-vite-client",
+      enforce: "pre",
+      load(id: string) {
+        if (!id.replace(/\\/g, "/").endsWith("/vite/dist/client/client.mjs")) return;
+        return [
+          "export const createHotContext=()=>({accept(){},dispose(){},prune(){},invalidate(){},on(){},off(){},send(){},data:{}});",
+          "export const injectQuery=(u)=>u;",
+          "export const updateStyle=(id,css)=>{let s=document.querySelector(`style[data-vite-dev-id='${id}']`);if(!s){s=document.createElement('style');s.setAttribute('data-vite-dev-id',id);document.head.appendChild(s)}s.textContent=css};",
+          "export const removeStyle=(id)=>{document.querySelector(`style[data-vite-dev-id='${id}']`)?.remove()};",
+        ].join("");
+      },
+    },
+  ],
   base: "./",
   envPrefix: ["VITE_"],
   define: {
