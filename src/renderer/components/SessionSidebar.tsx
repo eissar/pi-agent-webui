@@ -18,7 +18,6 @@ import { worktreePathsEqual } from "@shared/worktree-path";
 import { buildSessionTree, SessionTreeItem, type SessionTreeNode } from "./sidebar/SessionTree";
 import { PiAgentTitle } from "./sidebar/PiAgentTitle";
 import { ProjectPicker } from "./sidebar/ProjectPicker";
-import { WorktreePicker } from "./sidebar/WorktreePicker";
 import { useSidebarWorkspace, getRecentProjects } from "@/hooks/useSidebarWorkspace";
 
 interface Props {
@@ -404,16 +403,6 @@ export function SessionSidebar({
           allSessions={allSessions}
           restoringInitialSession={Boolean(initialSessionId && !restoredRef.current)}
           setSelectedCwd={setSelectedCwd}
-        />
-        <WorktreePicker
-          selectedCwd={selectedCwd}
-          selectedProject={selectedProject}
-          homeDir={homeDir}
-          worktreeState={worktreeState}
-          worktreeLoadingCwd={worktreeLoadingCwd}
-          setSelectedCwd={setSelectedCwd}
-          onCreated={registerCreatedWorktree}
-          onRefresh={refreshWorktrees}
         />
       </div>
 

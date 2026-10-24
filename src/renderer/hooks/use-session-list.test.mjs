@@ -394,46 +394,6 @@ test("delete retains running guards and backend conflicts without issuing an imp
   assert.deepEqual(fixture.deleted, ["one"]);
 });
 
-test("worktree creation keeps project identity and dirty removal requires the explicit force action", async (t) => {
-  let entries = [{ path: "/project", branch: "main", isMain: true }];
-  const fixture = await mount(t, {
-    sidebar: true,
-    worktrees: () => ({ projectRoot: "/project", isGit: true, isTopLevel: true, worktrees: entries }),
-  });
-  await fixture.reply(0, response([session("one")]));
-  await fixture.click("Switch worktree: /project");
-  await fixture.click("New worktree…");
-  const input = fixture.renderer.root.find((node) => node.type === "input" && node.props.placeholder === "branch name");
-  await act(async () => input.props.onChange({ target: { value: "feature" } }));
-  await fixture.click("Create");
-  assert.deepEqual(fixture.next("worktrees.create").params, {
-    projectRoot: "/project",
-    cwd: "/project",
-    branch: "feature",
-  });
-  entries = [...entries, { path: "/project-feature", branch: "feature", isMain: false }];
-  await fixture.replyRpc("worktrees.create", { worktree: entries[1] });
-  assert.equal(fixture.selectedDirectories.at(-1), "/project-feature");
-  assert.equal(fixture.selectedProjects.at(-1), "/project");
-  assert.match(JSON.stringify(fixture.renderer.toJSON()), /Session actions for one/);
-  await fixture.click("Switch worktree: /project-feature");
-  await fixture.click("Remove worktree checkout /project-feature; the branch is kept");
-  assert.deepEqual(fixture.next("worktrees.remove").params, {
-    cwd: "/project",
-    path: "/project-feature",
-    force: false,
-  });
-  await fixture.failRpc("worktrees.remove", "CONFLICT", "Dirty checkout", { dirty: true });
-  assert.match(JSON.stringify(fixture.renderer.toJSON()), /Uncommitted changes. Force remove checkout/);
-  assert.equal(fixture.mutations.filter((request) => request.method === "worktrees.remove").length, 1);
-  await fixture.click("Force");
-  assert.equal(fixture.next("worktrees.remove").params.force, true);
-  entries = entries.slice(0, 1);
-  await fixture.replyRpc("worktrees.remove", { ok: true });
-  assert.equal(fixture.selectedDirectories.at(-1), "/project");
-  assert.equal(fixture.selectedProjects.at(-1), "/project");
-});
-
 test("toolchain project invalidation refreshes worktrees and session grouping without another directory selection", async (t) => {
   let ready = false;
   const reads = [];

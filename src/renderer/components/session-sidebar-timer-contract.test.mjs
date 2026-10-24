@@ -7,7 +7,7 @@ const title = readFileSync(new URL("./sidebar/PiAgentTitle.tsx", import.meta.url
 const tree = readFileSync(new URL("./sidebar/SessionTree.tsx", import.meta.url), "utf8");
 
 const workspace = readFileSync(new URL("./sidebar/WorkspaceDropdown.tsx", import.meta.url), "utf8");
-const pickers = ["ProjectPicker", "WorktreePicker"].map((name) =>
+const pickers = ["ProjectPicker"].map((name) =>
   readFileSync(new URL(`./sidebar/${name}.tsx`, import.meta.url), "utf8"),
 );
 
