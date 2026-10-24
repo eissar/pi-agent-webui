@@ -1,4 +1,6 @@
-export function t(key: string, _params?: Record<string, string | number>): string {
+/** Translate `key`, falling back to the English `fallback` text (no dictionaries are shipped). */
+export function t(key: string, fallback?: string): string {
+  if (fallback !== undefined) return fallback;
   const parts = key.split(".");
   return parts[parts.length - 1] || key;
 }
