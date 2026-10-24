@@ -9,8 +9,6 @@ const stubs = {
     "export const createFileWatchService = () => {init('files'); return {};}; export const stopAllFileWatches = () => step('files-stop');",
   "auth-login":
     "export const createAuthLoginService = () => {init('auth'); return {start: unexpected, cancel() {}, dispose() {step('auth-stop');}};}; export const resolveLoginCode = () => false;",
-  "managed-process/runtime":
-    "export const initializeManagedProcessService = () => {init('processes'); return {stopAll: () => step('processes-stop')};};",
   "rpc-manager":
     "export const subscribeRunningSessions = listener => {state.running.add(listener); return () => {state.running.delete(listener); step('running-off');};}; export const disposeAllRpcSessions = () => step('sessions-stop'); export const syncDesktopToolsForAllSessions = () => {}; export const syncCacheWarmingForAllSessions = async () => 0; export const getRunningRpcSessionIds = () => []; export const getRpcSession = () => state.agent; export const startRpcSession = unexpected;",
   "model-runtime":
@@ -73,8 +71,8 @@ test("the actual registrar owns one service set and releases subscriptions and s
     handle: (next) => Object.assign(methods, next),
     emit: (...args) => events.push(args),
   });
-  assert.deepEqual(control.state.created, ["files", "auth", "processes"]);
-  assert.equal(Object.keys(methods).length, 56);
+  assert.deepEqual(control.state.created, ["files", "auth"]);
+  assert.equal(Object.keys(methods).length, 46);
   assert.equal(control.state.running.size, 1);
   await methods["agent.command"]({ sessionId: "fixture", command: { type: "get_state" } });
   const running = [...control.state.running][0];
@@ -103,7 +101,6 @@ test("the actual registrar owns one service set and releases subscriptions and s
     "destroy-off",
     "auth-stop",
     "models-stop",
-    "processes-stop",
     "files-stop",
     "sessions-stop",
   ]);
@@ -114,7 +111,6 @@ test("the actual registrar continues cleanup after a service failure and reports
   control.state.fail.add("models-stop");
   const stop = registerHandlers({ handle() {}, emit() {} });
   await assert.rejects(stop(), (error) => error instanceof AggregateError && error.message.includes("model refreshes"));
-  assert.ok(control.state.steps.includes("processes-stop"));
   assert.ok(control.state.steps.includes("files-stop"));
   assert.ok(control.state.steps.includes("sessions-stop"));
   assert.equal(control.state.running.size, 0);

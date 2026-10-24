@@ -3,10 +3,8 @@ import type {
   AgentEvent,
   ApiKeyProviderStatus,
   CredentialMutationResult,
-  DirEntry,
   EntryContentResult,
   FileContent,
-  FileMeta,
   HistoryWindow,
   LoginProgressEvent,
   ModelPreferencesResult,
@@ -22,70 +20,16 @@ import type {
   WorktreeInfo,
 } from "./types";
 import type {
-  GitStatusResult,
   PluginActionParams,
   PluginsResponse,
   SkillRecord,
   SkillSearchResult,
   SkillUpdateParams,
 } from "../shared/api-types";
-import type { ToolCapabilityId, ToolProvider } from "../shared/toolchains/types";
-import type {
-  ManagedProcessChangedEvent,
-  ManagedProcessLogStream,
-  ManagedProcessLogWindow,
-  ManagedProcessOutputEvent,
-  ManagedProcessPublicInfo,
-  ManagedProcessReadParams,
-  ManagedProcessWaitParams,
-  ManagedProcessWriteParams,
-} from "./processes";
 
 /** Request/response API surface (replaces HTTP routes). */
 export interface Api {
   "host.ping": { params: void; result: { ok: true; ts: number } };
-
-  // Managed background processes (trusted Renderer control surface)
-  "processes.list": {
-    params: { includeExited?: boolean } | void;
-    result: { revision: number; processes: ManagedProcessPublicInfo[] };
-  };
-  "processes.get": {
-    params: { processId: string };
-    result: ManagedProcessPublicInfo;
-  };
-  "processes.read": {
-    params: ManagedProcessReadParams;
-    result: ManagedProcessLogWindow;
-  };
-  "processes.wait": {
-    params: ManagedProcessWaitParams;
-    result: ManagedProcessLogWindow;
-  };
-  "processes.write": {
-    params: ManagedProcessWriteParams;
-    result: { ok: true; runId: string };
-  };
-  "processes.stop": {
-    params: { processId: string; runId: string; mode?: "graceful" | "force" };
-    result: ManagedProcessPublicInfo;
-  };
-  "processes.stopAll": {
-    params: { mode?: "graceful" | "force" } | void;
-    result: { ok: true; stopped: number };
-  };
-  "processes.restart": {
-    params: { processId: string; runId: string };
-    result: ManagedProcessPublicInfo;
-  };
-  "processes.dismiss": {
-    params: { processId: string };
-    result: { ok: true };
-  };
-  "processes.export": {
-    params: { processId: string; runId: string; streams?: ManagedProcessLogStream[] };
-    result: { saved: boolean; fileName?: string };
-  };
 
   // Sessions & projects
   "sessions.list": {
@@ -327,8 +271,6 @@ export interface Streams {
     size?: number;
     message?: string;
   };
-  "processes.changed": ManagedProcessChangedEvent;
-  "processes.output": ManagedProcessOutputEvent;
 }
 
 export type ApiMethod = keyof Api;

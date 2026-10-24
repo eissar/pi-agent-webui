@@ -56,10 +56,6 @@ export const architecturePolicy = {
       maxLines: 1347,
       reason: "Existing constrained toolchain action UI; changes retain the action contract checks.",
     },
-    "src/agent-host/managed-process/service.ts": {
-      maxLines: 1324,
-      reason: "Existing process lifetime owner; moving shared helpers must not duplicate service instances.",
-    },
     "src/main/toolchains/manager.ts": {
       maxLines: 1219,
       reason: "Existing toolchain installation/validation owner; keep its bounded-operation behavior.",

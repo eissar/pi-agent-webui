@@ -42,7 +42,7 @@ const fixtureModule = await importTestBundle("session-handler-order", {
   ],
 });
 
-function createFixture(t, active = true) {
+function createFixture(t) {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "pi-session-delete-"));
   const file = path.join(directory, "session.jsonl");
   fs.writeFileSync(file, "owned fixture");
@@ -50,8 +50,6 @@ function createFixture(t, active = true) {
   const { runtime, reader, index, main, createSessionHandlers } = fixtureModule;
   reader.setFile(file);
   index.removed.length = main.calls.length = 0;
-  const stopped = createDeferred(),
-    finishStop = createDeferred();
   const disposing = createDeferred(),
     finishDispose = createDeferred();
   const order = [],
@@ -69,39 +67,25 @@ function createFixture(t, active = true) {
   });
   const handlers = createSessionHandlers({
     server: { emit: (...event) => events.push(event) },
-    managedProcesses: {
-      activeForSession: () => (active ? [{ processId: "process", runId: "run" }] : []),
-      async stop(...args) {
-        assert.deepEqual(args, ["process", "run", "graceful", "user"]);
-        order.push("stop");
-        stopped.resolve();
-        await finishStop.promise;
-        order.push("stopped");
-      },
-    },
     clearSessionEventBinding: (id) => {
       assert.equal(id, "session");
       assert.equal(fs.existsSync(file), true);
       order.push("unbind");
     },
   });
-  return { file, handlers, stopped, finishStop, disposing, finishDispose, order, events, index, reader, main };
+  return { file, handlers, disposing, finishDispose, order, events, index, reader, main };
 }
 
-test("forced deletion waits for process and Agent shutdown before unlinking and publishing", async (t) => {
+test("forced deletion waits for Agent shutdown before unlinking and publishing", async (t) => {
   const fixture = createFixture(t);
   const deletion = fixture.handlers.delete({ id: "session", force: true });
-  await fixture.stopped.promise;
-  assert.equal(fs.existsSync(fixture.file), true);
-  assert.deepEqual(fixture.order, ["stop"]);
-  fixture.finishStop.resolve();
   await fixture.disposing.promise;
   assert.equal(fs.existsSync(fixture.file), true);
-  assert.deepEqual(fixture.order, ["stop", "stopped", "dispose"]);
+  assert.deepEqual(fixture.order, ["dispose"]);
   fixture.finishDispose.resolve();
   assert.deepEqual(await deletion, { ok: true });
   assert.equal(fs.existsSync(fixture.file), false);
-  assert.deepEqual(fixture.order, ["stop", "stopped", "dispose", "disposed", "unbind"]);
+  assert.deepEqual(fixture.order, ["dispose", "disposed", "unbind"]);
   assert.deepEqual(fixture.index.removed, [fixture.file]);
   assert.deepEqual(fixture.reader.invalidated, ["session"]);
   assert.deepEqual(fixture.main.calls, [["browser.sessionEnded", { sessionId: "session" }]]);
@@ -110,21 +94,8 @@ test("forced deletion waits for process and Agent shutdown before unlinking and 
   ]);
 });
 
-test("stop failure keeps the file, event binding and notifications intact", async (t) => {
-  const fixture = createFixture(t);
-  const deletion = fixture.handlers.delete({ id: "session", force: true });
-  const rejected = assert.rejects(deletion, /stop failed/);
-  await fixture.stopped.promise;
-  fixture.finishStop.reject(new Error("stop failed"));
-  await rejected;
-  assert.equal(fs.existsSync(fixture.file), true);
-  assert.deepEqual(fixture.order, ["stop"]);
-  assert.deepEqual(fixture.events, []);
-  assert.deepEqual(fixture.index.removed, []);
-});
-
 test("Agent disposal failure also leaves the session file and binding in place", async (t) => {
-  const fixture = createFixture(t, false);
+  const fixture = createFixture(t);
   const deletion = fixture.handlers.delete({ id: "session", force: true });
   const rejected = assert.rejects(deletion, /dispose failed/);
   await fixture.disposing.promise;
@@ -136,12 +107,10 @@ test("Agent disposal failure also leaves the session file and binding in place",
   assert.deepEqual(fixture.index.removed, []);
 });
 
-test("an active process or Agent blocks unforced deletion without side effects", async (t) => {
-  for (const active of [true, false]) {
-    const fixture = createFixture(t, active);
-    await assert.rejects(fixture.handlers.delete({ id: "session" }), (error) => error.code === "CONFLICT");
-    assert.equal(fs.existsSync(fixture.file), true);
-    assert.deepEqual(fixture.order, []);
-    assert.deepEqual(fixture.events, []);
-  }
+test("an active Agent blocks unforced deletion without side effects", async (t) => {
+  const fixture = createFixture(t);
+  await assert.rejects(fixture.handlers.delete({ id: "session" }), (error) => error.code === "CONFLICT");
+  assert.equal(fs.existsSync(fixture.file), true);
+  assert.deepEqual(fixture.order, []);
+  assert.deepEqual(fixture.events, []);
 });

@@ -86,16 +86,6 @@ Object.assign(shim, {
   performToolchainAction: () => UNSUPPORTED("Toolchain management"),
   onToolchainState: () => noopUnsubscribe,
 
-  getManagedProcessCapability: () =>
-    Promise.resolve({
-      platform: detectPlatform(),
-      arch: "unknown" as never,
-      supported: false,
-      ready: false,
-      backend: "none",
-      errorCode: "UNSUPPORTED_PLATFORM",
-    }),
-
   getUiState: () => Promise.resolve(readStoredUiState()),
   setUiState: (patch: Record<string, unknown>) => {
     writeStoredUiState(patch as Record<string, unknown>);

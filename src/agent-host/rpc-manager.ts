@@ -27,11 +27,7 @@ import { browserCapabilityRuntime } from "./browser-capability-runtime";
 import { browserAgentRuntime } from "./browser-agent-runtime";
 import { projectExtensionDiagnostics } from "./extension-diagnostics";
 import { getDesktopSessionToolNames, setDesktopSessionToolNames } from "./session-tool-store";
-import { peekManagedProcessService } from "./managed-process/runtime";
-import { createManagedProcessToolDefinitions } from "./managed-process/tools";
-import { installManagedProcessSessionRedaction } from "./managed-process/session-redaction";
 import { createDesktopPromptExtension, SessionPromptPolicy } from "./session-prompt-policy";
-import { createEphemeralContextExtension, SessionEphemeralContext } from "./session-ephemeral-context";
 
 // ============================================================================
 // Types
@@ -169,7 +165,6 @@ export class AgentSessionWrapper {
     requestedToolNames?: string[],
     persistToolNames: (sessionId: string, toolNames: string[]) => void = setDesktopSessionToolNames,
     promptPolicy?: SessionPromptPolicy,
-    private readonly ephemeralContext?: SessionEphemeralContext,
   ) {
     this.inner = inner;
     this.persistToolNames = persistToolNames;
@@ -389,7 +384,6 @@ export class AgentSessionWrapper {
     this.extensionBindingError = null;
     this.extensionStatuses.clear();
     this.extensionWidgets.clear();
-    this.ephemeralContext?.clear();
     await this.inner.reload();
     await this.ensureExtensionsBound();
     if (this.requestedToolNames !== undefined) this.applyRequestedTools(this.requestedToolNames);
@@ -455,7 +449,6 @@ export class AgentSessionWrapper {
         const streamingBehavior = command.streamingBehavior as "steer" | "followUp" | undefined;
         if (!streamingBehavior) browserAgentRuntime.beginTurn(this.sessionId, "local");
         const invokePrompt = () => {
-          if (!streamingBehavior) this.ephemeralContext?.beginLocalTurn();
           return this.inner.prompt(command.message as string, {
             ...(promptImages?.length ? { images: promptImages } : {}),
             ...(streamingBehavior ? { streamingBehavior } : {}),
@@ -479,7 +472,6 @@ export class AgentSessionWrapper {
       }
 
       case "abort":
-        this.ephemeralContext?.suspendAfterAbort();
         await this.withFinalRunningNotification(() => this.inner.abort());
         return null;
 
@@ -560,7 +552,6 @@ export class AgentSessionWrapper {
 
       case "navigate_tree": {
         const result = await this.inner.navigateTree(command.targetId as string, {});
-        if (!result.cancelled) this.ephemeralContext?.clear();
         return { cancelled: result.cancelled };
       }
 
@@ -773,7 +764,6 @@ export class AgentSessionWrapper {
   destroy(): void {
     if (!this._alive) return;
     this._alive = false;
-    this.ephemeralContext?.dispose();
     browserAgentRuntime.clearSession(this.sessionId);
     if (this.idleTimer) clearTimeout(this.idleTimer);
     this.unsubscribe?.();
@@ -1162,7 +1152,6 @@ export class AgentSessionWrapper {
       },
       navigateTree: async (targetId, options) => {
         const result = await this.inner.navigateTree(targetId, { summarize: options?.summarize });
-        if (!result.cancelled) this.ephemeralContext?.clear();
         return { cancelled: result.cancelled };
       },
       switchSession: async () => {
@@ -1172,7 +1161,6 @@ export class AgentSessionWrapper {
       reload: async () => {
         this.extensionStatuses.clear();
         this.extensionWidgets.clear();
-        this.ephemeralContext?.clear();
         await this.inner.reload({
           beforeSessionStart: () => {
             this.inner.extensionRunner.setUIContext?.(this.createExtensionUiContext(), "rpc");
@@ -1322,9 +1310,6 @@ export async function startRpcSession(
     // Unknown provenance is fail-closed for desktop tools. A session becomes
     // local only at this explicit desktop-owned construction boundary.
     setBrowserSessionSource(sessionManager, "local");
-    installManagedProcessSessionRedaction(sessionManager);
-    const ephemeralContext = new SessionEphemeralContext(sessionManager);
-    ephemeralContext.install();
 
     // Desktop-owned session choices live outside Pi's shared JSONL so the CLI
     // remains unaffected. Read the old custom entry only for one-way migration.
@@ -1341,10 +1326,7 @@ export async function startRpcSession(
       cwd,
       agentDir,
       resourceLoaderOptions: {
-        extensionFactories: [
-          createEphemeralContextExtension(ephemeralContext),
-          createDesktopPromptExtension(promptPolicy),
-        ],
+        extensionFactories: [createDesktopPromptExtension(promptPolicy)],
       },
     });
     const executionContext = await toolchainRuntime.createExecutionContext({
@@ -1362,13 +1344,6 @@ export async function startRpcSession(
       createBashToolDefinition(cwd, bashOptions),
       ...createDesktopSearchToolDefinitions(cwd, executionContext, toolchainRuntime),
       ...createBrowserToolDefinitions(),
-      ...(peekManagedProcessService()
-        ? createManagedProcessToolDefinitions(
-            cwd,
-            services.settingsManager.isProjectTrusted(),
-            peekManagedProcessService()!,
-          )
-        : []),
     ] as unknown as NonNullable<CreateAgentSessionFromServicesOptions["customTools"]>;
     const { session: inner } = await createAgentSessionFromServices({
       services,
@@ -1385,7 +1360,7 @@ export async function startRpcSession(
       if (desktopToolNames === undefined) setDesktopSessionToolNames(realSessionId, sessionToolNames);
     }
 
-    const wrapper = new AgentSessionWrapper(inner, sessionToolNames, undefined, promptPolicy, ephemeralContext);
+    const wrapper = new AgentSessionWrapper(inner, sessionToolNames, undefined, promptPolicy);
     wrapper.setRuntimeDiagnostics(services.diagnostics);
     wrapper.setToolchainSummary(executionContext.inventoryRevision, executionContext.summary);
     wrapper.start();

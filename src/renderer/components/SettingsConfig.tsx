@@ -9,7 +9,6 @@ import { BrowserSettings } from "./browser/BrowserSettings";
 import type { ChatAppearancePreferences, ChatAssistantWidth, ChatFontSize, ChatLayout } from "@shared/chat-appearance";
 import { APP_WEBSITE_URL } from "@shared/app-links";
 import type { DesktopUpdateState } from "../../contract/desktop";
-import type { ManagedProcessCapability } from "../../contract/processes";
 import { APP_AUTHOR, APP_DISPLAY_NAME, APP_GITHUB_URL, APP_VERSION, PI_VERSION } from "@/lib/app-version";
 import appIconUrl from "../../../build/icon.png";
 import { isAutoSessionTitleEnabled, setAutoSessionTitleEnabled } from "../lib/auto-session-title";
@@ -919,18 +918,12 @@ function GeneralSettings({
   chatAppearanceSaving: boolean;
   onChatAppearanceChange: (preferences: ChatAppearancePreferences) => Promise<void>;
 }) {
-  const [managedProcessesEnabled, setManagedProcessesEnabled] = useState(false);
-  const [managedProcessesLoading, setManagedProcessesLoading] = useState(true);
-  const [managedProcessesSaving, setManagedProcessesSaving] = useState(false);
-  const [managedProcessesError, setManagedProcessesError] = useState<"load" | "save" | null>(null);
-  const [managedProcessCapability, setManagedProcessCapability] = useState<ManagedProcessCapability | null>(null);
   const [autoSessionTitle, setAutoSessionTitle] = useState(() => isAutoSessionTitleEnabled());
   const [cacheWarmingMode, setCacheWarmingModeState] = useState<"off" | "streaming" | "idle">("streaming");
   const [cacheWarmingLoading, setCacheWarmingLoading] = useState(true);
   const [cacheWarmingSaving, setCacheWarmingSaving] = useState(false);
   const [cacheWarmingError, setCacheWarmingError] = useState<"load" | "save" | "partial" | null>(null);
   const [chatAppearanceError, setChatAppearanceError] = useState(false);
-  const managedProcessesControlId = useId();
   const autoSessionTitleControlId = useId();
   const cacheWarmingControlId = useId();
   const chatFontSizeControlId = useId();
@@ -955,44 +948,7 @@ function GeneralSettings({
       disposed = true;
     };
   }, []);
-  useEffect(() => {
-    let disposed = false;
-    void Promise.all([window.piBridge.getUiState(), window.piBridge.getManagedProcessCapability()])
-      .then(([state, capability]) => {
-        if (!disposed) {
-          setManagedProcessesEnabled(state.managedProcessesEnabled === true);
-          setManagedProcessCapability(capability);
-        }
-      })
-      .catch(() => {
-        if (!disposed) {
-          setManagedProcessesError("load");
-        }
-      })
-      .finally(() => {
-        if (!disposed) {
-          setManagedProcessesLoading(false);
-        }
-      });
-    return () => {
-      disposed = true;
-    };
-  }, []);
 
-  const saveManagedProcesses = async (next: boolean): Promise<void> => {
-    const previous = managedProcessesEnabled;
-    setManagedProcessesEnabled(next);
-    setManagedProcessesSaving(true);
-    setManagedProcessesError(null);
-    try {
-      await window.piBridge.setUiState({ managedProcessesEnabled: next });
-    } catch {
-      setManagedProcessesEnabled(previous);
-      setManagedProcessesError("save");
-    } finally {
-      setManagedProcessesSaving(false);
-    }
-  };
   const saveChatAppearance = async (next: ChatAppearancePreferences): Promise<void> => {
     setChatAppearanceError(false);
     try {
@@ -1022,83 +978,8 @@ function GeneralSettings({
       setCacheWarmingSaving(false);
     }
   };
-  const managedProcessCapabilityMessage = (() => {
-    if (!managedProcessCapability || managedProcessCapability.ready) return null;
-    switch (managedProcessCapability.errorCode) {
-      case "ARCH_UNSUPPORTED":
-        return "Managed processes require Windows x64 on this platform.";
-      case "HELPER_MISSING":
-        return "The Windows process helper is missing. Reinstall the app, then restart it.";
-      case "HELPER_INTEGRITY":
-        return "The Windows process helper failed its integrity check. Reinstall the app, then restart it.";
-      case "OWNER_IDENTITY_UNAVAILABLE":
-        return "Windows process ownership could not be verified. Restart the app before enabling this feature.";
-      case "REAPER_UNHEALTHY":
-        return "A previous process tree could not be safely verified as stopped. Restart the app or export diagnostics.";
-      default:
-        return "Managed processes are not available on this platform.";
-    }
-  })();
-  const managedProcessesUnavailable = !managedProcessCapability?.ready;
   return (
     <div style={{ width: "100%", overflowY: "auto", padding: "28px clamp(18px, 5vw, 52px)" }}>
-      <section style={{ maxWidth: 620 }}>
-        <h2 style={{ margin: 0, fontSize: 14, color: "var(--text)" }}>{"Managed processes"}</h2>
-        <p style={{ margin: "6px 0 16px", fontSize: 12, lineHeight: 1.6, color: "var(--text-dim)" }}>
-          {
-            "Let Agents run development servers and watchers under app-owned lifecycle control. Processes have the same local access as Bash and are not a sandbox."
-          }
-        </p>
-        <SettingRow label={"Enable managed background processes"} controlId={managedProcessesControlId}>
-          <label
-            htmlFor={managedProcessesControlId}
-            style={{
-              width: 36,
-              height: 36,
-              display: "grid",
-              placeItems: "center",
-              flexShrink: 0,
-              cursor: managedProcessesUnavailable ? "not-allowed" : "pointer",
-            }}
-          >
-            <input
-              id={managedProcessesControlId}
-              type="checkbox"
-              checked={managedProcessesEnabled}
-              disabled={managedProcessesUnavailable || managedProcessesLoading || managedProcessesSaving}
-              onChange={(event) => void saveManagedProcesses(event.target.checked)}
-              style={{
-                width: 18,
-                height: 18,
-                margin: 0,
-                accentColor: "var(--accent)",
-              }}
-            />
-          </label>
-        </SettingRow>
-        {managedProcessCapabilityMessage && (
-          <p style={{ margin: "8px 0 0", fontSize: 12, lineHeight: 1.55, color: "var(--text-dim)" }}>
-            {managedProcessCapabilityMessage}
-          </p>
-        )}
-        {managedProcessCapability?.ready &&
-          managedProcessCapability.backend === "windows-job" &&
-          managedProcessCapability.helperProvenance === "windows-native-dev" && (
-            <p style={{ margin: "8px 0 0", fontSize: 12, lineHeight: 1.55, color: "var(--text-dim)" }}>
-              {"Developer build — not a release-validated Windows helper."}
-            </p>
-          )}
-        {managedProcessesError && (
-          <p role="alert" style={{ margin: "8px 0 0", fontSize: 12, lineHeight: 1.55, color: "#f87171" }}>
-            {managedProcessesError === "save"
-              ? "Managed process settings could not be saved. The previous setting was restored."
-              : "Managed process settings could not be loaded. The feature remains disabled."}
-          </p>
-        )}
-      </section>
-
-      <div style={{ height: 1, background: "var(--border)", maxWidth: 620, margin: "28px 0" }} />
-
       <section style={{ maxWidth: 620 }}>
         <h2 style={{ margin: 0, fontSize: 14, color: "var(--text)" }}>{"Conversation"}</h2>
         <p style={{ margin: "6px 0 16px", fontSize: 12, lineHeight: 1.6, color: "var(--text-dim)" }}>

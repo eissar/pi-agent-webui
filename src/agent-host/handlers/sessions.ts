@@ -34,7 +34,6 @@ import { buildSessionStats } from "../session-stats";
 import { sessionIndex } from "../session-index";
 import { emitIndexedSessionChange } from "../session-change";
 import { callMain } from "../parent-rpc";
-import type { ManagedProcessService } from "../managed-process/service";
 
 type SessionHandlers = {
   list: NonNullable<ApiHandler["sessions.list"]>;
@@ -48,11 +47,9 @@ type SessionHandlers = {
 
 export function createSessionHandlers({
   server,
-  managedProcesses,
   clearSessionEventBinding,
 }: {
   server: Pick<RpcServer, "emit">;
-  managedProcesses: Pick<ManagedProcessService, "activeForSession" | "stop">;
   clearSessionEventBinding: (sessionId: string) => void;
 }) {
   return {
@@ -256,19 +253,6 @@ export function createSessionHandlers({
       const filePath = await resolveSessionPath(id);
       if (!filePath) throw new RpcError({ code: "NOT_FOUND", message: "Session not found" });
       const existing = getRpcSession(id);
-      const activeProcesses = managedProcesses.activeForSession(id);
-      if (activeProcesses.length > 0 && !force) {
-        throw new RpcError({
-          code: "CONFLICT",
-          message: "Session still owns managed processes. Stop them before deleting.",
-          detail: { managedProcessCount: activeProcesses.length },
-        });
-      }
-      if (activeProcesses.length > 0) {
-        await Promise.all(
-          activeProcesses.map((process) => managedProcesses.stop(process.processId, process.runId, "graceful", "user")),
-        );
-      }
       if (existing?.isAlive()) {
         if (existing.isRunning() && !force) {
           throw new RpcError({

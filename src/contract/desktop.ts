@@ -1,4 +1,3 @@
-import type { ManagedProcessCapability } from "./processes";
 import type { ChatAppearancePreferences } from "../shared/chat-appearance";
 import type { PublicToolchainState, ToolchainActionRequest } from "../shared/toolchains/types";
 import type {
@@ -107,7 +106,6 @@ export interface LocalFileInspection {
 }
 
 export interface DesktopUiState {
-  managedProcessesEnabled?: boolean;
   chatAppearance?: ChatAppearancePreferences;
 }
 
@@ -143,7 +141,6 @@ export interface PiBridge {
   notifyAgentEnd: (payload: { sessionId: string; title?: string }) => void;
   setBadgeCount: (n: number) => void;
   getUiState: () => Promise<DesktopUiState>;
-  getManagedProcessCapability: () => Promise<ManagedProcessCapability>;
   setUiState: (patch: DesktopUiStatePatch) => Promise<void>;
   getThemeSource: () => Promise<"system" | "light" | "dark">;
   setThemeSource: (source: "system" | "light" | "dark") => Promise<void>;

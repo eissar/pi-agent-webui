@@ -12,7 +12,6 @@ import { createSessionHandlers } from "./handlers/sessions";
 import { createTitleHandlers } from "./handlers/agent-title";
 import { createAgentHandlers } from "./handlers/agent";
 import { resourceHandlers } from "./handlers/resources";
-import { createProcessHandlers } from "./handlers/processes";
 export { generateSessionTitleWithFallback, applySessionNameIfEmpty } from "./handlers/agent-title";
 export { createAgentNewLockKey } from "./handlers/agent";
 
@@ -30,9 +29,6 @@ import { createFileWatchService, stopAllFileWatches } from "./file-watch";
 import { createAuthLoginService } from "./auth-login";
 import { modelCatalogRefreshCoordinator } from "./model-runtime";
 
-import { initializeManagedProcessService } from "./managed-process/runtime";
-import { ManagedProcessError } from "./managed-process/service";
-
 export function registerHandlers(server: RpcServer): () => Promise<void> {
   const bindings = createSessionEventBindings(server);
   let closing = false;
@@ -40,20 +36,9 @@ export function registerHandlers(server: RpcServer): () => Promise<void> {
   const fileHandlers = createFileHandlers(fileWatch);
   const authLogin = createAuthLoginService(server);
   const authHandlers = createAuthHandlers(authLogin);
-  const managedProcesses = initializeManagedProcessService(server);
   const worktreeHandlers = createWorktreeHandlers();
-  const sessionHandlers = createSessionHandlers({ server, managedProcesses, clearSessionEventBinding: bindings.clear });
+  const sessionHandlers = createSessionHandlers({ server, clearSessionEventBinding: bindings.clear });
 
-  const managedCall = async <T>(operation: () => T | Promise<T>): Promise<T> => {
-    try {
-      return await operation();
-    } catch (error) {
-      if (error instanceof ManagedProcessError) {
-        throw new RpcError({ code: error.code, message: error.message, detail: error.details });
-      }
-      throw error;
-    }
-  };
   const stopRunning = subscribeRunningSessions((ids) => {
     if (closing) return;
     // Both fields remain in the current stream contract for renderer compatibility.
@@ -69,7 +54,6 @@ export function registerHandlers(server: RpcServer): () => Promise<void> {
     bindEvents: (session, id) => bindings.ensure(session, id),
   });
   const titleHandlers = createTitleHandlers(server);
-  const processHandlers = createProcessHandlers(managedProcesses, managedCall);
 
   const guard =
     <P, R>(handler: (params: P, context: RpcRequestContext) => R) =>
@@ -80,26 +64,6 @@ export function registerHandlers(server: RpcServer): () => Promise<void> {
 
   server.handle({
     "host.ping": guard(() => ({ ok: true as const, ts: Date.now() })),
-
-    "processes.list": guard(processHandlers.list),
-
-    "processes.get": guard(processHandlers.get),
-
-    "processes.read": guard(processHandlers.read),
-
-    "processes.wait": guard(processHandlers.wait),
-
-    "processes.write": guard(processHandlers.write),
-
-    "processes.stop": guard(processHandlers.stop),
-
-    "processes.stopAll": guard(processHandlers.stopAll),
-
-    "processes.restart": guard(processHandlers.restart),
-
-    "processes.dismiss": guard(processHandlers.dismiss),
-
-    "processes.export": guard(processHandlers.export),
 
     "sessions.list": guard(sessionHandlers.list),
 
@@ -195,7 +159,6 @@ export function registerHandlers(server: RpcServer): () => Promise<void> {
     { name: "session event bindings", stop: bindings.close },
     { name: "authentication flows", stop: () => authLogin.dispose() },
     { name: "model refreshes", stop: () => modelCatalogRefreshCoordinator.cancelAll() },
-    { name: "managed processes", stop: () => managedProcesses.stopAll("host") },
     { name: "file watches", stop: stopAllFileWatches },
     { name: "Agent sessions", stop: disposeAllRpcSessions },
   ]);

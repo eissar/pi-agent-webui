@@ -18,9 +18,8 @@ export default defineConfig([
     entry: {
       main: "server/main.ts",
       // Worker entrypoints are resolved at runtime relative to the bundle
-      // directory (plugin-worker-client.ts / managed-process/service.ts).
+      // directory (plugin-worker-client.ts).
       "plugin-worker": "src/agent-host/plugin-worker.ts",
-      "managed-process-worker": "src/agent-host/managed-process/worker.ts",
     },
     format: ["esm"],
     platform: "node",

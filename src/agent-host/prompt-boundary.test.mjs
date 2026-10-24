@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -12,9 +12,6 @@ import {
   createAgentSessionFromServices,
 } from "@earendil-works/pi-coding-agent";
 import { importTestBundle } from "#test-bundle";
-import { SessionEphemeralContext, createEphemeralContextExtension } from "./session-ephemeral-context.ts";
-import { installManagedProcessSessionRedaction } from "./managed-process/session-redaction.ts";
-import { setAgentSessionSource } from "./session-source.ts";
 
 const { AgentSessionWrapper } = await importTestBundle("pi-prompt-boundary", {
   packages: "external",
@@ -234,14 +231,7 @@ test("steering and follow-up queued during a tool run settle as one Desktop prom
     });
     return stream;
   };
-  const liveContextScope = {
-    begins: 0,
-    beginLocalTurn() {
-      this.begins++;
-    },
-    dispose() {},
-  };
-  const wrapper = new AgentSessionWrapper(session, undefined, () => undefined, undefined, liveContextScope);
+  const wrapper = new AgentSessionWrapper(session, undefined, () => undefined, undefined);
   t.after(() => {
     releaseTool();
     void wrapper.dispose();
@@ -284,7 +274,6 @@ test("steering and follow-up queued during a tool run settle as one Desktop prom
   assert.deepEqual(userMessages, ["start", "steer this run", "follow up afterwards"]);
   assert.equal(events.filter((event) => event.type === "prompt_done").length, 1);
   assert.equal(events.filter((event) => event.type === "prompt_error").length, 0);
-  assert.equal(liveContextScope.begins, 1, "queued messages must not begin another sensitive-result scope");
   assert.equal(
     requests.some((request) => JSON.stringify(request.messages).includes("steer this run")),
     true,
@@ -293,123 +282,4 @@ test("steering and follow-up queued during a tool run settle as one Desktop prom
     requests.some((request) => JSON.stringify(request.messages).includes("follow up afterwards")),
     true,
   );
-});
-
-test("Desktop abort prevents a delayed sensitive tool result from reviving in the next prompt", async (t) => {
-  const directory = mkdtempSync(path.join(tmpdir(), "pi-desktop-abort-context-"));
-  const manager = SessionManager.create(directory, directory);
-  setAgentSessionSource(manager, "local");
-  installManagedProcessSessionRedaction(manager);
-  const ephemeral = new SessionEphemeralContext(manager);
-  ephemeral.install();
-  let releaseTool;
-  const toolGate = new Promise((resolve) => {
-    releaseTool = resolve;
-  });
-  let signalToolStarted;
-  const toolStarted = new Promise((resolve) => {
-    signalToolStarted = resolve;
-  });
-  const services = await createAgentSessionServices({
-    cwd: directory,
-    agentDir: directory,
-    settingsManager: SettingsManager.inMemory({ cacheWarming: "off" }),
-    resourceLoaderOptions: {
-      noSkills: true,
-      noPromptTemplates: true,
-      noThemes: true,
-      noContextFiles: true,
-      extensionFactories: [createEphemeralContextExtension(ephemeral)],
-    },
-  });
-  await services.modelRuntime.setRuntimeApiKey("anthropic", "offline-fixture-key");
-  const model = services.modelRuntime.getModel("anthropic", "claude-sonnet-4-5");
-  assert.ok(model);
-  const { session } = await createAgentSessionFromServices({
-    services,
-    sessionManager: manager,
-    model,
-    tools: ["process_list"],
-    customTools: [
-      {
-        name: "process_list",
-        label: "Delayed process result",
-        description: "Return after cancellation to exercise late result handling",
-        parameters: Type.Object({}),
-        execute: async () => {
-          signalToolStarted();
-          await toolGate;
-          return { content: [{ type: "text", text: "LATE_PROCESS_RESULT_42" }] };
-        },
-      },
-    ],
-  });
-  await session.bindExtensions({ mode: "rpc" });
-  const requests = [];
-  session.agent.streamFunction = (requestModel, context) => {
-    requests.push(structuredClone(context));
-    const first = requests.length === 1;
-    const message = {
-      role: "assistant",
-      content: first
-        ? [{ type: "toolCall", id: "delayed-process", name: "process_list", arguments: {} }]
-        : [{ type: "text", text: "safe continuation" }],
-      api: requestModel.api,
-      provider: requestModel.provider,
-      model: requestModel.id,
-      stopReason: first ? "toolUse" : "stop",
-      timestamp: Date.now(),
-      usage: {
-        input: 1,
-        output: 1,
-        cacheRead: 0,
-        cacheWrite: 0,
-        totalTokens: 2,
-        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
-      },
-    };
-    const stream = createAssistantMessageEventStream();
-    void Promise.resolve().then(() => {
-      stream.push({ type: "done", reason: message.stopReason, message });
-      stream.end();
-    });
-    return stream;
-  };
-  const wrapper = new AgentSessionWrapper(session, undefined, () => undefined, undefined, ephemeral);
-  t.after(async () => {
-    releaseTool();
-    await wrapper.dispose();
-    ephemeral.dispose();
-    rmSync(directory, { recursive: true, force: true });
-  });
-  wrapper.start();
-  const waitForDone = (runId) =>
-    new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => reject(new Error(`prompt ${runId} did not finish`)), 3000);
-      const unsubscribe = wrapper.onEvent((event) => {
-        if (event.type !== "prompt_done" || event.clientRunId !== runId) return;
-        clearTimeout(timeout);
-        unsubscribe();
-        resolve();
-      });
-    });
-
-  const abortedDone = waitForDone(70);
-  await wrapper.send({ type: "prompt", message: "Start the delayed tool", clientRunId: 70 });
-  await toolStarted;
-  const aborting = wrapper.send({ type: "abort" });
-  await Promise.resolve();
-  assert.equal(ephemeral.shouldStopCacheWarming(), true);
-  releaseTool();
-  await aborting;
-  await abortedDone;
-  const sessionFile = manager.getSessionFile();
-  assert.ok(sessionFile);
-  assert.equal(readFileSync(sessionFile, "utf8").includes("LATE_PROCESS_RESULT_42"), false);
-
-  const nextDone = waitForDone(71);
-  await wrapper.send({ type: "prompt", message: "Continue after cancellation", clientRunId: 71 });
-  await nextDone;
-  assert.equal(requests.length >= 2, true);
-  assert.equal(JSON.stringify(requests.slice(1)).includes("LATE_PROCESS_RESULT_42"), false);
 });
