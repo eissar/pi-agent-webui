@@ -41,7 +41,7 @@ export function registerHandlers(server: RpcServer): () => Promise<void> {
   const authLogin = createAuthLoginService(server);
   const authHandlers = createAuthHandlers(authLogin);
   const managedProcesses = initializeManagedProcessService(server);
-  const worktreeHandlers = createWorktreeHandlers(managedProcesses);
+  const worktreeHandlers = createWorktreeHandlers();
   const sessionHandlers = createSessionHandlers({ server, managedProcesses, clearSessionEventBinding: bindings.clear });
 
   const managedCall = async <T>(operation: () => T | Promise<T>): Promise<T> => {
@@ -81,8 +81,6 @@ export function registerHandlers(server: RpcServer): () => Promise<void> {
   server.handle({
     "host.ping": guard(() => ({ ok: true as const, ts: Date.now() })),
 
-    "host.toolchain": guard(resourceHandlers.toolchain),
-
     "processes.list": guard(processHandlers.list),
 
     "processes.get": guard(processHandlers.get),
@@ -113,19 +111,11 @@ export function registerHandlers(server: RpcServer): () => Promise<void> {
 
     "sessions.entryContent": guard(sessionHandlers.entryContent),
 
-    "sessions.export": guard(sessionHandlers.export),
-
     "sessions.delete": guard(sessionHandlers.delete),
 
     "sessions.rename": guard(sessionHandlers.rename),
 
     "worktrees.list": guard(worktreeHandlers.list),
-
-    "worktrees.create": guard(worktreeHandlers.create),
-
-    "worktrees.remove": guard(worktreeHandlers.remove),
-
-    "git.status": guard(worktreeHandlers.status),
 
     "agent.new": guard(agentHandlers.new),
 
@@ -135,15 +125,9 @@ export function registerHandlers(server: RpcServer): () => Promise<void> {
 
     "agent.generateTitle": guard(titleHandlers.generate),
 
-    "files.list": guard(fileHandlers.list),
-
     "files.read": guard(fileHandlers.read),
 
     "files.download": guard(fileHandlers.download),
-
-    "files.meta": guard(fileHandlers.meta),
-
-    "files.preview": guard(fileHandlers.preview),
 
     "files.index": guard(fileHandlers.index),
 
@@ -204,10 +188,6 @@ export function registerHandlers(server: RpcServer): () => Promise<void> {
     "system.validateCwd": guard(systemHandlers.validateCwd),
 
     "system.defaultCwd": guard(systemHandlers.defaultCwd),
-
-    "system.allowRoot": guard(systemHandlers.allowRoot),
-
-    "system.runningCount": guard(systemHandlers.runningCount),
   });
 
   const shutdown = createHostShutdown([

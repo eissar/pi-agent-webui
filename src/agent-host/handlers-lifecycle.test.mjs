@@ -74,7 +74,7 @@ test("the actual registrar owns one service set and releases subscriptions and s
     emit: (...args) => events.push(args),
   });
   assert.deepEqual(control.state.created, ["files", "auth", "processes"]);
-  assert.equal(Object.keys(methods).length, 66);
+  assert.equal(Object.keys(methods).length, 56);
   assert.equal(control.state.running.size, 1);
   await methods["agent.command"]({ sessionId: "fixture", command: { type: "get_state" } });
   const running = [...control.state.running][0];

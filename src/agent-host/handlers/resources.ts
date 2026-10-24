@@ -1,5 +1,4 @@
 import { readFileSync, realpathSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
-import path from "node:path";
 import { DefaultResourceLoader, getAgentDir } from "@earendil-works/pi-coding-agent";
 import type { ApiHandler } from "../../contract/rpc";
 import { RpcError } from "../../contract/types";
@@ -7,7 +6,6 @@ import { applyPluginAction, readPlugins } from "../plugins-service";
 import { installSkill, searchSkills } from "../skills-service";
 import { updateSkillModelInvocation } from "../skill-frontmatter";
 import { ToolchainError } from "../../shared/toolchains/errors";
-import { toolchainRuntime } from "../toolchain-runtime";
 import { cacheWarmingSettings, isCacheWarmingMode } from "../cache-warming-settings";
 
 async function resolveLoadedSkill(cwd: string, filePath: string) {
@@ -46,7 +44,6 @@ function writeTextAtomically(filePath: string, content: string): void {
 }
 
 type ResourceHandlers = {
-  toolchain: NonNullable<ApiHandler["host.toolchain"]>;
   getCacheWarming: NonNullable<ApiHandler["settings.getCacheWarming"]>;
   setCacheWarming: NonNullable<ApiHandler["settings.setCacheWarming"]>;
   listSkills: NonNullable<ApiHandler["skills.list"]>;
@@ -58,22 +55,6 @@ type ResourceHandlers = {
   setPlugin: NonNullable<ApiHandler["plugins.set"]>;
 };
 export const resourceHandlers = {
-  toolchain: async (params) => {
-    const { cwd } = params as { cwd: string };
-    if (!cwd || !path.isAbsolute(cwd)) throw new RpcError({ code: "BAD_REQUEST", message: "absolute cwd required" });
-    const context = await toolchainRuntime.createExecutionContext({ cwd, intent: "project-command" });
-    return {
-      inventoryRevision: context.inventoryRevision,
-      resolutionId: context.resolutionId,
-      capabilities: Object.fromEntries(
-        Object.entries(context.commands).map(([capability, command]) => [
-          capability,
-          { provider: command.provider, version: command.version },
-        ]),
-      ),
-    };
-  },
-
   getCacheWarming: async () => cacheWarmingSettings.get(),
 
   setCacheWarming: async (params) => {

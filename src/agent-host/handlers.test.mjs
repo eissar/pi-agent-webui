@@ -154,17 +154,14 @@ test("model connection tests use isolated configuration and preserve success and
 test("registerHandlers exposes every contract method exactly once", async () => {
   const { handlers } = await captureHandlers();
   // Keep in sync with src/contract/api.ts: one handler per contract method.
-  assert.equal(Object.keys(handlers).length, 66);
+  assert.equal(Object.keys(handlers).length, 56);
   for (const method of [
     "host.ping",
-    "host.toolchain",
     "sessions.list",
     "sessions.contextPage",
     "sessions.entryContent",
     "worktrees.list",
-    "git.status",
     "agent.state",
-    "files.list",
     "files.download",
     "models.list",
     "models.refresh",
@@ -180,7 +177,6 @@ test("registerHandlers exposes every contract method exactly once", async () => 
     "processes.stop",
     "processes.restart",
     "processes.export",
-    "system.allowRoot",
   ]) {
     assert.equal(typeof handlers[method], "function", `${method} must be registered`);
   }
@@ -203,10 +199,10 @@ test("both text endpoints preserve UTF-8 boundaries and byte budgets while Host 
     server.detachPort(port2);
     port2.close();
   });
-  await client.call("system.allowRoot", { path: project });
-  await client.call("files.meta", { path: file }); // warm authorization before checking IO fairness
+  await client.call("system.validateCwd", { path: project });
+  await client.call("files.read", { path: file }); // warm authorization before checking IO fairness
   let finished = 0;
-  const previews = ["files.read", "files.preview", "files.read", "files.preview"].map((method) =>
+  const previews = ["files.read", "files.read", "files.read", "files.read"].map((method) =>
     client.call(method, { path: file }).then((result) => {
       finished++;
       return result;
@@ -220,7 +216,7 @@ test("both text endpoints preserve UTF-8 boundaries and byte budgets while Host 
     assert.equal(result.truncated, true);
     assert.ok(!result.content.includes("\ufffd"), "a truncated code point must not become a replacement character");
   }
-  for (const method of ["files.read", "files.preview"]) {
+  for (const method of ["files.read"]) {
     await assert.rejects(client.call(method, { path: project }), (error) => error.code === "BAD_REQUEST");
     await assert.rejects(handlers[method]({ path: path.join(project, "deleted.txt") }), { code: "ENOENT" });
   }
@@ -389,27 +385,11 @@ test("file, git, worktree, skill, plugin, and system handlers return contract-sh
   writeFileSync(outsideFile, "must not become an allowed root\n");
 
   const { handlers } = await captureHandlers();
-  assert.deepEqual(await handlers["system.allowRoot"]({ path: project }), { ok: true });
   assert.deepEqual(await handlers["system.validateCwd"]({ path: project }), { ok: true, path: project });
   assert.deepEqual(await handlers["system.validateCwd"]({ path: outsideFile }), {
     ok: false,
     error: "Not a directory",
   });
-  await assert.rejects(
-    handlers["system.allowRoot"]({ path: outsideFile }),
-    (error) => error.code === "BAD_REQUEST" && /Not a directory/.test(error.message),
-  );
-  await assert.rejects(
-    handlers["system.allowRoot"]({ path: path.join(base, "missing") }),
-    (error) => error.code === "BAD_REQUEST" && /Directory does not exist/.test(error.message),
-  );
-
-  const listed = await handlers["files.list"]({ path: project });
-  assert.equal(
-    listed.entries.some((entry) => entry.name === "hello.txt" && entry.type === "file"),
-    true,
-  );
-
   const read = await handlers["files.read"]({ path: textFile });
   assert.equal(read.encoding, "utf8");
   assert.equal(read.content, "hello handler tests\n");
@@ -428,14 +408,6 @@ test("file, git, worktree, skill, plugin, and system handlers return contract-sh
       error.detail?.size === 50 * 1024 * 1024 + 1 &&
       error.detail?.maxBytes === 50 * 1024 * 1024,
   );
-
-  const meta = await handlers["files.meta"]({ path: textFile });
-  assert.equal(meta.language, "text");
-  assert.equal(meta.mime, "text/plain");
-
-  const preview = await handlers["files.preview"]({ path: textFile });
-  assert.equal(preview.kind, "text");
-  assert.equal(preview.content, "hello handler tests\n");
 
   const index = await handlers["files.index"]({ root: project, query: "hello" });
   assert.equal(Array.isArray(index.files), true);
@@ -465,9 +437,6 @@ test("file, git, worktree, skill, plugin, and system handlers return contract-sh
   );
   assert.equal(directIndex.truncated, false);
 
-  const git = await handlers["git.status"]({ path: project });
-  assert.equal(git.isGit, false);
-
   const worktrees = await handlers["worktrees.list"]({ projectRoot: project });
   assert.equal(Array.isArray(worktrees.worktrees), true);
   assert.equal(worktrees.projectRoot, project);
@@ -480,9 +449,6 @@ test("file, git, worktree, skill, plugin, and system handlers return contract-sh
 
   const plugins = await handlers["plugins.list"]({ cwd: project });
   assert.equal(typeof plugins, "object");
-
-  const running = await handlers["system.runningCount"]();
-  assert.equal(running.count, running.sessionIds.length);
 
   await handlers["files.watchStart"]({ path: project });
   assert.deepEqual(await handlers["files.watchStop"]({ path: project }), { ok: true });
@@ -507,8 +473,8 @@ test("file routes retain canonical and exact-session-reference authorization aft
   const escape = path.join(project, "escape");
   symlinkSync(outside, escape, process.platform === "win32" ? "junction" : "dir");
   const { handlers } = await captureHandlers();
-  await handlers["system.allowRoot"]({ path: project });
-  for (const method of ["files.read", "files.preview", "files.meta", "files.download", "files.watchStart"]) {
+  await handlers["system.validateCwd"]({ path: project });
+  for (const method of ["files.read", "files.download", "files.watchStart"]) {
     await assert.rejects(handlers[method]({ path: file }), (error) => error.code === "FORBIDDEN", method);
     await assert.rejects(
       handlers[method]({ path: path.join(escape, "referenced.txt") }),
@@ -517,12 +483,8 @@ test("file routes retain canonical and exact-session-reference authorization aft
     );
   }
   for (const [method, params] of [
-    ["files.list", { path: outside }],
     ["files.index", { root: outside }],
-    ["git.status", { path: outside }],
     ["worktrees.list", { projectRoot: outside }],
-    ["worktrees.create", { projectRoot: outside, branch: "fixture" }],
-    ["worktrees.remove", { path: outside }],
   ])
     await assert.rejects(handlers[method](params), (error) => error.code === "FORBIDDEN", method);
 
@@ -548,11 +510,6 @@ test("file routes retain canonical and exact-session-reference authorization aft
   const sourceSessionId = session.getSessionId();
   removeSession = () => handlers["sessions.delete"]({ id: sourceSessionId });
   assert.equal((await handlers["files.read"]({ path: file, sourceSessionId })).content, "reference-only fixture");
-  assert.equal((await handlers["files.preview"]({ path: file, sourceSessionId })).content, "reference-only fixture");
-  assert.equal(
-    (await handlers["files.meta"]({ path: file, sourceSessionId })).size,
-    Buffer.byteLength("reference-only fixture"),
-  );
   assert.equal(
     Buffer.from((await handlers["files.download"]({ path: file, sourceSessionId })).base64, "base64").toString(),
     "reference-only fixture",
@@ -561,10 +518,6 @@ test("file routes retain canonical and exact-session-reference authorization aft
   await handlers["files.watchStop"]({ path: file });
   await assert.rejects(
     handlers["files.read"]({ path: file, sourceSessionId: "not-a-session" }),
-    (error) => error.code === "FORBIDDEN",
-  );
-  await assert.rejects(
-    handlers["files.list"]({ path: outside, sourceSessionId }),
     (error) => error.code === "FORBIDDEN",
   );
 });

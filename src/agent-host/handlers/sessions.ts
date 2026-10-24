@@ -1,15 +1,14 @@
-import { readFileSync, statSync, unlinkSync } from "node:fs";
+import { statSync, unlinkSync } from "node:fs";
 import path from "node:path";
 import { SessionManager } from "@earendil-works/pi-coding-agent";
 import type { ApiHandler, RpcServer } from "../../contract/rpc";
 import { RpcError, type HistoryWindow, type SessionDetail, type SessionRuntimeState } from "../../contract/types";
 import type { SessionTreeNode } from "../../shared/types";
 import { getRpcSession, getRunningRpcSessionIds } from "../rpc-manager";
-import { readSessionSnapshot, assertSessionWritable } from "../session-readonly";
+import { assertSessionWritable } from "../session-readonly";
 import { getDesktopSessionToolNames } from "../session-tool-store";
 import { canonicalPathForComparison } from "../directory-validation";
 import {
-  buildSessionContext,
   buildSessionInfoFromManager,
   getSessionIndexMetrics,
   invalidateSessionPathCache,
@@ -43,7 +42,6 @@ type SessionHandlers = {
   context: NonNullable<ApiHandler["sessions.context"]>;
   contextPage: NonNullable<ApiHandler["sessions.contextPage"]>;
   entryContent: NonNullable<ApiHandler["sessions.entryContent"]>;
-  export: NonNullable<ApiHandler["sessions.export"]>;
   delete: NonNullable<ApiHandler["sessions.delete"]>;
   rename: NonNullable<ApiHandler["sessions.rename"]>;
 };
@@ -251,31 +249,6 @@ export function createSessionHandlers({
           contentType: content.type,
         },
       };
-    },
-
-    export: async (params) => {
-      const { id, format = "md" } = params as { id: string; format?: "md" | "json" };
-      const filePath = await resolveSessionPath(id);
-      if (!filePath) throw new RpcError({ code: "NOT_FOUND", message: "Session not found" });
-      const raw = readFileSync(filePath, "utf8");
-      if (format === "json") {
-        return { content: raw, suggestedName: `session-${id}.json` };
-      }
-      // Simple markdown export of session file content
-      const sm = readSessionSnapshot(filePath);
-      const context = buildSessionContext(sm.getEntries() as never);
-      const lines: string[] = [`# Session ${id}`, ""];
-      for (const msg of context.messages as Array<{ role: string; content: unknown }>) {
-        lines.push(`## ${msg.role}`, "");
-        if (typeof msg.content === "string") lines.push(msg.content);
-        else if (Array.isArray(msg.content)) {
-          for (const block of msg.content as Array<{ type?: string; text?: string }>) {
-            if (block.type === "text" && block.text) lines.push(block.text);
-          }
-        }
-        lines.push("");
-      }
-      return { content: lines.join("\n"), suggestedName: `session-${id}.md` };
     },
 
     delete: async (params) => {

@@ -44,14 +44,6 @@ import type {
 /** Request/response API surface (replaces HTTP routes). */
 export interface Api {
   "host.ping": { params: void; result: { ok: true; ts: number } };
-  "host.toolchain": {
-    params: { cwd: string };
-    result: {
-      inventoryRevision: number;
-      resolutionId: string;
-      capabilities: Partial<Record<ToolCapabilityId, { provider: ToolProvider; version: string }>>;
-    };
-  };
 
   // Managed background processes (trusted Renderer control surface)
   "processes.list": {
@@ -116,10 +108,6 @@ export interface Api {
     params: { id: string; entryId: string; blockIndex?: number };
     result: EntryContentResult;
   };
-  "sessions.export": {
-    params: { id: string; format?: "md" | "json" };
-    result: { content: string; suggestedName: string };
-  };
   "sessions.delete": { params: { id: string; force?: boolean }; result: { ok: true } };
   "sessions.rename": {
     params: { id: string; name: string };
@@ -134,19 +122,6 @@ export interface Api {
       isGit: boolean;
       isTopLevel: boolean;
     };
-  };
-  "worktrees.create": {
-    params: { projectRoot: string; branch: string; cwd?: string };
-    result: { worktree: WorktreeInfo };
-  };
-  "worktrees.remove": {
-    params: { path: string; cwd?: string; force?: boolean };
-    result: { ok: true };
-  };
-
-  "git.status": {
-    params: { path: string };
-    result: GitStatusResult;
   };
 
   // Agent lifecycle
@@ -183,7 +158,6 @@ export interface Api {
   };
 
   // Files
-  "files.list": { params: { path: string }; result: { entries: DirEntry[] } };
   "files.read": {
     params: { path: string; sourceSessionId?: string };
     result: FileContent & {
@@ -194,14 +168,6 @@ export interface Api {
   "files.download": {
     params: { path: string; sourceSessionId?: string };
     result: { base64: string; size: number; mime: string };
-  };
-  "files.meta": {
-    params: { path: string; sourceSessionId?: string };
-    result: FileMeta;
-  };
-  "files.preview": {
-    params: { path: string; sourceSessionId?: string };
-    result: { kind: string; content?: string; base64?: string; mime?: string; [key: string]: unknown };
   };
   "files.index": {
     params: { root: string; query?: string };
@@ -338,8 +304,6 @@ export interface Api {
     result: { ok: boolean; path?: string; error?: string };
   };
   "system.defaultCwd": { params: void; result: { cwd: string } };
-  "system.allowRoot": { params: { path: string }; result: { ok: true } };
-  "system.runningCount": { params: void; result: { count: number; sessionIds: string[] } };
 }
 
 /** Server-push streams delivered over MessagePort RPC. */
