@@ -5,7 +5,6 @@ import { ChatWindow } from "./ChatWindow";
 import { SessionInfoPanel } from "./SessionInfoPanel";
 import { SessionPresentationStore } from "@/lib/session-presentation-store";
 import { SettingsConfig, type SettingsTab } from "./SettingsConfig";
-import { BrowserAuthorizationDialog } from "./browser/BrowserAuthorizationDialog";
 import { useTheme } from "@/hooks/useTheme";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { getSessionDisplayTitle } from "@/lib/session-list";
@@ -17,7 +16,6 @@ import type { SessionInfo } from "@/lib/types";
 import type { ChatInputHandle } from "./ChatInput";
 import type { ChatAppearancePreferences } from "@shared/chat-appearance";
 import { worktreePathsEqual } from "@shared/worktree-path";
-import type { BrowserAgentAuthorizationRequest, BrowserAgentAuthorizationDecision } from "../../contract/browser";
 
 export function AppShell({
   chatAppearance,
@@ -45,8 +43,6 @@ export function AppShell({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsInitialTab, setSettingsInitialTab] = useState<SettingsTab>("general");
   const [settingsNavigationRequestId, setSettingsNavigationRequestId] = useState(0);
-  const [authorizationSettingsSessionId, setAuthorizationSettingsSessionId] = useState<string | null>(null);
-  const [browserAuthorization, setBrowserAuthorization] = useState<BrowserAgentAuthorizationRequest | null>(null);
   const [modelsRefreshKey, setModelsRefreshKey] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileSidebarReady, setMobileSidebarReady] = useState(false);
@@ -79,32 +75,6 @@ export function AppShell({
     if (isMobile) setActiveTopPanel(null);
     setSidebarOpen((open) => !open);
   }, [isMobile]);
-
-  useEffect(
-    () =>
-      window.piBridge.onBrowserEvent((event) => {
-        if (event.type === "agent-authorization-request") {
-          setBrowserAuthorization(event.request);
-          void window.piBridge.browserSetSurfaceVisible({ visible: false }).catch(() => undefined);
-        } else if (event.type === "agent-authorization-resolved") {
-          setBrowserAuthorization((current) => (current?.id === event.requestId ? null : current));
-          setAuthorizationSettingsSessionId(null);
-        }
-      }),
-    [],
-  );
-
-  const respondToBrowserAuthorization = useCallback(
-    (decision: BrowserAgentAuthorizationDecision) => {
-      const requestId = browserAuthorization?.id;
-      if (!requestId) return;
-      void window.piBridge
-        .browserRespondAgentAuthorization(requestId, decision)
-        .catch(() => undefined)
-        .finally(() => setBrowserAuthorization((current) => (current?.id === requestId ? null : current)));
-    },
-    [browserAuthorization?.id],
-  );
 
   const [initialSessionId] = useState<string | null>(() => readSessionIdFromSearch(window.location.search));
   const [activeCwd, setActiveCwd] = useState<string | null>(null);
@@ -735,7 +705,7 @@ export function AppShell({
       {settingsOpen && (
         <SettingsConfig
           cwd={activeCwd ?? selectedSession?.cwd ?? newSessionCwd ?? null}
-          sessionId={authorizationSettingsSessionId ?? selectedSession?.id ?? null}
+          sessionId={selectedSession?.id ?? null}
           initialTab={settingsInitialTab}
           navigationRequestId={settingsNavigationRequestId}
           onClose={() => {
@@ -747,23 +717,6 @@ export function AppShell({
           chatAppearance={chatAppearance}
           chatAppearanceSaving={chatAppearanceSaving}
           onChatAppearanceChange={onChatAppearanceChange}
-        />
-      )}
-      {browserAuthorization && !settingsOpen && (
-        <BrowserAuthorizationDialog
-          request={browserAuthorization}
-          sessionTitle={
-            selectedSession?.id === browserAuthorization.sessionId
-              ? getSessionDisplayTitle(displayedSession ?? selectedSession, 240)
-              : browserAuthorization.sessionId
-          }
-          onRespond={respondToBrowserAuthorization}
-          onManage={() => {
-            setAuthorizationSettingsSessionId(browserAuthorization.sessionId);
-            setSettingsInitialTab("browser");
-            setSettingsNavigationRequestId((value) => value + 1);
-            setSettingsOpen(true);
-          }}
         />
       )}
     </>

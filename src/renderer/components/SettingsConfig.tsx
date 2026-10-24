@@ -5,7 +5,6 @@ import { ModelsConfig } from "./ModelsConfig";
 import { SkillsConfig, type SkillsConfigHandle } from "./SkillsConfig";
 import { PluginsConfig } from "./PluginsConfig";
 import { ToolchainsConfig } from "./ToolchainsConfig";
-import { BrowserSettings } from "./browser/BrowserSettings";
 import type { ChatAppearancePreferences, ChatAssistantWidth, ChatFontSize, ChatLayout } from "@shared/chat-appearance";
 import { APP_WEBSITE_URL } from "@shared/app-links";
 import type { DesktopUpdateState } from "../../contract/desktop";
@@ -14,7 +13,7 @@ import appIconUrl from "../../../build/icon.png";
 import { isAutoSessionTitleEnabled, setAutoSessionTitleEnabled } from "../lib/auto-session-title";
 import { getCacheWarmingStatus, setCacheWarmingMode } from "../lib/api-client";
 
-export type SettingsTab = "general" | "browser" | "models" | "tools" | "skills" | "plugins" | "about";
+export type SettingsTab = "general" | "models" | "tools" | "skills" | "plugins" | "about";
 
 interface SettingsConfigProps {
   cwd: string | null;
@@ -86,7 +85,6 @@ export function SettingsConfig({
     { id: "models", label: "Models" },
     { id: "skills", label: "Skills" },
     { id: "plugins", label: "Plugins" },
-    { id: "browser", label: "Browser" },
     { id: "tools", label: "Developer Tools" },
     { id: "about", label: "About" },
   ];
@@ -288,7 +286,6 @@ export function SettingsConfig({
                 onChatAppearanceChange={onChatAppearanceChange}
               />
             )}
-            {activeTab === "browser" && <BrowserSettings sessionId={sessionId} />}
             {activeTab === "models" && (
               <ModelsConfig embedded cwd={cwd} onClose={() => undefined} onChanged={onModelsChanged} />
             )}
