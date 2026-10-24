@@ -13,8 +13,7 @@
  * backend host: the Vite dev server (or any static host of out/renderer) can then be proxied
  * or forwarded alone, with the browser connecting straight to the backend's WebSocket. */
 export function resolveRpcUrl(): string {
-  const override =
-    new URLSearchParams(window.location.search).get("rpc") ?? localStorage.getItem("pi.webuiRpcUrl");
+  const override = new URLSearchParams(window.location.search).get("rpc") ?? localStorage.getItem("pi.webuiRpcUrl");
   if (override) return override;
   const envUrl = import.meta.env.VITE_RPC_URL;
   if (typeof envUrl === "string" && envUrl.length > 0) return envUrl;
@@ -42,6 +41,10 @@ export function createWebSocketPort(
 } {
   const wsUrl = token ? `${url}${url.includes("?") ? "&" : "?"}token=${encodeURIComponent(token)}` : url;
   const ws = new WebSocket(wsUrl);
+
+  // Messages posted before the socket finishes opening are buffered and flushed
+  // on "open", so callers never hit a hard failure on a CONNECTING socket.
+  const pendingSends: string[] = [];
 
   const messageListeners = new Set<MessageListener>();
   const closeListeners = new Set<CloseListener>();
@@ -76,7 +79,14 @@ export function createWebSocketPort(
   });
 
   const opened = new Promise<void>((resolve, reject) => {
-    ws.addEventListener("open", () => resolve(), { once: true });
+    ws.addEventListener(
+      "open",
+      () => {
+        for (const payload of pendingSends.splice(0)) ws.send(payload);
+        resolve();
+      },
+      { once: true },
+    );
     ws.addEventListener("error", () => reject(new Error(`WebSocket connection failed: ${url}`)), { once: true });
   });
 
@@ -97,8 +107,18 @@ export function createWebSocketPort(
         }
       },
       postMessage(message) {
-        if (ws.readyState !== WebSocket.OPEN) throw new Error("WebSocket is not open");
-        ws.send(typeof message === "string" ? message : JSON.stringify(message));
+        // Never throw for transient socket states (CONNECTING / CLOSING / CLOSED).
+        // A not-yet-open socket is buffered; a closed one drops the message and
+        // surfaces the failure through the close/error listeners instead.
+        const payload = typeof message === "string" ? message : JSON.stringify(message);
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(payload);
+          return;
+        }
+        if (ws.readyState === WebSocket.CONNECTING) {
+          pendingSends.push(payload);
+          return;
+        }
       },
       start() {
         /* browser WebSockets deliver messages immediately */

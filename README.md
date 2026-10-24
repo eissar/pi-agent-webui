@@ -22,7 +22,8 @@ npm install
 
 ```bash
 # Build both the Node backend and Vite renderer
-npm run build
+npm run build:server
+npm run build:renderer
 ```
 
 Or build components individually:
@@ -37,24 +38,32 @@ npm run build:renderer  # builds Vite assets to out/renderer/
 #### Production mode (Node server serves both API and static assets):
 
 ```bash
-# Start on localhost:3456
+# Start on http://127.0.0.1:7860
 npm start
 
-# Or with custom port / host
-PORT=8080 HOST=0.0.0.0 npm start
+# Or bind to all interfaces / custom port
+PI_WEBUI_HOST=0.0.0.0 PI_WEBUI_PORT=8080 npm start
 ```
 
 _Note on remote access:_ When binding to non-loopback addresses (e.g. `0.0.0.0`), a bearer authentication token is automatically generated and printed in the server log to protect against unauthorized access. You can also supply your own via `PI_WEBUI_TOKEN=secret npm start` and append `?token=secret` to the browser URL.
 
 #### Development mode:
 
-```bash
-# Terminal 1: run the backend server
-npm run dev:server
+A single command builds and starts the backend (port 7860), waits for it to become
+ready, and then starts the Vite dev server with hot reload (port 5173). Terminating
+it (Ctrl-C) shuts both down.
 
-# Terminal 2: run Vite dev server with hot reload
-npm run dev:renderer
+```bash
+npm run dev
+
+# Bind Vite to all interfaces so it is reachable by hostname/LAN:
+npm run dev -- --host 0.0.0.0
 ```
+
+Then open http://localhost:5173/ (or the host/port Vite reports).
+
+Extra arguments after `--` are forwarded to Vite. To run Vite without the backend,
+use `npm run dev:renderer`.
 
 ## Testing
 

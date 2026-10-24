@@ -6,13 +6,20 @@
  * tool execution, model configuration) in a plain Node.js process and
  * serves them over a WebSocket transport.
  *
- * Environment variables:
+ * Command-line flags (take precedence over environment variables):
+ *   --host <interface>   bind address, default "127.0.0.1" (use "0.0.0.0" for LAN)
+ *   --port <number>      listen port, default 7860
+ *   --static-root <dir>  directory of prebuilt renderer assets
+ *   --help               print usage and exit
+ *
+ * Environment variables (used when the matching flag is absent):
  *   PI_WEBUI_HOST   host interface, default "127.0.0.1" (bind "0.0.0.0" for LAN)
  *   PI_WEBUI_PORT   port, default 7860
  */
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { extname, join } from "node:path";
+import { parseArgs } from "node:util";
 import { WebSocketServer } from "ws";
 
 import { createRpcServer } from "../src/contract/rpc";
@@ -42,10 +49,56 @@ const EMPTY_TOOLCHAIN_SNAPSHOT: ToolchainSnapshot = {
   },
 };
 
-const HOST = process.env.PI_WEBUI_HOST || "127.0.0.1";
-const PORT = Number.parseInt(process.env.PI_WEBUI_PORT || "7860", 10);
-const STATIC_ROOT = process.env.PI_WEBUI_STATIC_ROOT || join(import.meta.dirname, "../renderer");
+function parseCliOptions(argv: string[]): { host?: string; port?: string; "static-root"?: string } {
+  try {
+    return parseArgs({
+      args: argv,
+      options: {
+        host: { type: "string" },
+        port: { type: "string" },
+        "static-root": { type: "string" },
+        help: { type: "boolean", short: "h" },
+      },
+      strict: true,
+      allowPositionals: false,
+    }).values as { host?: string; port?: string; "static-root"?: string };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`[webui] ${message}`);
+    console.error("[webui] usage: node out/server/main.mjs [--host <interface>] [--port <number>]");
+    process.exit(1);
+  }
+}
+
+if (process.argv.includes("--help") || process.argv.includes("-h")) {
+  console.log(
+    [
+      "Usage: node out/server/main.mjs [options]",
+      "",
+      "Options:",
+      "  --host <interface>   bind address (default 127.0.0.1, use 0.0.0.0 for LAN)",
+      "  --port <number>      listen port (default 7860)",
+      "  --static-root <dir>  directory of prebuilt renderer assets",
+      "  -h, --help           show this help message",
+      "",
+      "Environment: PI_WEBUI_HOST, PI_WEBUI_PORT, PI_WEBUI_STATIC_ROOT",
+    ].join("\n"),
+  );
+  process.exit(0);
+}
+
+const cli = parseCliOptions(process.argv.slice(2));
+
+const HOST = cli.host ?? process.env.PI_WEBUI_HOST ?? "127.0.0.1";
+const PORT = Number.parseInt(cli.port ?? process.env.PI_WEBUI_PORT ?? "7860", 10);
+const STATIC_ROOT =
+  cli["static-root"] ?? process.env.PI_WEBUI_STATIC_ROOT ?? join(import.meta.dirname, "../renderer");
 const RPC_PATH = "/rpc";
+
+if (!Number.isInteger(PORT) || PORT < 0 || PORT > 65535) {
+  console.error(`[webui] invalid port: ${cli.port ?? process.env.PI_WEBUI_PORT}`);
+  process.exit(1);
+}
 
 function isLoopbackHost(host: string): boolean {
   return host === "127.0.0.1" || host === "::1" || host === "localhost";
