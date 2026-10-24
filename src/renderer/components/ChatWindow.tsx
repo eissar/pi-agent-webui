@@ -31,7 +31,6 @@ import { ToolMessageIndex } from "@/lib/tool-message-index";
 import { useI18n } from "@/i18n";
 import type { ThinkingExpansionStore } from "@/lib/thinking-expansion-store";
 import { skillInvocationCommandText } from "@shared/skill-invocation";
-import { localizedExtensionConfirmCopy } from "@/lib/extension-ui-copy";
 
 interface Props {
   session: SessionInfo | null;
@@ -1098,7 +1097,6 @@ function ExtensionDialog({
 }) {
   const { t } = useI18n();
   const [value, setValue] = useState(request.method === "editor" ? (request.prefill ?? "") : "");
-  const confirmCopy = request.method === "confirm" ? localizedExtensionConfirmCopy(request, t) : null;
 
   useEffect(() => {
     setValue(request.method === "editor" ? (request.prefill ?? "") : "");
@@ -1139,7 +1137,7 @@ function ExtensionDialog({
       >
         <div style={{ padding: "12px 14px", borderBottom: "1px solid var(--border)" }}>
           <div style={{ color: "var(--text)", fontSize: scaledChatFont(14), fontWeight: 650 }}>
-            {confirmCopy?.title ?? request.title}
+            {request.title}
           </div>
           <div
             style={{
@@ -1163,7 +1161,7 @@ function ExtensionDialog({
                 whiteSpace: "pre-wrap",
               }}
             >
-              {confirmCopy?.message ?? request.message}
+              {request.message}
             </div>
           )}
           {request.method === "select" && (

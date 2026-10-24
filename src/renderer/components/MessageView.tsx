@@ -1,7 +1,6 @@
 import { memo, useState, useRef, useEffect, useMemo } from "react";
 import { MarkdownBody } from "./MarkdownBody";
 import { scaledChatFont } from "@/lib/chat-appearance";
-import { getToolResultDisplayText } from "@/lib/tool-result-display";
 import { useCopyFeedback } from "@/hooks/useCopyFeedback";
 import { parseCompactionSummary } from "@/lib/compaction-summary";
 import {
@@ -1146,7 +1145,12 @@ function ToolCallBlock({
   const resultDiff = result && !result.isError ? getResultDiff(result) : null;
 
   // Result display
-  const resultText = getToolResultDisplayText(block.toolName, result, t);
+  const resultText = result
+    ? result.content
+        .filter((b) => b.type === "text")
+        .map((b) => b.text)
+        .join("\n")
+    : null;
   const resultIsEmpty = resultText === null ? false : resultText.trim() === "(no output)" || resultText.trim() === "";
   const isError = result?.isError ?? false;
   const isRunning = !result;

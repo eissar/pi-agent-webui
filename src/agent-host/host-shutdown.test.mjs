@@ -14,9 +14,9 @@ test("shutdown detaches synchronously, preserves async order and shares one comp
       },
     },
     {
-      name: "Herdr",
+      name: "terminals",
       stop: () => {
-        calls.push("Herdr");
+        calls.push("terminals");
         return pending.promise;
       },
     },
@@ -30,10 +30,10 @@ test("shutdown detaches synchronously, preserves async order and shares one comp
   const first = stop(),
     second = stop();
   assert.equal(first, second);
-  assert.deepEqual(calls, ["listeners", "Herdr"]);
+  assert.deepEqual(calls, ["listeners", "terminals"]);
   pending.resolve();
   await first;
-  assert.deepEqual(calls, ["listeners", "Herdr", "processes"]);
+  assert.deepEqual(calls, ["listeners", "terminals", "processes"]);
   assert.equal(stop(), first);
 });
 
@@ -43,9 +43,9 @@ test("failed steps retain their error and do not skip later resource cleanup", a
     secondError = new Error("private second detail");
   const stop = createHostShutdown([
     {
-      name: "Herdr",
+      name: "terminals",
       stop: () => {
-        calls.push("Herdr");
+        calls.push("terminals");
         throw firstError;
       },
     },
@@ -75,7 +75,7 @@ test("failed steps retain their error and do not skip later resource cleanup", a
       error instanceof AggregateError &&
       error.errors[0] === firstError &&
       error.errors[1] === secondError &&
-      error.message === "Host cleanup failed: Herdr, processes",
+      error.message === "Host cleanup failed: terminals, processes",
   );
-  assert.deepEqual(calls, ["Herdr", "processes", "files", "sessions"]);
+  assert.deepEqual(calls, ["terminals", "processes", "files", "sessions"]);
 });

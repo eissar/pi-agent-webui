@@ -13,8 +13,6 @@ const stubs = {
     "export class ChannelManager {constructor() {init('channels');} async initialize() {} shutdown() {return step('channels-stop');}}",
   "managed-process/runtime":
     "export const initializeManagedProcessService = () => {init('processes'); return {stopAll: () => step('processes-stop')};};",
-  "herdr/runtime":
-    "export const initializeHerdrBridge = () => {init('herdr'); return {subscribeRuntime: () => () => step('herdr-unsubscribe'), shutdown: () => step('herdr-stop')};}; export const clearHerdrBridge = () => step('herdr-clear');",
   "rpc-manager":
     "export const subscribeRunningSessions = listener => {state.running.add(listener); return () => {state.running.delete(listener); step('running-off');};}; export const disposeAllRpcSessions = () => step('sessions-stop'); export const syncDesktopToolsForAllSessions = () => {}; export const syncCacheWarmingForAllSessions = async () => 0; export const getRunningRpcSessionIds = () => []; export const getRpcSession = () => state.agent; export const startRpcSession = unexpected;",
   "model-runtime":
@@ -77,8 +75,8 @@ test("the actual registrar owns one service set and releases subscriptions and s
     handle: (next) => Object.assign(methods, next),
     emit: (...args) => events.push(args),
   });
-  assert.deepEqual(control.state.created, ["files", "auth", "channels", "processes", "herdr"]);
-  assert.equal(Object.keys(methods).length, 104);
+  assert.deepEqual(control.state.created, ["files", "auth", "channels", "processes"]);
+  assert.equal(Object.keys(methods).length, 83);
   assert.equal(control.state.running.size, 1);
   await methods["agent.command"]({ sessionId: "fixture", command: { type: "get_state" } });
   const running = [...control.state.running][0];
@@ -107,9 +105,6 @@ test("the actual registrar owns one service set and releases subscriptions and s
     "destroy-off",
     "auth-stop",
     "models-stop",
-    "herdr-unsubscribe",
-    "herdr-stop",
-    "herdr-clear",
     "processes-stop",
     "channels-stop",
     "files-stop",
@@ -119,10 +114,9 @@ test("the actual registrar owns one service set and releases subscriptions and s
 
 test("the actual registrar continues cleanup after a service failure and reports rejection", async () => {
   control.reset();
-  control.state.fail.add("herdr-stop");
+  control.state.fail.add("models-stop");
   const stop = registerHandlers({ handle() {}, emit() {} });
-  await assert.rejects(stop(), (error) => error instanceof AggregateError && error.message.includes("Herdr"));
-  assert.ok(control.state.steps.indexOf("herdr-clear") > control.state.steps.indexOf("herdr-stop"));
+  await assert.rejects(stop(), (error) => error instanceof AggregateError && error.message.includes("model refreshes"));
   assert.ok(control.state.steps.includes("processes-stop"));
   assert.ok(control.state.steps.includes("files-stop"));
   assert.ok(control.state.steps.includes("sessions-stop"));

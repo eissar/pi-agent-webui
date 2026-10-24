@@ -13,14 +13,11 @@ import { createTitleHandlers } from "./handlers/agent-title";
 import { createAgentHandlers } from "./handlers/agent";
 import { resourceHandlers } from "./handlers/resources";
 import { createChannelHandlers, initializeChannels } from "./handlers/channels";
-import { createHerdrHandlers } from "./handlers/herdr";
 import { createProcessHandlers } from "./handlers/processes";
 export { generateSessionTitleWithFallback, applySessionNameIfEmpty } from "./handlers/agent-title";
 export { createAgentNewLockKey } from "./handlers/agent";
 export { initializeChannels } from "./handlers/channels";
-export { assertHerdrParamKeys } from "./handlers/herdr";
 
-import { assertPathAllowed } from "./path-authorization";
 
 export { projectModelsList } from "./handlers/model-catalog";
 export { credentialMutationFailure } from "./handlers/auth";
@@ -30,7 +27,7 @@ import { createSessionEventBindings } from "./session-event-bindings";
 import { createHostShutdown } from "./host-shutdown";
 import { RpcError } from "../contract/types";
 
-import { disposeAllRpcSessions, subscribeRunningSessions, syncDesktopToolsForAllSessions } from "./rpc-manager";
+import { disposeAllRpcSessions, subscribeRunningSessions } from "./rpc-manager";
 
 import { createFileWatchService, stopAllFileWatches } from "./file-watch";
 import { createAuthLoginService } from "./auth-login";
@@ -41,8 +38,6 @@ import { ChannelManager } from "./channels/channel-manager";
 import { initializeManagedProcessService } from "./managed-process/runtime";
 import { ManagedProcessError } from "./managed-process/service";
 
-import { HerdrBridgeError } from "./herdr/errors";
-import { clearHerdrBridge, initializeHerdrBridge } from "./herdr/runtime";
 
 export function registerHandlers(server: RpcServer): () => Promise<void> {
   const bindings = createSessionEventBindings(server);
@@ -56,8 +51,6 @@ export function registerHandlers(server: RpcServer): () => Promise<void> {
   const managedProcesses = initializeManagedProcessService(server);
   const worktreeHandlers = createWorktreeHandlers(managedProcesses);
   const sessionHandlers = createSessionHandlers({ server, managedProcesses, clearSessionEventBinding: bindings.clear });
-  const herdr = initializeHerdrBridge(server, { assertAllowedPath: (target) => assertPathAllowed(target) });
-  const stopHerdrToolSync = herdr.subscribeRuntime(() => syncDesktopToolsForAllSessions());
 
   const managedCall = async <T>(operation: () => T | Promise<T>): Promise<T> => {
     try {
@@ -69,17 +62,6 @@ export function registerHandlers(server: RpcServer): () => Promise<void> {
       throw error;
     }
   };
-  const herdrCall = async <T>(operation: () => T | Promise<T>): Promise<T> => {
-    try {
-      return await operation();
-    } catch (error) {
-      if (error instanceof HerdrBridgeError) {
-        throw new RpcError({ code: error.code, message: error.message, detail: error.toPublic() });
-      }
-      throw error;
-    }
-  };
-
   const stopRunning = subscribeRunningSessions((ids) => {
     if (closing) return;
     // Both fields remain in the current stream contract for renderer compatibility.
@@ -97,7 +79,6 @@ export function registerHandlers(server: RpcServer): () => Promise<void> {
   const titleHandlers = createTitleHandlers(server);
   const channelHandlers = createChannelHandlers(channelManager);
   const processHandlers = createProcessHandlers(managedProcesses, managedCall);
-  const herdrHandlers = createHerdrHandlers(herdr, herdrCall);
 
   const guard =
     <P, R>(handler: (params: P, context: RpcRequestContext) => R) =>
@@ -109,47 +90,26 @@ export function registerHandlers(server: RpcServer): () => Promise<void> {
   server.handle({
     "host.ping": guard(() => ({ ok: true as const, ts: Date.now() })),
 
-    "herdr.runtime.get": guard(herdrHandlers.runtimeGet),
 
-    "herdr.runtime.configure": guard(herdrHandlers.runtimeConfigure),
 
-    "herdr.runtime.probe": guard(herdrHandlers.runtimeProbe),
 
-    "herdr.runtime.restart": guard(herdrHandlers.runtimeRestart),
 
-    "herdr.runtime.connect": guard(herdrHandlers.runtimeConnect),
 
-    "herdr.runtime.disconnect": guard(herdrHandlers.runtimeDisconnect),
 
-    "herdr.diagnostics": guard(herdrHandlers.diagnostics),
 
-    "herdr.snapshot": guard(herdrHandlers.snapshot),
 
-    "herdr.workspace.create": guard(herdrHandlers.workspaceCreate),
 
-    "herdr.pane.split": guard(herdrHandlers.paneSplit),
 
-    "herdr.pane.read": guard(herdrHandlers.paneRead),
 
-    "herdr.agent.start": guard(herdrHandlers.agentStart),
 
-    "herdr.agent.prompt": guard(herdrHandlers.agentPrompt),
 
-    "herdr.agent.sendKeys": guard(herdrHandlers.agentSendKeys),
 
-    "herdr.agent.wait": guard(herdrHandlers.agentWait),
 
-    "herdr.agent.waitCancel": guard(herdrHandlers.agentWaitCancel),
 
-    "herdr.terminal.open": guard(herdrHandlers.terminalOpen),
 
-    "herdr.terminal.input": guard(herdrHandlers.terminalInput),
 
-    "herdr.terminal.resize": guard(herdrHandlers.terminalResize),
 
-    "herdr.terminal.ack": guard(herdrHandlers.terminalAck),
 
-    "herdr.terminal.close": guard(herdrHandlers.terminalClose),
 
     "host.toolchain": guard(resourceHandlers.toolchain),
 
@@ -319,9 +279,6 @@ export function registerHandlers(server: RpcServer): () => Promise<void> {
     { name: "session event bindings", stop: bindings.close },
     { name: "authentication flows", stop: () => authLogin.dispose() },
     { name: "model refreshes", stop: () => modelCatalogRefreshCoordinator.cancelAll() },
-    { name: "Herdr tool sync", stop: stopHerdrToolSync },
-    { name: "Herdr", stop: () => herdr.shutdown() },
-    { name: "Herdr registration", stop: () => clearHerdrBridge(herdr) },
     { name: "managed processes", stop: () => managedProcesses.stopAll("host") },
     { name: "channels", stop: () => channelManager.shutdown() },
     { name: "file watches", stop: stopAllFileWatches },

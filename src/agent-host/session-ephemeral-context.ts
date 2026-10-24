@@ -1,6 +1,5 @@
 import type { ExtensionAPI, SessionManager } from "@earendil-works/pi-coding-agent";
 import { getAgentSessionSource } from "./session-source.ts";
-import { redactHerdrPersistedMessage } from "./herdr/session-redaction.ts";
 import { redactManagedProcessPersistedMessage } from "./managed-process/session-redaction.ts";
 
 type ProjectedMessage = ReturnType<SessionManager["buildSessionProjection"]>["messages"][number];
@@ -21,7 +20,7 @@ function sameJson(left: unknown, right: unknown): boolean {
 }
 
 function isSensitiveMessage(message: unknown): boolean {
-  return redactManagedProcessPersistedMessage(message) !== message || redactHerdrPersistedMessage(message) !== message;
+  return redactManagedProcessPersistedMessage(message) !== message;
 }
 
 /**

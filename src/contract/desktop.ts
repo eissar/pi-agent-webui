@@ -2,7 +2,6 @@ import type { AppLanguage } from "../shared/app-language.ts";
 import type { ChannelId } from "../shared/channel-types";
 import type { ManagedProcessCapability } from "./processes";
 import type { ChatAppearancePreferences } from "../shared/chat-appearance";
-import type { HerdrSettings } from "./herdr";
 import type { PublicToolchainState, ToolchainActionRequest } from "../shared/toolchains/types";
 import type {
   BrowserBoundsInput,
@@ -126,7 +125,6 @@ export interface DesktopUiState {
   backgroundMode?: boolean;
   managedProcessesEnabled?: boolean;
   chatAppearance?: ChatAppearancePreferences;
-  herdrSettings?: HerdrSettings;
 }
 
 export type DesktopUiStatePatch = Partial<DesktopUiState>;

@@ -13,7 +13,6 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import { setAgentSessionSource } from "./session-source.ts";
 import { installManagedProcessSessionRedaction } from "./managed-process/session-redaction.ts";
-import { installHerdrSessionRedaction } from "./herdr/session-redaction.ts";
 import { createEphemeralContextExtension, SessionEphemeralContext } from "./session-ephemeral-context.ts";
 
 const SENTINEL = "LIVE_TOOL_RESULT_42";
@@ -33,7 +32,6 @@ async function createFixture(
   const manager = persisted ? SessionManager.create(directory, directory) : SessionManager.inMemory(directory);
   setAgentSessionSource(manager, "local");
   installManagedProcessSessionRedaction(manager);
-  installHerdrSessionRedaction(manager);
   const ephemeral = new SessionEphemeralContext(manager);
   ephemeral.install();
   const services = await createAgentSessionServices({
@@ -106,8 +104,8 @@ async function createFixture(
   return { session, manager, ephemeral, requests };
 }
 
-test("persisted JSONL contains only redacted process and Herdr tool output", async (t) => {
-  for (const toolName of ["process_list", "herdr_status"]) {
+test("persisted JSONL contains only redacted process tool output", async (t) => {
+  for (const toolName of ["process_list"]) {
     const { session, manager, requests } = await createFixture(t, toolName, {}, true);
     await session.prompt("Run the fixture tool", { source: "rpc" });
     assert.match(JSON.stringify(requests[1].messages), /LIVE_TOOL_RESULT_42/);
@@ -115,7 +113,7 @@ test("persisted JSONL contains only redacted process and Herdr tool output", asy
     assert.ok(sessionFile);
     const jsonl = readFileSync(sessionFile, "utf8");
     assert.equal(jsonl.includes(SENTINEL), false);
-    assert.match(jsonl, /Sensitive (managed process|Herdr) result was not saved/);
+    assert.match(jsonl, /Sensitive managed process result was not saved/);
   }
 });
 
@@ -237,7 +235,7 @@ test("an aborted run discards live records and ignores late callbacks until a ne
   ephemeral.dispose();
 });
 
-for (const toolName of ["process_list", "herdr_status"]) {
+for (const toolName of ["process_list"]) {
   test(toolName + " remains available to the next model request but is never saved raw", async (t) => {
     const { session, manager, requests } = await createFixture(t, toolName);
     await session.prompt("Run the fixture tool", { source: "rpc" });
@@ -246,7 +244,7 @@ for (const toolName of ["process_list", "herdr_status"]) {
     assert.equal(result.content[0].text, SENTINEL);
     const persisted = JSON.stringify(manager.getEntries());
     assert.equal(persisted.includes(SENTINEL), false);
-    assert.match(persisted, /Sensitive (managed process|Herdr) result was not saved/);
+    assert.match(persisted, /Sensitive managed process result was not saved/);
   });
 }
 
@@ -433,7 +431,7 @@ test("clearing a live result stops warming a request that still holds the old co
 });
 
 test("retain-none compaction removes live result context without writing the result into a summary", async (t) => {
-  const { session, manager, requests } = await createFixture(t, "herdr_status");
+  const { session, manager, requests } = await createFixture(t, "process_list");
   await session.prompt("Run the fixture tool", { source: "rpc" });
   manager.appendCompaction("Safe fixture summary", null, 2);
   await session.prompt("Continue after compaction", { source: "rpc" });

@@ -35,10 +35,6 @@ export const architecturePolicy = {
       reason:
         "Reduced by 22-04 presentation extraction; one completion-time index reconciliation covers missed first-session file events.",
     },
-    "src/agent-host/herdr/bridge.ts": {
-      maxLines: 1580,
-      reason: "Existing terminal/session coordination; lifecycle changes require native integration evidence.",
-    },
     "src/agent-host/rpc-manager.ts": {
       maxLines: 1541,
       reason:

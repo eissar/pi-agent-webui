@@ -123,7 +123,7 @@ test("renders verified providers, incomplete Node distributions, and the no-netw
   assert.match(html, /Incomplete/);
   assert.match(html, /does not run shell profiles or access the network/);
   assert.match(html, /<button[^>]*>Rescan<\/button>/);
-  assert.equal((html.match(/data-tool-id=/g) ?? []).length, 15);
+  assert.equal((html.match(/data-tool-id=/g) ?? []).length, 14);
   assert.match(html, /<aside[^>]*aria-label="Developer tool list"/);
   assert.match(html, /data-tool-id="js\.node"[^>]*aria-current="true"/);
   assert.doesNotMatch(html, /<details|<summary/);

@@ -78,4 +78,4 @@ npm run typecheck
 ## Features Supported & Unsupported
 
 - ✅ **Supported**: Real Pi coding agent sessions, prompting, tool execution, session history, model configuration, workspace/file explorer, skill discovery, plugins.
-- ❌ **Unsupported / Disabled**: Electron native menus, Herdr terminal fleet management, native OS window decorations.
+- ❌ **Unsupported / Disabled**: Electron native menus, native OS window decorations.

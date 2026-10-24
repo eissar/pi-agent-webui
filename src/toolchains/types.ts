@@ -26,7 +26,6 @@ export const MANAGED_COMPONENT_IDS = [
   "fd",
   "jq",
   "bun",
-  "herdr",
 ] as const;
 
 export type ManagedComponentId = (typeof MANAGED_COMPONENT_IDS)[number];

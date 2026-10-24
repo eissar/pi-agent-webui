@@ -7,7 +7,7 @@
  *   1. host.ping over the WS transport
  *   2. sessions.list / agent.new / agent.state (session essentials)
  *   3. models.list (model catalog from local config)
- *   4. Unsupported desktop features fail explicitly (herdr.*)
+ *   4. Unknown methods fail explicitly
  *   5. Remote binding requires a token; wrong/missing token is rejected
  *
  * Usage: npm run build:server && node scripts/test-standalone-server.mjs
@@ -183,13 +183,7 @@ try {
   }
   check("server emits sessions.changed events to subscribers", eventReceived !== null);
 
-  // Unsupported desktop features must fail explicitly, never fake success.
-  const herdr = await rpc
-    .call("herdr.snapshot")
-    .then((v) => ({ ok: true, v }))
-    .catch((err) => ({ ok: false, err }));
-  check("herdr.snapshot fails explicitly in standalone mode", herdr.ok === false, JSON.stringify(herdr.v));
-
+  // Unknown methods must fail explicitly, never fake success.
   const unknown = await rpc
     .call("host.doesNotExist")
     .then(() => ({ ok: true }))

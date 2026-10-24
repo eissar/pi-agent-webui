@@ -154,7 +154,7 @@ test("model connection tests use isolated configuration and preserve success and
 test("registerHandlers exposes every contract method exactly once", async () => {
   const { handlers } = await captureHandlers();
   // Keep in sync with src/contract/api.ts: one handler per contract method.
-  assert.equal(Object.keys(handlers).length, 104);
+  assert.equal(Object.keys(handlers).length, 83);
   for (const method of [
     "host.ping",
     "host.toolchain",
@@ -182,26 +182,6 @@ test("registerHandlers exposes every contract method exactly once", async () => 
     "processes.stop",
     "processes.restart",
     "processes.export",
-    "herdr.runtime.get",
-    "herdr.runtime.configure",
-    "herdr.runtime.probe",
-    "herdr.runtime.restart",
-    "herdr.runtime.connect",
-    "herdr.runtime.disconnect",
-    "herdr.snapshot",
-    "herdr.workspace.create",
-    "herdr.pane.split",
-    "herdr.pane.read",
-    "herdr.agent.start",
-    "herdr.agent.prompt",
-    "herdr.agent.sendKeys",
-    "herdr.agent.wait",
-    "herdr.agent.waitCancel",
-    "herdr.terminal.open",
-    "herdr.terminal.input",
-    "herdr.terminal.resize",
-    "herdr.terminal.ack",
-    "herdr.terminal.close",
     "system.allowRoot",
   ]) {
     assert.equal(typeof handlers[method], "function", `${method} must be registered`);
@@ -246,35 +226,6 @@ test("both text endpoints preserve UTF-8 boundaries and byte budgets while Host 
     await assert.rejects(client.call(method, { path: project }), (error) => error.code === "BAD_REQUEST");
     await assert.rejects(handlers[method]({ path: path.join(project, "deleted.txt") }), { code: "ENOENT" });
   }
-});
-
-test("Herdr RPC parameter objects reject unknown keys at the Host boundary", async () => {
-  const { assertHerdrParamKeys } = await loadHandlersModule();
-  assert.deepEqual(assertHerdrParamKeys(undefined, []), {});
-  assert.deepEqual(assertHerdrParamKeys({ paneId: "pane-a", mode: "observe" }, ["paneId", "mode"]), {
-    paneId: "pane-a",
-    mode: "observe",
-  });
-  assert.throws(
-    () => assertHerdrParamKeys({ paneId: "pane-a", rawMethod: "shell.exec" }, ["paneId"]),
-    (error) => error.code === "HERDR_INVALID_REQUEST" && /unsupported parameter/.test(error.message),
-  );
-});
-
-test("Herdr Host validates path parameter types before filesystem policy checks", async () => {
-  const { handlers } = await captureHandlers();
-  await assert.rejects(
-    handlers["herdr.workspace.create"]({ cwd: 42 }),
-    (error) => error.code === "HERDR_INVALID_REQUEST" && error.message === "Workspace parameters are invalid.",
-  );
-  await assert.rejects(
-    handlers["herdr.workspace.create"]({ cwd: "/tmp/project", name: { label: "unsafe" } }),
-    (error) => error.code === "HERDR_INVALID_REQUEST" && error.message === "Workspace parameters are invalid.",
-  );
-  await assert.rejects(
-    handlers["herdr.pane.split"]({ paneId: "pane-a", direction: "horizontal", cwd: { path: "/tmp" } }),
-    (error) => error.code === "HERDR_INVALID_REQUEST" && error.message === "Pane split parameters are invalid.",
-  );
 });
 
 test("agent.new uses a unique temporary lock key for every request", async () => {

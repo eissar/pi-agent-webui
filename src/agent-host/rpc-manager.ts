@@ -36,9 +36,6 @@ import { getDesktopSessionToolNames, setDesktopSessionToolNames } from "./sessio
 import { peekManagedProcessService } from "./managed-process/runtime";
 import { createManagedProcessToolDefinitions } from "./managed-process/tools";
 import { installManagedProcessSessionRedaction } from "./managed-process/session-redaction";
-import { peekHerdrBridge } from "./herdr/runtime";
-import { createHerdrToolDefinitions, herdrToolNamesForRuntime, isHerdrToolName } from "./herdr/tools";
-import { installHerdrSessionRedaction } from "./herdr/session-redaction";
 import { createDesktopPromptExtension, SessionPromptPolicy } from "./session-prompt-policy";
 import { createEphemeralContextExtension, SessionEphemeralContext } from "./session-ephemeral-context";
 import { createLegacyChannelContextExtension } from "./legacy-channel-context";
@@ -239,12 +236,9 @@ export class AgentSessionWrapper {
       this.inner.setActiveToolsByName([]);
       return;
     }
-    const current = this.inner
-      .getActiveToolNames()
-      .filter((name) => !isBrowserToolName(name) && !isHerdrToolName(name));
+    const current = this.inner.getActiveToolNames().filter((name) => !isBrowserToolName(name));
     const browserTools = browserToolNamesForSnapshot(browserCapabilityRuntime.getSnapshot());
-    const herdrTools = herdrToolNamesForRuntime(peekHerdrBridge());
-    this.inner.setActiveToolsByName(filterDesktopToolNames([...current, ...browserTools, ...herdrTools]));
+    this.inner.setActiveToolsByName(filterDesktopToolNames([...current, ...browserTools]));
   }
 
   syncBrowserToolActivation(): void {
@@ -1135,20 +1129,6 @@ export class AgentSessionWrapper {
           opts?.timeout,
           opts?.signal,
         ),
-      confirmLocalized: (title, message, localization, opts) =>
-        this.requestExtensionUi(
-          {
-            method: "confirm",
-            title,
-            message,
-            localization,
-            ...(opts?.timeout ? { timeout: opts.timeout } : {}),
-          },
-          false,
-          (response) => ("confirmed" in response ? response.confirmed : false),
-          opts?.timeout,
-          opts?.signal,
-        ),
       input: (title, placeholder, opts) =>
         this.requestExtensionUi(
           {
@@ -1455,7 +1435,6 @@ export async function startRpcSession(
     // local only at this explicit desktop-owned construction boundary.
     setBrowserSessionSource(sessionManager, "local");
     installManagedProcessSessionRedaction(sessionManager);
-    installHerdrSessionRedaction(sessionManager);
     const ephemeralContext = new SessionEphemeralContext(sessionManager);
     ephemeralContext.install();
 
@@ -1496,7 +1475,6 @@ export async function startRpcSession(
       createBashToolDefinition(cwd, bashOptions),
       ...createDesktopSearchToolDefinitions(cwd, executionContext, toolchainRuntime),
       ...createBrowserToolDefinitions(),
-      ...(peekHerdrBridge() ? createHerdrToolDefinitions(cwd, peekHerdrBridge()!) : []),
       ...(peekManagedProcessService()
         ? createManagedProcessToolDefinitions(
             cwd,
