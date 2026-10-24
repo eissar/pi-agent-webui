@@ -1,5 +1,5 @@
 import { signal, computed } from "@preact/signals";
-import { useCallback, useEffect } from "react";
+import { useCallback } from "react";
 
 export type Theme = "light" | "dark";
 
@@ -21,35 +21,37 @@ function applyDocumentTheme(theme: Theme): void {
   themeSignal.value = theme;
 }
 
+let systemThemeFollowStarted = false;
+
+/** Follow OS theme when the user has not forced a preference. Starts once per page. */
+function startSystemThemeFollow(): void {
+  if (systemThemeFollowStarted || typeof window === "undefined") return;
+  systemThemeFollowStarted = true;
+  const storedTheme = (): string | null => {
+    try {
+      return localStorage.getItem("pi-theme");
+    } catch {
+      return null;
+    }
+  };
+  if (storedTheme() === "light" || storedTheme() === "dark") return;
+  const applySystem = () => {
+    const stored = storedTheme();
+    if (stored === "light" || stored === "dark") return;
+    const dark = systemPrefersDark();
+    applyDocumentTheme(dark ? "dark" : "light");
+    void window.piBridge?.setThemeSource?.("system");
+  };
+  applySystem();
+  window.matchMedia?.("(prefers-color-scheme: dark)")?.addEventListener?.("change", applySystem);
+}
+
 type ToggleOrigin = { x: number; y: number };
 
 export function useTheme() {
   const theme = themeSignal.value;
 
-  // Follow OS theme when user has not forced a preference (or chose system)
-  useEffect(() => {
-    const storedTheme = (): string | null => {
-      try {
-        return localStorage.getItem("pi-theme");
-      } catch {
-        return null;
-      }
-    };
-    if (storedTheme() === "light" || storedTheme() === "dark") return;
-
-    const applySystem = () => {
-      const stored = storedTheme();
-      if (stored === "light" || stored === "dark") return;
-      const dark = systemPrefersDark();
-      applyDocumentTheme(dark ? "dark" : "light");
-      void window.piBridge?.setThemeSource?.("system");
-    };
-    applySystem();
-    const mq = window.matchMedia?.("(prefers-color-scheme: dark)");
-    const onChange = () => applySystem();
-    mq?.addEventListener?.("change", onChange);
-    return () => mq?.removeEventListener?.("change", onChange);
-  }, []);
+  startSystemThemeFollow();
 
   const toggleTheme = useCallback((origin?: ToggleOrigin) => {
     const next: Theme = themeSignal.value === "dark" ? "light" : "dark";

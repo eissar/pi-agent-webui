@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import type { ChatAppearancePreferences } from "@shared/chat-appearance";
 import { applyChatAppearance, ChatAppearanceController } from "@/lib/chat-appearance";
 
@@ -15,13 +15,10 @@ export function useChatAppearance(): {
       write: (preferences) => window.piBridge.setUiState({ chatAppearance: preferences }),
       apply: (preferences) => applyChatAppearance(document.documentElement, preferences),
     });
+    void controllerRef.current.load();
   }
   const controller = controllerRef.current;
   const snapshot = controller.snapshotSignal.value;
-
-  useEffect(() => {
-    void controller.load();
-  }, [controller]);
 
   return { ...snapshot, update: (preferences) => controller.update(preferences) };
 }

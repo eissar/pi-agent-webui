@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback } from "react";
 
 const SOUND_ENABLED_STORAGE_KEY = "pi-sound-enabled";
 
@@ -47,9 +47,7 @@ export function useAudio() {
   });
 
   const enabledRef = useRef(enabled);
-  useEffect(() => {
-    enabledRef.current = enabled;
-  }, [enabled]);
+  enabledRef.current = enabled;
 
   // Reuse a single AudioContext so it can be resumed if the browser
   // autoplay policy suspends it (contexts created outside user gestures

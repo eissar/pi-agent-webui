@@ -1,5 +1,4 @@
 import { signal } from "@preact/signals";
-import { useEffect } from "react";
 
 // Mobile breakpoint shared with app/globals.css (max-width: 640px).
 const MOBILE_QUERY = "(max-width: 640px)";
@@ -22,9 +21,5 @@ if (typeof window !== "undefined" && window.matchMedia) {
  * Returns true when the viewport is at or below the mobile breakpoint.
  */
 export function useIsMobile(): boolean {
-  useEffect(() => {
-    // Sync initially on mount if needed
-    isMobileSignal.value = getIsMobile();
-  }, []);
   return isMobileSignal.value;
 }
