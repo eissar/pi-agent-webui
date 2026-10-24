@@ -1,11 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import rehypeKatex from "rehype-katex";
 import rehypeRaw from "rehype-raw";
 import rehypeSanitize from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
-import remarkMath from "remark-math";
 import {
   linkifyLocalFileText,
   markdownRehypePlugins,
@@ -13,12 +11,10 @@ import {
   remarkLocalFileLinks,
 } from "./markdown.ts";
 
-test("Markdown plugins preserve GFM/math, add AST path links, and sanitize raw HTML", () => {
-  assert.deepEqual(markdownRemarkPlugins, [remarkGfm, remarkMath, remarkLocalFileLinks]);
+test("Markdown plugins preserve GFM, add AST path links, and sanitize raw HTML", () => {
+  assert.deepEqual(markdownRemarkPlugins, [remarkGfm, remarkLocalFileLinks]);
   assert.equal(markdownRehypePlugins[0], rehypeRaw);
   assert.equal(markdownRehypePlugins[1][0], rehypeSanitize);
-  assert.equal(markdownRehypePlugins[2][0], rehypeKatex);
-  assert.deepEqual(markdownRehypePlugins[2][1], { throwOnError: false, strict: false });
   const schema = markdownRehypePlugins[1][1];
   assert.deepEqual(schema.strip.slice(-4), ["iframe", "object", "style", "form"]);
   assert.ok(schema.protocols.href.includes("file"));
@@ -73,7 +69,7 @@ test("links local filenames containing spaces and absolute directories without e
   ]);
 });
 
-test("AST transform skips existing links, images, code, inline code, HTML, and math", () => {
+test("AST transform skips existing links, images, code, inline code, and HTML", () => {
   const tree = {
     type: "root",
     children: [
@@ -83,7 +79,6 @@ test("AST transform skips existing links, images, code, inline code, HTML, and m
       { type: "code", value: "/tmp/code.txt" },
       { type: "inlineCode", value: "/tmp/inline.txt" },
       { type: "html", value: '<a href="https://example.com/x">x</a>' },
-      { type: "math", value: "/tmp/math.txt" },
     ],
   };
   remarkLocalFileLinks()(tree);

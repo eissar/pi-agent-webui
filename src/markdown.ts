@@ -1,16 +1,14 @@
 import type { Options as ReactMarkdownOptions } from "react-markdown";
-import rehypeKatex from "rehype-katex";
 import rehypeRaw from "rehype-raw";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
-import remarkMath from "remark-math";
 import { fileUrlToLocalPath, localFilePathToUrl } from "./file-url.ts";
 
 export const markdownSanitizeSchema = {
   ...defaultSchema,
   attributes: {
     ...defaultSchema.attributes,
-    code: [["className", /^language-./, "math-inline", "math-display"]],
+    code: [["className", /^language-./]],
   },
   protocols: {
     ...defaultSchema.protocols,
@@ -43,7 +41,7 @@ const BARE_LOCAL_PATH_RE = new RegExp(
   "gu",
 );
 
-const SKIPPED_MARKDOWN_NODE_TYPES = new Set(["link", "image", "code", "inlineCode", "html", "math", "inlineMath"]);
+const SKIPPED_MARKDOWN_NODE_TYPES = new Set(["link", "image", "code", "inlineCode", "html"]);
 
 function splitLineSuffix(value: string): { path: string; suffix: string } {
   const match = /(:\d+(?::\d+)?)$/.exec(value);
@@ -107,12 +105,10 @@ export function remarkLocalFileLinks() {
 
 export const markdownRemarkPlugins: ReactMarkdownOptions["remarkPlugins"] = [
   remarkGfm,
-  remarkMath,
   remarkLocalFileLinks,
 ];
 
 export const markdownRehypePlugins: ReactMarkdownOptions["rehypePlugins"] = [
   rehypeRaw,
   [rehypeSanitize, markdownSanitizeSchema],
-  [rehypeKatex, { throwOnError: false, strict: false }],
 ];

@@ -14,7 +14,7 @@ const { MarkdownBody, getMarkdownComponentIdentityForTest, parseStats } = await 
       loader: "ts",
     },
     jsx: "automatic",
-    external: ["react", "react/jsx-runtime", "react-markdown", "mermaid"],
+    external: ["react", "react/jsx-runtime", "react-markdown"],
     plugins: [
       {
         name: "markdown-body-stubs",
@@ -36,13 +36,11 @@ const { MarkdownBody, getMarkdownComponentIdentityForTest, parseStats } = await 
                         ? "export const shouldHighlightCode = () => false;"
                         : args.path === "@/lib/chat-appearance"
                           ? "export const scaledChatFont = (value) => `${value}px`;"
-                          : args.path === "@/lib/mermaid-renderer"
-                            ? "export const mermaidCacheKey = () => 'key'; export const renderMermaidSvg = async () => '<svg />';"
-                            : args.path === "@/hooks/useCopyFeedback"
-                              ? "export const useCopyFeedback = () => ({ copied: false, copy: async () => true });"
-                              : args.path === "@/lib/syntax-highlight"
-                                ? "export const SyntaxHighlighter = 'pre'; export const vs = {}; export const vscDarkPlus = {};"
-                                : "export const SessionProfiler = ({ children }) => children;",
+                          : args.path === "@/hooks/useCopyFeedback"
+                            ? "export const useCopyFeedback = () => ({ copied: false, copy: async () => true });"
+                            : args.path === "@/lib/syntax-highlight"
+                              ? "export const SyntaxHighlighter = 'pre'; export const vs = {}; export const vscDarkPlus = {};"
+                              : "export const SessionProfiler = ({ children }) => children;",
           }));
         },
       },

@@ -2,17 +2,6 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
-test("renderer loads KaTeX CSS from the installed package without runtime CDN links", () => {
-  const html = readFileSync(new URL("./index.html", import.meta.url), "utf8");
-  const main = readFileSync(new URL("./main.tsx", import.meta.url), "utf8");
-  const katexCss = readFileSync(new URL("../../node_modules/katex/dist/katex.min.css", import.meta.url), "utf8");
-
-  assert.doesNotMatch(html, /https?:\/\//i);
-  assert.match(main, /import\s+["']katex\/dist\/katex\.min\.css["']/);
-  assert.match(katexCss, /@font-face/);
-  assert.match(katexCss, /url\(fonts\/KaTeX_[^)]+\.woff2\)/);
-});
-
 test(
   "production renderer CSP permits only packaged styles and fonts",
   { skip: !existsSync(new URL("../main/protocol.ts", import.meta.url)) },

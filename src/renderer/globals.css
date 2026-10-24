@@ -533,15 +533,6 @@ code {
   margin: 12px 0;
   background: linear-gradient(90deg, transparent, var(--border), transparent);
 }
-.markdown-body .katex-display {
-  margin: 0.6em 0;
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding: 2px 0;
-}
-.markdown-body .katex {
-  font-size: 1.05em;
-}
 .markdown-body.markdown-user-message {
   color: var(--user-fg);
 }
@@ -739,24 +730,6 @@ code {
 .markdown-code-action.is-active {
   background: var(--bg-selected);
   color: var(--text);
-}
-
-.mermaid-block {
-  padding: 12px;
-  overflow-x: auto;
-  background: color-mix(in srgb, var(--bg) 92%, var(--bg-panel));
-}
-.mermaid-block svg {
-  display: block;
-  max-width: none;
-}
-.mermaid-block-loading {
-  min-height: 120px;
-}
-.mermaid-block-error {
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-  font-size: calc(12px * var(--chat-font-scale, 1));
 }
 
 /* File viewer markdown preview — larger headings */

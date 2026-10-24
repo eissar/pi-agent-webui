@@ -17,7 +17,6 @@ import { useCopyFeedback } from "@/hooks/useCopyFeedback";
 import { resolveLocalFileHref } from "@/lib/file-links";
 import { markdownRehypePlugins, markdownRemarkPlugins } from "@/lib/markdown";
 import { shouldHighlightCode } from "@/lib/code-highlight-policy";
-import { mermaidCacheKey, renderMermaidSvg } from "@/lib/mermaid-renderer";
 import { SessionProfiler } from "./SessionProfiler";
 import { useI18n } from "@/i18n";
 import { scaledChatFont } from "@/lib/chat-appearance";
@@ -49,9 +48,6 @@ function MarkdownCode({ className, children, node: _node, ...props }: MarkdownCo
   const raw = String(children);
   const isBlock = className?.includes("language-") || raw.includes("\n");
   if (isBlock) {
-    if (lang === "mermaid") {
-      return <MermaidBlock code={raw.replace(/\n$/, "")} isStreaming={isStreaming} />;
-    }
     return <CodeBlock code={raw.replace(/\n$/, "")} lang={lang} isStreaming={isStreaming} />;
   }
   return (
@@ -173,10 +169,7 @@ export const MarkdownBody = memo(function MarkdownBody({
 }: MarkdownBodyProps) {
   // Bound synchronous parsing while content grows; settlement renders the original source in full.
   const lightweightPreview = isStreaming && children.length > 2048;
-  const normalizedMarkdown = useMemo(
-    () => (lightweightPreview ? "" : normalizeDisplayMath(children)),
-    [children, lightweightPreview],
-  );
+  const normalizedMarkdown = lightweightPreview ? "" : children;
   const renderContext = useMemo(
     () => ({ isStreaming, cwd, imageBasePath, sourceSessionId, onOpenFile }),
     [cwd, imageBasePath, isStreaming, onOpenFile, sourceSessionId],
@@ -274,110 +267,6 @@ function MarkdownImage({
   }
 
   return <img src={previewSrc} alt={alt ?? ""} loading="lazy" referrerPolicy="no-referrer" {...props} />;
-}
-
-function normalizeDisplayMath(markdown: string): string {
-  const lineBreak = markdown.includes("\r\n") ? "\r\n" : "\n";
-  const lines = markdown.split(/\r?\n/);
-  let fence: { marker: string; size: number } | null = null;
-
-  return lines
-    .map((line) => {
-      const fenceMatch = line.match(/^ {0,3}(`{3,}|~{3,})/);
-      if (fenceMatch) {
-        const marker = fenceMatch[1][0];
-        const size = fenceMatch[1].length;
-        if (!fence) fence = { marker, size };
-        else if (marker === fence.marker && size >= fence.size) fence = null;
-        return line;
-      }
-
-      if (fence) return line;
-
-      const displayMathMatch = line.match(/^([ \t]{0,3})\$\$(.+)\$\$[ \t]*$/);
-      if (!displayMathMatch) return line;
-
-      const math = displayMathMatch[2].trim();
-      if (!math) return line;
-
-      // Keep the body in the same list item as its fences; dedenting it turns
-      // the closing fence into a new block that consumes subsequent Markdown.
-      const indent = displayMathMatch[1];
-      return `${indent}$$${lineBreak}${indent}${math}${lineBreak}${indent}$$`;
-    })
-    .join(lineBreak);
-}
-
-function MermaidBlock({ code, isStreaming }: { code: string; isStreaming?: boolean }) {
-  const { isDark } = useTheme();
-  const [showPreview, setShowPreview] = useState(true);
-  const [svg, setSvg] = useState<string | null>(null);
-  const [renderedKey, setRenderedKey] = useState("");
-  const [failedKey, setFailedKey] = useState<string | null>(null);
-  const currentKey = mermaidCacheKey(code, isDark);
-
-  useEffect(() => {
-    if (!showPreview || isStreaming) return;
-
-    let cancelled = false;
-    setFailedKey(null);
-
-    const render = async () => {
-      const rendered = await renderMermaidSvg(code, isDark);
-      if (!cancelled) {
-        setSvg(rendered);
-        setRenderedKey(currentKey);
-      }
-    };
-
-    render().catch(() => {
-      if (!cancelled) setFailedKey(currentKey);
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [code, currentKey, isDark, isStreaming, showPreview]);
-
-  const previewButton = (
-    <button
-      onClick={() => setShowPreview((v) => !v)}
-      disabled={isStreaming}
-      title={
-        isStreaming
-          ? "Preview available after streaming"
-          : showPreview
-            ? "Show Mermaid source"
-            : "Preview Mermaid diagram"
-      }
-      className={["markdown-code-action", showPreview ? "is-active" : ""].filter(Boolean).join(" ")}
-    >
-      {showPreview ? "Source" : "Preview"}
-    </button>
-  );
-
-  if (!showPreview || isStreaming) {
-    return <CodeBlock code={code} lang="mermaid" headerAction={previewButton} isStreaming={isStreaming} />;
-  }
-
-  const body =
-    failedKey === currentKey ? (
-      <div className="mermaid-block mermaid-block-error">Invalid Mermaid diagram</div>
-    ) : !svg || renderedKey !== currentKey ? (
-      <div className="mermaid-block mermaid-block-loading" aria-label="Rendering Mermaid diagram" />
-    ) : (
-      <div className="mermaid-block" dangerouslySetInnerHTML={{ __html: svg }} />
-    );
-
-  return (
-    <div className="markdown-code-block">
-      <div className="markdown-code-header">
-        <span className="markdown-code-lang">mermaid</span>
-        {previewButton}
-      </div>
-      {body}
-    </div>
-  );
 }
 
 const CodeBlock = memo(function CodeBlock({
