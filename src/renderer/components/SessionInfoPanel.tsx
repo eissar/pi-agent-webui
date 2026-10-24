@@ -13,14 +13,12 @@ export function SessionInfoPanel({
   showChat,
   activeTopPanel,
   toggleTopPanel,
-  rightPanelOpen,
   isMobile,
 }: {
   store: SessionPresentationStore;
   showChat: boolean;
   activeTopPanel: "session" | null;
   toggleTopPanel: () => void;
-  rightPanelOpen: boolean;
   isMobile: boolean;
 }) {
   const { t, language } = useI18n();
@@ -119,7 +117,7 @@ export function SessionInfoPanel({
                 alignItems: "center",
                 gap: 8,
                 paddingLeft: 12,
-                paddingRight: rightPanelOpen ? 12 : 48,
+                paddingRight: 12,
                 height: "100%",
                 background: activeTopPanel === "session" ? "var(--bg-selected)" : "none",
                 border: "none",
