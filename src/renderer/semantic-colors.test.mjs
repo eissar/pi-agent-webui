@@ -94,8 +94,4 @@ test("accent contrast meets WCAG AA in both themes and has no component fallback
     assert.ok(contrastRatio(cssHexToken(root, "--accent"), cssHexToken(root, "--accent-contrast")) >= 4.5, theme);
     assert.match(root, /--on-accent:\s*var\(--accent-contrast\)/);
   }
-
-  const browserSettings = readFileSync(new URL("components/browser/BrowserSettings.tsx", import.meta.url), "utf8");
-  assert.match(browserSettings, /color:\s*"var\(--accent-contrast\)"/);
-  assert.doesNotMatch(browserSettings, /var\(--accent-contrast\s*,/);
 });

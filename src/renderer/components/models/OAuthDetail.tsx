@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { SectionTitle } from "../form-controls";
-import { useI18n } from "@/i18n";
 import { call, subscribeAuthLogin } from "@/lib/api-client";
 import type { ProviderStatus as OAuthProvider, LoginProgressEvent } from "@contract/types";
 import { type ModelSelectionControl, ManagedModelsControl } from "./ManagedModelsControl";
@@ -31,7 +30,6 @@ export function OAuthDetail({
   onRefresh: () => void;
   modelSelection: ModelSelectionControl;
 }) {
-  const { t } = useI18n();
   const [loginState, setLoginState] = useState<OAuthLoginState>({ phase: "idle" });
   const [inputValue, setInputValue] = useState("");
   const progressUnsubRef = useRef<(() => void) | null>(null);
@@ -85,7 +83,7 @@ export function OAuthDetail({
       if (loginAttemptRef.current !== attempt) return;
       setLoginState({
         phase: "error",
-        message: error instanceof Error ? error.message : t("modelUnableResetLogin", "Unable to reset login"),
+        message: error instanceof Error ? error.message : "Unable to reset login",
       });
       return;
     }
@@ -171,10 +169,10 @@ export function OAuthDetail({
       finishProgress();
       setLoginState({
         phase: "error",
-        message: error instanceof Error ? error.message : t("modelConnectionLost", "Connection lost"),
+        message: error instanceof Error ? error.message : "Connection lost",
       });
     }
-  }, [closeProgress, provider.id, onRefresh, t]);
+  }, [closeProgress, provider.id, onRefresh]);
 
   const handleCancelLogin = useCallback(() => {
     loginAttemptRef.current += 1;
@@ -191,13 +189,13 @@ export function OAuthDetail({
       setLoginState(
         result.warning
           ? { phase: "success", message: result.warning.message, warning: true }
-          : { phase: "success", message: t("modelDisconnectedSuccessfully", "Disconnected successfully.") },
+          : { phase: "success", message: "Disconnected successfully." },
       );
       onRefresh();
     } catch (error) {
       setLoginState({ phase: "error", message: error instanceof Error ? error.message : String(error) });
     }
-  }, [provider.id, onRefresh, t]);
+  }, [provider.id, onRefresh]);
 
   const submitChallenge = useCallback(
     async (token: string, code: string, message: string, clearInput: boolean) => {
@@ -218,28 +216,28 @@ export function OAuthDetail({
         if (current())
           setLoginState({
             phase: "error",
-            message: error instanceof Error ? error.message : t("modelNetworkError", "Network error"),
+            message: error instanceof Error ? error.message : "Network error",
           });
       } finally {
         if (submissionRef.current === submission) submissionRef.current = null;
       }
     },
-    [provider.id, t],
+    [provider.id],
   );
 
   const submitCode = useCallback(
     (token: string, code: string) => {
       if (!code.trim()) return Promise.resolve();
-      return submitChallenge(token, code.trim(), t("modelVerifying", "Verifying…"), true);
+      return submitChallenge(token, code.trim(), "Verifying…", true);
     },
-    [submitChallenge, t],
+    [submitChallenge],
   );
 
   const submitSelection = useCallback(
     (token: string, value: string) => {
-      return submitChallenge(token, value, t("modelContinuing", "Continuing…"), false);
+      return submitChallenge(token, value, "Continuing…", false);
     },
-    [submitChallenge, t],
+    [submitChallenge],
   );
 
   const isWorking =
@@ -253,7 +251,7 @@ export function OAuthDetail({
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <SectionTitle>{t("modelSubscription", "Subscription")}</SectionTitle>
+        <SectionTitle>{"Subscription"}</SectionTitle>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <span
             style={{
@@ -265,7 +263,7 @@ export function OAuthDetail({
             }}
           />
           <span style={{ fontSize: 11, color: provider.loggedIn ? "#4ade80" : "var(--text-dim)" }}>
-            {provider.loggedIn ? t("modelConnected", "connected") : t("modelNotConnected", "not connected")}
+            {provider.loggedIn ? "connected" : "not connected"}
           </span>
         </div>
       </div>
@@ -275,14 +273,12 @@ export function OAuthDetail({
         {loginState.phase === "idle" && (
           <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)", lineHeight: 1.5 }}>
             {provider.loggedIn
-              ? t("modelAlreadyConnected", "Already connected. You can re-login or disconnect.")
-              : t("modelConnectAccount", "Connect your {provider} account.").replace("{provider}", provider.name)}
+              ? "Already connected. You can re-login or disconnect."
+              : "Connect your {provider} account.".replace("{provider}", provider.name)}
           </p>
         )}
         {loginState.phase === "connecting" && (
-          <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)" }}>
-            {t("modelOpeningBrowser", "Opening browser…")}
-          </p>
+          <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)" }}>{"Opening browser…"}</p>
         )}
         {loginState.phase === "select" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -313,22 +309,19 @@ export function OAuthDetail({
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)", lineHeight: 1.5 }}>
               {loginState.phase === "auth"
-                ? t(
-                    "modelCompleteSignIn",
-                    "Complete sign-in in the browser, then copy the redirect URL from the address bar and paste it below.",
-                  )
+                ? "Complete sign-in in the browser, then copy the redirect URL from the address bar and paste it below."
                 : loginState.message}
             </p>
             {loginState.phase === "auth" && (
               <p style={{ margin: 0, fontSize: 11, color: "var(--text-dim)", lineHeight: 1.5 }}>
-                {t("modelBrowserDidNotOpen", "If the browser window did not open,")}{" "}
+                {"If the browser window did not open,"}{" "}
                 <a
                   href={loginState.url}
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{ color: "var(--accent)", wordBreak: "break-all" }}
                 >
-                  {t("modelOpenLoginPage", "click here to open the login page")}
+                  {"click here to open the login page"}
                 </a>
                 .
               </p>
@@ -344,7 +337,7 @@ export function OAuthDetail({
                 placeholder={
                   loginState.phase === "auth"
                     ? "http://localhost:1455/auth/callback?code=…"
-                    : (loginState.placeholder ?? t("modelEnterValue", "Enter value…"))
+                    : (loginState.placeholder ?? "Enter value…")
                 }
                 style={{
                   flex: 1,
@@ -374,7 +367,7 @@ export function OAuthDetail({
                   flexShrink: 0,
                 }}
               >
-                {t("submit", "Submit")}
+                {"Submit"}
               </button>
             </div>
           </div>
@@ -382,7 +375,7 @@ export function OAuthDetail({
         {loginState.phase === "device_code" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)", lineHeight: 1.5 }}>
-              {t("modelOpenVerificationPage", "Open the verification page and enter this code:")}
+              {"Open the verification page and enter this code:"}
             </p>
             <div
               style={{
@@ -409,7 +402,7 @@ export function OAuthDetail({
                 {loginState.verificationUri}
               </a>
               {loginState.expiresInSeconds
-                ? ` ${t("modelCodeExpires", "Expires in {minutes} minutes.").replace(
+                ? ` ${"Expires in {minutes} minutes.".replace(
                     "{minutes}",
                     String(Math.ceil(loginState.expiresInSeconds / 60)),
                   )}`
@@ -422,7 +415,7 @@ export function OAuthDetail({
         )}
         {loginState.phase === "success" && (
           <p style={{ margin: 0, fontSize: 12, color: loginState.warning ? "#d97706" : "#4ade80" }}>
-            {loginState.message ?? t("modelConnectedSuccessfully", "Connected successfully.")}
+            {loginState.message ?? "Connected successfully."}
           </p>
         )}
         {loginState.phase === "error" && (
@@ -445,7 +438,7 @@ export function OAuthDetail({
               fontSize: 12,
             }}
           >
-            {t("cancel", "Cancel")}
+            {"Cancel"}
           </button>
         ) : (
           <>
@@ -462,7 +455,7 @@ export function OAuthDetail({
                 fontWeight: 600,
               }}
             >
-              {provider.loggedIn ? t("modelRelogin", "Re-login") : t("modelLogin", "Login")}
+              {provider.loggedIn ? "Re-login" : "Login"}
             </button>
             {provider.loggedIn && (
               <button
@@ -477,7 +470,7 @@ export function OAuthDetail({
                   fontSize: 12,
                 }}
               >
-                {t("modelDisconnect", "Disconnect")}
+                {"Disconnect"}
               </button>
             )}
           </>

@@ -1,5 +1,4 @@
 import { useCallback } from "react";
-import { useI18n } from "@/i18n";
 import type { BuiltinSlashCommandResult } from "@/hooks/useAgentSession";
 import type { AttachedImage, useComposerDraft } from "@/hooks/useComposerDraft";
 import { localFileReferenceToMarkdown } from "@/lib/file-url";
@@ -44,7 +43,6 @@ export function useComposerSubmission({
   onBuiltinCommand,
   onAudioUnlock,
 }: ComposerActions & { draft: SubmissionDraft; clearInput: () => void; isStreaming: boolean }) {
-  const { t } = useI18n();
   const {
     value,
     attachedImages,
@@ -64,7 +62,7 @@ export function useComposerSubmission({
     const validationRevision = getRevision();
     if (!(await validateLocalFileReferences(attachedFiles))) return;
     if (validationRevision !== getRevision()) {
-      setSubmissionNotice(t("draftChangedDuringValidation", "The draft changed while files were checked. Send again."));
+      setSubmissionNotice("The draft changed while files were checked. Send again.");
       return;
     }
     onAudioUnlock?.();
@@ -101,7 +99,6 @@ export function useComposerSubmission({
     onSend,
     restoreFailedSubmission,
     setSubmissionNotice,
-    t,
     validateLocalFileReferences,
     value,
   ]);
@@ -112,9 +109,7 @@ export function useComposerSubmission({
       // queue_update/clearQueue. Keep images in the composer until the Agent is
       // idle so recall can never silently discard them.
       if (attachedImages.length > 0) {
-        setSubmissionNotice(
-          t("queuedImagesUnsupported", "Image messages can be sent after the current response finishes."),
-        );
+        setSubmissionNotice("Image messages can be sent after the current response finishes.");
         return;
       }
       const msg = [value.trim(), ...attachedFiles.map(localFileReferenceToMarkdown)].filter(Boolean).join(" ");
@@ -122,9 +117,7 @@ export function useComposerSubmission({
       const validationRevision = getRevision();
       if (!(await validateLocalFileReferences(attachedFiles))) return;
       if (validationRevision !== getRevision()) {
-        setSubmissionNotice(
-          t("draftChangedDuringValidation", "The draft changed while files were checked. Send again."),
-        );
+        setSubmissionNotice("The draft changed while files were checked. Send again.");
         return;
       }
       onAudioUnlock?.();
@@ -160,7 +153,6 @@ export function useComposerSubmission({
       onSteer,
       restoreFailedSubmission,
       setSubmissionNotice,
-      t,
       validateLocalFileReferences,
       value,
     ],

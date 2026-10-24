@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Check, Field, NumInput, SecretTextInput, Select, SectionTitle, TextInput } from "../form-controls";
 import { applyStrictOptionalPositiveInteger } from "@/lib/strict-integer";
-import { useI18n } from "@/i18n";
 import { type ModelEntry, type ProviderEntry } from "@/lib/models-config-state";
 import { call } from "@/lib/api-client";
 
@@ -26,7 +25,6 @@ export function ProviderDetail({
   onRename: (n: string) => void;
   onDelete: () => void;
 }) {
-  const { t } = useI18n();
   const [editingName, setEditingName] = useState(name);
   useEffect(() => setEditingName(name), [name]);
   const set = <K extends keyof ProviderEntry>(k: K, v: ProviderEntry[K]) => onChange({ ...provider, [k]: v });
@@ -39,7 +37,7 @@ export function ProviderDetail({
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <SectionTitle>{t("modelProvider", "Provider")}</SectionTitle>
+        <SectionTitle>{"Provider"}</SectionTitle>
         <button
           type="button"
           onClick={onDelete}
@@ -54,11 +52,11 @@ export function ProviderDetail({
             fontSize: 12,
           }}
         >
-          {t("delete", "Delete")}
+          {"Delete"}
         </button>
       </div>
 
-      <Field label={t("modelProviderName", "Provider name")}>
+      <Field label={"Provider name"}>
         <TextInput value={editingName} onChange={setEditingName} placeholder="provider-name" mono />
         {editingName !== name && editingName.trim() && (
           <button
@@ -77,12 +75,12 @@ export function ProviderDetail({
               alignSelf: "flex-start",
             }}
           >
-            {t("rename", "Rename")}
+            {"Rename"}
           </button>
         )}
       </Field>
 
-      <Field label={t("modelBaseUrl", "Base URL")}>
+      <Field label={"Base URL"}>
         <TextInput
           value={provider.baseUrl ?? ""}
           onChange={(v) => set("baseUrl", v || undefined)}
@@ -91,19 +89,19 @@ export function ProviderDetail({
         />
       </Field>
 
-      <Field label={t("modelApiKey", "API Key")}>
+      <Field label={"API Key"}>
         <SecretTextInput
           value={provider.apiKey ?? ""}
           onChange={(v) => set("apiKey", v || undefined)}
-          placeholder={t("modelApiKeySourcePlaceholder", "ENV_VAR_NAME, !shell-command, or literal key")}
+          placeholder={"ENV_VAR_NAME, !shell-command, or literal key"}
           mono
         />
         <span style={{ fontSize: 10, color: "var(--text-dim)", marginTop: 2 }}>
-          {t("modelApiKeySourceHint", "Prefix with ! to run a shell command, or use an environment variable name.")}
+          {"Prefix with ! to run a shell command, or use an environment variable name."}
         </span>
       </Field>
 
-      <Field label={t("modelApi", "API")}>
+      <Field label={"API"}>
         <Select
           value={provider.api ?? "openai-completions"}
           onChange={(v) => set("api", v)}
@@ -119,36 +117,33 @@ const THINKING_LEVELS = ["off", "minimal", "low", "medium", "high", "xhigh"] as 
 
 type ThinkingLevel = (typeof THINKING_LEVELS)[number];
 
-function thinkingLevelLabel(level: ThinkingLevel, t: (key: string, fallback: string) => string): string {
+function thinkingLevelLabel(level: ThinkingLevel): string {
   switch (level) {
     case "off":
-      return t("thinkingOff", "Off");
+      return "Off";
     case "minimal":
-      return t("thinkingMinimal", "Minimal");
+      return "Minimal";
     case "low":
-      return t("thinkingLow", "Low");
+      return "Low";
     case "medium":
-      return t("thinkingMedium", "Medium");
+      return "Medium";
     case "high":
-      return t("thinkingHigh", "High");
+      return "High";
     case "xhigh":
-      return t("thinkingXHigh", "Extra high");
+      return "Extra high";
   }
 }
 
-function modelCostLabel(
-  kind: "input" | "output" | "cacheRead" | "cacheWrite",
-  t: (key: string, fallback: string) => string,
-): string {
+function modelCostLabel(kind: "input" | "output" | "cacheRead" | "cacheWrite"): string {
   switch (kind) {
     case "input":
-      return t("modelCostInput", "input");
+      return "input";
     case "output":
-      return t("modelCostOutput", "output");
+      return "output";
     case "cacheRead":
-      return t("modelCostCacheRead", "cache read");
+      return "cache read";
     case "cacheWrite":
-      return t("modelCostCacheWrite", "cache write");
+      return "cache write";
   }
 }
 
@@ -168,7 +163,6 @@ function ThinkingLevelMapEditor({
   value: Record<string, string | null> | undefined;
   onChange: (v: Record<string, string | null> | undefined) => void;
 }) {
-  const { t } = useI18n();
   const map = value ?? {};
 
   const setLevel = (level: ThinkingLevel, entry: string | null | "omit") => {
@@ -245,7 +239,7 @@ function ThinkingLevelMapEditor({
                   textDecoration: state === "null" ? "line-through" : "none",
                 }}
               >
-                {thinkingLevelLabel(level, t)}
+                {thinkingLevelLabel(level)}
               </span>
             </div>
 
@@ -263,7 +257,7 @@ function ThinkingLevelMapEditor({
                 onClick={() => setLevel(level, "omit")}
                 style={{ ...btnBase, ...(state === "omit" ? btnActive : {}) }}
               >
-                {t("modelDefault", "Default")}
+                {"Default"}
               </button>
               <button
                 onClick={() => setLevel(level, null)}
@@ -273,7 +267,7 @@ function ThinkingLevelMapEditor({
                   ...(state === "null" ? btnActiveDisabled : {}),
                 }}
               >
-                {t("modelDisabled", "Disabled")}
+                {"Disabled"}
               </button>
             </div>
 
@@ -296,7 +290,7 @@ function ThinkingLevelMapEditor({
                   flexShrink: 0,
                 }}
               >
-                {t("modelCustom", "Custom")}
+                {"Custom"}
               </button>
               <input
                 value={strVal}
@@ -359,7 +353,6 @@ export function ModelDetail({
   onChange: (m: ModelEntry) => void;
   onDelete: () => void;
 }) {
-  const { t } = useI18n();
   const [testState, setTestState] = useState<ModelTestState>({ phase: "idle" });
   const set = <K extends keyof ModelEntry>(k: K, v: ModelEntry[K]) => onChange({ ...model, [k]: v });
   const costVal = (k: keyof NonNullable<ModelEntry["cost"]>) =>
@@ -370,17 +363,15 @@ export function ModelDetail({
   };
   const testSummary = (() => {
     if (testState.phase === "idle") return null;
-    if (testState.phase === "testing") return t("modelTestingConnection", "Testing model connection…");
+    if (testState.phase === "testing") return "Testing model connection…";
     const meta = [
       testState.latencyMs !== undefined ? `${testState.latencyMs}ms` : null,
       testState.status !== undefined ? `HTTP ${testState.status}` : null,
     ].filter(Boolean);
     if (testState.phase === "success") {
-      return [t("modelConnectionConnected", "Connected"), ...meta, testState.responseText || null]
-        .filter(Boolean)
-        .join(" · ");
+      return ["Connected", ...meta, testState.responseText || null].filter(Boolean).join(" · ");
     }
-    return [t("modelConnectionFailed", "Failed"), ...meta, testState.message].filter(Boolean).join(" · ");
+    return ["Failed", ...meta, testState.message].filter(Boolean).join(" · ");
   })();
 
   useEffect(() => {
@@ -395,7 +386,7 @@ export function ModelDetail({
       if (!d.ok) {
         setTestState({
           phase: "error",
-          message: d.error ?? t("modelConnectionFailed", "Failed"),
+          message: d.error ?? "Failed",
           latencyMs: d.latencyMs,
           status: d.status,
         });
@@ -410,12 +401,12 @@ export function ModelDetail({
     } catch (e) {
       setTestState({ phase: "error", message: e instanceof Error ? e.message : String(e) });
     }
-  }, [model, provider, providerName, t, testState.phase]);
+  }, [model, provider, providerName, testState.phase]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <SectionTitle>{t("model", "Model")}</SectionTitle>
+        <SectionTitle>{"Model"}</SectionTitle>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           {testSummary && (
             <span
@@ -454,7 +445,7 @@ export function ModelDetail({
             type="button"
             onClick={handleTest}
             disabled={!model.id.trim() || testState.phase === "testing"}
-            title={t("modelTestConnection", "Test model connection")}
+            title={"Test model connection"}
             style={{
               height: 32,
               padding: "0 10px",
@@ -490,11 +481,7 @@ export function ModelDetail({
                 <polyline points="20 6 9 17 4 12" />
               </svg>
             )}
-            {testState.phase === "testing"
-              ? t("testingConnection", "Testing…")
-              : testState.phase === "success"
-                ? "OK"
-                : t("modelTest", "Test")}
+            {testState.phase === "testing" ? "Testing…" : testState.phase === "success" ? "OK" : "Test"}
           </button>
           <button
             type="button"
@@ -511,36 +498,36 @@ export function ModelDetail({
               boxSizing: "border-box",
             }}
           >
-            {t("modelRemove", "Remove")}
+            {"Remove"}
           </button>
         </div>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-        <Field label={t("modelId", "ID *")}>
+        <Field label={"ID *"}>
           <TextInput value={model.id} onChange={(v) => set("id", v)} placeholder="model-id" mono />
         </Field>
-        <Field label={t("modelName", "Name")}>
+        <Field label={"Name"}>
           <TextInput
             value={model.name ?? ""}
             onChange={(v) => set("name", v || undefined)}
-            placeholder={t("modelDisplayName", "Display name")}
+            placeholder={"Display name"}
           />
         </Field>
       </div>
 
-      <Field label={t("modelApiOverride", "API override")}>
+      <Field label={"API override"}>
         <Select value={model.api ?? ""} onChange={(v) => set("api", v || undefined)} options={API_OPTIONS} />
       </Field>
 
       <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
         <Check
-          label={t("modelReasoning", "Reasoning / thinking")}
+          label={"Reasoning / thinking"}
           checked={model.reasoning ?? false}
           onChange={(v) => set("reasoning", v || undefined)}
         />
         <Check
-          label={t("modelImageInput", "Image input")}
+          label={"Image input"}
           checked={model.input?.includes("image") ?? false}
           onChange={(v) => set("input", v ? ["text", "image"] : undefined)}
         />
@@ -549,13 +536,13 @@ export function ModelDetail({
       {model.reasoning && (
         <>
           <Check
-            label={t("modelDeepSeekCompat", "DeepSeek thinking compatibility")}
+            label={"DeepSeek thinking compatibility"}
             checked={hasDeepseekCompat(model)}
             onChange={(v) => onChange(setDeepseekCompat(model, v))}
           />
           <div>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-              <SectionTitle>{t("modelThinkingLevelMap", "Thinking level map")}</SectionTitle>
+              <SectionTitle>{"Thinking level map"}</SectionTitle>
               {model.thinkingLevelMap && (
                 <button
                   type="button"
@@ -571,7 +558,7 @@ export function ModelDetail({
                     cursor: "pointer",
                   }}
                 >
-                  {t("modelClearAll", "Clear all")}
+                  {"Clear all"}
                 </button>
               )}
             </div>
@@ -581,14 +568,14 @@ export function ModelDetail({
       )}
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-        <Field label={t("modelContextWindow", "Context window (tokens)")}>
+        <Field label={"Context window (tokens)"}>
           <NumInput
             value={model.contextWindow !== undefined ? String(model.contextWindow) : ""}
             onChange={(value) => set("contextWindow", applyStrictOptionalPositiveInteger(model.contextWindow, value))}
             placeholder="128000"
           />
         </Field>
-        <Field label={t("modelMaxOutputTokens", "Max output tokens")}>
+        <Field label={"Max output tokens"}>
           <NumInput
             value={model.maxTokens !== undefined ? String(model.maxTokens) : ""}
             onChange={(value) => set("maxTokens", applyStrictOptionalPositiveInteger(model.maxTokens, value))}
@@ -598,10 +585,10 @@ export function ModelDetail({
       </div>
 
       <div>
-        <SectionTitle>{t("modelCostPerMillion", "Cost (per million tokens)")}</SectionTitle>
+        <SectionTitle>{"Cost (per million tokens)"}</SectionTitle>
         <div style={{ marginTop: 8, display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8 }}>
           {(["input", "output", "cacheRead", "cacheWrite"] as const).map((k) => (
-            <Field key={k} label={modelCostLabel(k, t)}>
+            <Field key={k} label={modelCostLabel(k)}>
               <NumInput value={costVal(k)} onChange={(v) => setCost(k, v)} placeholder="0" />
             </Field>
           ))}

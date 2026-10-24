@@ -1,7 +1,6 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { ModelCatalogStatus } from "@contract/types";
-import { useI18n } from "@/i18n";
 import { scaledChatFont } from "@/lib/chat-appearance";
 
 interface ModelOption {
@@ -66,7 +65,6 @@ function ComposerToolbarView({
   hasAttachments: boolean;
   onAttach: () => void;
 }) {
-  const { t } = useI18n();
   const {
     onAbort,
     isStreaming,
@@ -132,22 +130,22 @@ function ComposerToolbarView({
   const currentName = displayModelName;
 
   const thinkingLabels: Record<(typeof THINKING_LEVELS)[number], string> = {
-    auto: t("thinkingAuto", "Auto"),
-    off: t("thinkingOff", "Off"),
-    minimal: t("thinkingMinimal", "Minimal"),
-    low: t("thinkingLow", "Low"),
-    medium: t("thinkingMedium", "Medium"),
-    high: t("thinkingHigh", "High"),
-    xhigh: t("thinkingXHigh", "Extra high"),
+    auto: "Auto",
+    off: "Off",
+    minimal: "Minimal",
+    low: "Low",
+    medium: "Medium",
+    high: "High",
+    xhigh: "Extra high",
   };
   const thinkingDescriptions: Record<(typeof THINKING_LEVELS)[number], string> = {
-    auto: t("thinkingDefaultDescription", "Use Pi default"),
-    off: t("thinkingOffDescription", "Reasoning off"),
-    minimal: t("thinkingMinimalDescription", "Minimal reasoning"),
-    low: t("thinkingLowDescription", "Low reasoning"),
-    medium: t("thinkingMediumDescription", "Medium reasoning"),
-    high: t("thinkingHighDescription", "High reasoning"),
-    xhigh: t("thinkingXHighDescription", "Max reasoning"),
+    auto: "Use Pi default",
+    off: "Reasoning off",
+    minimal: "Minimal reasoning",
+    low: "Low reasoning",
+    medium: "Medium reasoning",
+    high: "High reasoning",
+    xhigh: "Max reasoning",
   };
   const translateThinkingValue = (value: string): string => {
     return (THINKING_LEVELS as readonly string[]).includes(value)
@@ -163,9 +161,9 @@ function ComposerToolbarView({
     (Object.entries(TOOL_PRESET_MAP).find(([, value]) => value === (toolPreset ?? "default"))?.[0] as
       "off" | "default" | "full" | undefined) ?? "default";
   const toolPresetLabels: Record<"off" | "default" | "full", string> = {
-    off: t("permissionReadOnly", "Read only"),
-    default: t("permissionStandard", "Standard"),
-    full: t("permissionFull", "Full access"),
+    off: "Read only",
+    default: "Standard",
+    full: "Full access",
   };
   const toolPresetLabel = toolPresetLabels[toolPresetKey];
   const closeControlDropdowns = useCallback(() => {
@@ -281,11 +279,10 @@ function ComposerToolbarView({
       >
         <button
           onClick={onAttach}
-          title={t(
-            "attachLocalFilesDescription",
-            "Add images or local file references. The agent reads absolute paths on this computer; moved files, remote agents, or sandboxes may not be able to access them.",
-          )}
-          aria-label={t("attachLocalFiles", "Add images or local file references")}
+          title={
+            "Add images or local file references. The agent reads absolute paths on this computer; moved files, remote agents, or sandboxes may not be able to access them."
+          }
+          aria-label={"Add images or local file references"}
           style={{
             flexShrink: 0,
             display: "flex",
@@ -387,7 +384,7 @@ function ComposerToolbarView({
                 <line x1="1" y1="14" x2="4" y2="14" />
               </svg>
               <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>
-                {currentName ?? t("models", "Models")}
+                {currentName ?? "Models"}
               </span>
             </button>
             {modelDropdownOpen &&
@@ -445,13 +442,11 @@ function ComposerToolbarView({
                               textAlign: "left",
                             }}
                           >
-                            {modelRefreshing
-                              ? t("refreshingModels", "Refreshing model directory…")
-                              : t("refreshModels", "Refresh model directory")}
+                            {modelRefreshing ? "Refreshing model directory…" : "Refresh model directory"}
                           </button>
                           {modelCatalog?.source === "offline" && (
                             <div style={{ marginTop: 6, color: "var(--text-dim)", fontSize: scaledChatFont(11) }}>
-                              {t("modelsOfflineCache", "Offline: using the cached model directory.")}
+                              {"Offline: using the cached model directory."}
                             </div>
                           )}
                           {(modelCatalog?.warnings ?? []).map((warning) => (
@@ -573,7 +568,7 @@ function ComposerToolbarView({
               closeControlDropdowns();
               onAbort();
             }}
-            title={t("stopAgent", "Stop agent")}
+            title={"Stop agent"}
             style={{
               display: "flex",
               alignItems: "center",
@@ -603,7 +598,7 @@ function ComposerToolbarView({
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
               <rect x="1.5" y="1.5" width="7" height="7" rx="1.5" fill="currentColor" />
             </svg>
-            {!isMobile && t("stop", "Stop")}
+            {!isMobile && "Stop"}
           </button>
         )}
         <div style={{ display: "contents" }}>
@@ -621,8 +616,8 @@ function ComposerToolbarView({
                   setThinkingDropdownOpen((v) => !v);
                 }}
                 disabled={isStreaming}
-                title={`${t("changeThinkingLevel", "Change reasoning level")}: ${thinkingDisplayLabel}`}
-                aria-label={`${t("changeThinkingLevel", "Change reasoning level")}: ${thinkingDisplayLabel}`}
+                title={`${"Change reasoning level"}: ${thinkingDisplayLabel}`}
+                aria-label={`${"Change reasoning level"}: ${thinkingDisplayLabel}`}
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -669,7 +664,7 @@ function ComposerToolbarView({
               {thinkingDropdownOpen && (
                 <div
                   role="menu"
-                  aria-label={t("changeThinkingLevel", "Change reasoning level")}
+                  aria-label={"Change reasoning level"}
                   style={{
                     position: "absolute",
                     bottom: "calc(100% + 6px)",
@@ -784,8 +779,8 @@ function ComposerToolbarView({
                   setToolDropdownOpen((v) => !v);
                 }}
                 disabled={isStreaming}
-                title={`${t("changePermission", "Change permission settings")}: ${toolPresetLabel}`}
-                aria-label={`${t("changePermission", "Change permission settings")}: ${toolPresetLabel}`}
+                title={`${"Change permission settings"}: ${toolPresetLabel}`}
+                aria-label={`${"Change permission settings"}: ${toolPresetLabel}`}
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -830,7 +825,7 @@ function ComposerToolbarView({
               {toolDropdownOpen && (
                 <div
                   role="menu"
-                  aria-label={t("changePermission", "Change permission settings")}
+                  aria-label={"Change permission settings"}
                   style={{
                     position: "absolute",
                     bottom: "calc(100% + 6px)",
@@ -849,10 +844,10 @@ function ComposerToolbarView({
                     const isActive = (toolPreset ?? "default") === preset;
                     const desc =
                       lvl === "off"
-                        ? t("permissionReadOnlyDescription", "No tools, read-only")
+                        ? "No tools, read-only"
                         : lvl === "default"
-                          ? t("permissionStandardDescription", "4 built-in tools")
-                          : t("permissionFullDescription", "All built-in tools");
+                          ? "4 built-in tools"
+                          : "All built-in tools";
                     return (
                       <button
                         key={lvl}
@@ -971,15 +966,15 @@ function ComposerToolbarView({
                   e.currentTarget.style.background = isCompacting ? "rgba(239,68,68,0.08)" : "var(--bg-panel)";
                   e.currentTarget.style.color = isCompacting ? "var(--danger)" : "var(--text-muted)";
                 }}
-                title={isCompacting ? t("stopCompaction", "Stop compaction") : t("compact", "Compact context")}
-                aria-label={isCompacting ? t("stopCompaction", "Stop compaction") : t("compact", "Compact context")}
+                title={isCompacting ? "Stop compaction" : "Compact context"}
+                aria-label={isCompacting ? "Stop compaction" : "Compact context"}
               >
                 {isCompacting ? (
                   <>
                     <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
                       <rect x="2" y="2" width="6" height="6" rx="1" fill="currentColor" />
                     </svg>
-                    {!isMobile && <span style={{ whiteSpace: "nowrap" }}>{t("compacting", "Compacting…")}</span>}
+                    {!isMobile && <span style={{ whiteSpace: "nowrap" }}>{"Compacting…"}</span>}
                   </>
                 ) : (
                   <>
@@ -998,7 +993,7 @@ function ComposerToolbarView({
                       <line x1="10" y1="14" x2="3" y2="21" />
                       <line x1="21" y1="3" x2="14" y2="10" />
                     </svg>
-                    {!isMobile && <span style={{ whiteSpace: "nowrap" }}>{t("compactAction", "Compact")}</span>}
+                    {!isMobile && <span style={{ whiteSpace: "nowrap" }}>{"Compact"}</span>}
                   </>
                 )}
               </button>
@@ -1013,16 +1008,8 @@ function ComposerToolbarView({
                 closeControlDropdowns();
                 onSoundToggle();
               }}
-              title={
-                soundEnabled
-                  ? t("disableCompletionSound", "Disable completion sound")
-                  : t("enableCompletionSound", "Enable completion sound")
-              }
-              aria-label={
-                soundEnabled
-                  ? t("disableCompletionSound", "Disable completion sound")
-                  : t("enableCompletionSound", "Enable completion sound")
-              }
+              title={soundEnabled ? "Disable completion sound" : "Enable completion sound"}
+              aria-label={soundEnabled ? "Disable completion sound" : "Enable completion sound"}
               style={{
                 display: "flex",
                 alignItems: "center",

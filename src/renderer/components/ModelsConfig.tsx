@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useReducer, useRef } from "react";
 import { useIsMobile } from "@/hooks/useIsMobile";
-import { useI18n } from "@/i18n";
 import {
   addModelTransition,
   deleteProviderTransition,
@@ -41,7 +40,6 @@ export function ModelsConfig({
   cwd?: string | null;
 }) {
   const isMobile = useIsMobile();
-  const { t } = useI18n();
   const [{ config, selection }, dispatchEditor] = useReducer(modelsConfigEditorReducer, {
     config: { providers: {} },
     selection: null,
@@ -252,10 +250,7 @@ export function ModelsConfig({
       setSaveConflict(conflict);
       setSaveError(
         conflict
-          ? t(
-              "modelConfigConflict",
-              "models.json changed outside this editor. Your edits are preserved here; copy or compare them before reloading the disk version to merge manually.",
-            )
+          ? "models.json changed outside this editor. Your edits are preserved here; copy or compare them before reloading the disk version to merge manually."
           : error instanceof Error
             ? error.message
             : String(error),
@@ -263,7 +258,7 @@ export function ModelsConfig({
     } finally {
       setSaving(false);
     }
-  }, [config, configVersion, loadModelPreferences, onChanged, t]);
+  }, [config, configVersion, loadModelPreferences, onChanged]);
 
   const providers = Object.entries(config.providers ?? {});
   const activeOAuth = oauthProviders.filter((p) => p.loggedIn);
@@ -398,7 +393,7 @@ export function ModelsConfig({
               }}
             >
               <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
-                <span style={{ fontSize: 15, fontWeight: 700, color: "var(--text)" }}>{t("models", "Models")}</span>
+                <span style={{ fontSize: 15, fontWeight: 700, color: "var(--text)" }}>{"Models"}</span>
                 <code style={{ fontSize: 11, color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
                   ~/.pi/agent/models.json
                 </code>
@@ -406,8 +401,8 @@ export function ModelsConfig({
               <button
                 type="button"
                 onClick={onClose}
-                title={t("modelCloseModels", "Close models")}
-                aria-label={t("modelCloseModels", "Close models")}
+                title={"Close models"}
+                aria-label={"Close models"}
                 style={{
                   background: "none",
                   border: "none",
@@ -529,9 +524,7 @@ export function ModelsConfig({
 
                 {/* Custom providers */}
                 {loading ? (
-                  <div style={{ padding: "10px 8px", fontSize: 12, color: "var(--text-muted)" }}>
-                    {t("loading", "Loading…")}
-                  </div>
+                  <div style={{ padding: "10px 8px", fontSize: 12, color: "var(--text-muted)" }}>{"Loading…"}</div>
                 ) : (
                   providers.map(([pName, pData]) => {
                     const isProviderSelected = selection?.type === "provider" && selection.name === pName;
@@ -630,7 +623,7 @@ export function ModelsConfig({
                                   whiteSpace: "nowrap",
                                 }}
                               >
-                                {m.id || t("modelNewModel", "new model")}
+                                {m.id || "new model"}
                               </span>
                               {m.reasoning && (
                                 <span
@@ -674,7 +667,7 @@ export function ModelsConfig({
                             e.currentTarget.style.background = "none";
                           }}
                         >
-                          <span style={{ fontSize: 11 }}>+ {t("modelAddModel", "model")}</span>
+                          <span style={{ fontSize: 11 }}>+ {"model"}</span>
                         </div>
                       </div>
                     );
@@ -686,7 +679,7 @@ export function ModelsConfig({
               <div style={{ borderTop: "1px solid var(--border)", padding: "8px 6px" }}>
                 <button
                   ref={addProviderButtonRef}
-                  aria-label={t("addProvider", "Add provider")}
+                  aria-label={"Add provider"}
                   onClick={() => setPickerOpen(true)}
                   style={{
                     display: "flex",
@@ -711,7 +704,7 @@ export function ModelsConfig({
                     e.currentTarget.style.color = "var(--text-muted)";
                   }}
                 >
-                  + {t("addProvider", "Add provider")}
+                  + {"Add provider"}
                 </button>
               </div>
             </div>
@@ -731,7 +724,7 @@ export function ModelsConfig({
                         fontSize: 13,
                       }}
                     >
-                      {t("selectProviderOrModel", "Select a provider or model")}
+                      {"Select a provider or model"}
                     </div>
                   ))}
             </div>
@@ -755,7 +748,7 @@ export function ModelsConfig({
                 type="button"
                 onClick={() => void loadModelsConfig()}
                 disabled={loading || saving}
-                title={t("modelReloadDiskVersionHint", "Discard local edits and load the current models.json")}
+                title={"Discard local edits and load the current models.json"}
                 style={{
                   padding: "6px 12px",
                   background: "none",
@@ -766,7 +759,7 @@ export function ModelsConfig({
                   fontSize: 12,
                 }}
               >
-                {t("modelReloadDiskVersion", "Reload disk version")}
+                {"Reload disk version"}
               </button>
             )}
             {!embedded && (
@@ -782,15 +775,13 @@ export function ModelsConfig({
                   fontSize: 13,
                 }}
               >
-                {t("cancel", "Cancel")}
+                {"Cancel"}
               </button>
             )}
             <button
               onClick={handleSave}
               disabled={saving || savedOk || loading || loadFailed || saveConflict || !configLoaded || !configVersion}
-              title={
-                loadFailed ? t("modelCannotSaveBeforeLoad", "Cannot save until config loads successfully") : undefined
-              }
+              title={loadFailed ? "Cannot save until config loads successfully" : undefined}
               style={{
                 position: "relative",
                 padding: "6px 16px",
@@ -835,7 +826,7 @@ export function ModelsConfig({
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
               )}
-              <span>{savedOk ? t("saved", "Saved") : saving ? t("saving", "Saving…") : t("save", "Save")}</span>
+              <span>{savedOk ? "Saved" : saving ? "Saving…" : "Save"}</span>
             </button>
           </div>
         </div>

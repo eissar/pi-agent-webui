@@ -31,8 +31,6 @@
     "bench:sessions": "node scripts/bench-sessions.mjs",
     "check:contract": "node scripts/check-contract-coverage.mjs",
     "check:pi-compat": "node scripts/check-pi-compatibility.mjs",
-    "check:i18n": "node scripts/check-renderer-i18n.mjs",
-    "check:browser-i18n": "node scripts/check-renderer-i18n.mjs",
     "check:dependencies": "node scripts/check-dependency-contract.mjs",
     "check:architecture": "node scripts/check-architecture.mjs",
     "test:build-watch": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/test-tsup-watch.mjs",

@@ -8,7 +8,6 @@ import { buildAtInsertText, extractAtQuery, type AtQueryMatch, type FileIndexEnt
 import { useFileSuggestions } from "@/hooks/useFileSuggestions";
 import { FolderIcon, getFileIcon } from "./FileIcons";
 import { useIsMobile } from "@/hooks/useIsMobile";
-import { useI18n } from "@/i18n";
 import { localFilePathKey, splitLocalFileReferenceMarkdown } from "@/lib/file-url";
 
 export type { AttachedImage } from "@/hooks/useComposerDraft";
@@ -89,7 +88,6 @@ function slashMatchRank(command: SlashCommandPaletteItem, query: string): number
 }
 
 function QueuedMessageRow({ kind, text }: { kind: "steer" | "follow-up"; text: string }) {
-  const { t } = useI18n();
   const segments = splitLocalFileReferenceMarkdown(text);
   return (
     <div
@@ -115,7 +113,7 @@ function QueuedMessageRow({ kind, text }: { kind: "steer" | "follow-up"; text: s
           color: kind === "steer" ? "var(--accent)" : "var(--text-dim)",
         }}
       >
-        {kind === "steer" ? t("steer", "Steer") : t("followUp", "Follow-up")}
+        {kind === "steer" ? "Steer" : "Follow-up"}
       </span>
       <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
         {segments.map((seg, i) =>
@@ -191,7 +189,6 @@ const ChatInputComponent = forwardRef<ChatInputHandle, Props>(function ChatInput
   ref,
 ) {
   const isMobile = useIsMobile();
-  const { t, language } = useI18n();
   const [slashMenuOpen, setSlashMenuOpen] = useState(false);
   const [slashActiveIndex, setSlashActiveIndex] = useState(0);
   const [atQuery, setAtQuery] = useState<AtQueryMatch | null>(null);
@@ -344,11 +341,11 @@ const ChatInputComponent = forwardRef<ChatInputHandle, Props>(function ChatInput
   const slashCommandCountLabel =
     filteredSlashCommands.length === 1
       ? slashQuery
-        ? t("oneMatch", "1 match")
-        : t("oneCommand", "1 command")
+        ? "1 match"
+        : "1 command"
       : slashQuery
-        ? t("matchCount", "{count} matches").replace("{count}", String(filteredSlashCommands.length))
-        : t("commandCount", "{count} commands").replace("{count}", String(filteredSlashCommands.length));
+        ? "{count} matches".replace("{count}", String(filteredSlashCommands.length))
+        : "{count} commands".replace("{count}", String(filteredSlashCommands.length));
   const hasInputText = Boolean(value.trim());
   const canQueueStreamingMessage = hasInputText || attachedFiles.length > 0 || attachedImages.length > 0;
 
@@ -696,16 +693,12 @@ const ChatInputComponent = forwardRef<ChatInputHandle, Props>(function ChatInput
                   letterSpacing: 0.4,
                 }}
               >
-                {t("queued", "Queued")} ·{" "}
-                {(queuedMessages?.steering.length ?? 0) + (queuedMessages?.followUp.length ?? 0)}
+                {"Queued"} · {(queuedMessages?.steering.length ?? 0) + (queuedMessages?.followUp.length ?? 0)}
               </span>
               {onRecallQueue && (
                 <button
                   onClick={onRecallQueue}
-                  title={t(
-                    "recallQueueDescription",
-                    "Remove all queued messages and put them back into the input box for editing",
-                  )}
+                  title={"Remove all queued messages and put them back into the input box for editing"}
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -742,7 +735,7 @@ const ChatInputComponent = forwardRef<ChatInputHandle, Props>(function ChatInput
                     <polyline points="9 14 4 9 9 4" />
                     <path d="M20 20v-7a4 4 0 0 0-4-4H4" />
                   </svg>
-                  {t("recallToInput", "Recall to input")}
+                  {"Recall to input"}
                 </button>
               )}
             </div>
@@ -784,7 +777,7 @@ const ChatInputComponent = forwardRef<ChatInputHandle, Props>(function ChatInput
               <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
               <path d="M3 3v5h5" />
             </svg>
-            {t("retrying", "Retrying")} ({retryInfo.attempt}/{retryInfo.maxAttempts})…
+            {"Retrying"} ({retryInfo.attempt}/{retryInfo.maxAttempts})…
             {retryInfo.errorMessage && <span style={{ opacity: 0.7, marginLeft: 4 }}>— {retryInfo.errorMessage}</span>}
           </div>
         )}
@@ -845,7 +838,7 @@ const ChatInputComponent = forwardRef<ChatInputHandle, Props>(function ChatInput
             <button
               type="button"
               onClick={() => setSubmissionNotice(null)}
-              aria-label={t("dismissSubmissionError", "Dismiss submission error")}
+              aria-label={"Dismiss submission error"}
               style={{
                 border: "none",
                 background: "transparent",
@@ -953,7 +946,7 @@ const ChatInputComponent = forwardRef<ChatInputHandle, Props>(function ChatInput
                   key={`${file.path}-${i}`}
                   title={`${file.path}${
                     fileInspectionByPath.get(localFilePathKey(file.path))?.insideCwd === false
-                      ? ` — ${t("outsideProject", "Outside project")}`
+                      ? ` — ${"Outside project"}`
                       : ""
                   }`}
                   onClick={() => void window.piBridge?.showItemInFolder?.(file.path)}
@@ -963,16 +956,15 @@ const ChatInputComponent = forwardRef<ChatInputHandle, Props>(function ChatInput
                       href: file.path,
                       cwd: cwd ?? undefined,
                       source: "local-file-reference",
-                      language,
                     });
                     void request
                       .then((result) => {
                         if (!result.shown) {
-                          setSubmissionNotice(t("fileContextMenuUnavailable", "The file menu could not be opened."));
+                          setSubmissionNotice("The file menu could not be opened.");
                         }
                       })
                       .catch(() => {
-                        setSubmissionNotice(t("fileContextMenuUnavailable", "The file menu could not be opened."));
+                        setSubmissionNotice("The file menu could not be opened.");
                       });
                   }}
                   style={{
@@ -1011,7 +1003,7 @@ const ChatInputComponent = forwardRef<ChatInputHandle, Props>(function ChatInput
                   </span>
                   {fileInspectionByPath.get(localFilePathKey(file.path))?.insideCwd === false && (
                     <span style={{ color: "var(--warning)", fontSize: scaledChatFont(10), whiteSpace: "nowrap" }}>
-                      {t("outsideProject", "Outside project")}
+                      {"Outside project"}
                     </span>
                   )}
                   <button
@@ -1019,7 +1011,7 @@ const ChatInputComponent = forwardRef<ChatInputHandle, Props>(function ChatInput
                       event.stopPropagation();
                       removeFile(i);
                     }}
-                    title={t("remove", "Remove")}
+                    title={"Remove"}
                     style={{
                       width: 16,
                       height: 16,
@@ -1052,10 +1044,9 @@ const ChatInputComponent = forwardRef<ChatInputHandle, Props>(function ChatInput
               ))}
             </div>
             <div style={{ marginTop: 4, fontSize: scaledChatFont(10.5), color: "var(--text-dim)" }}>
-              {t(
-                "localFileDraftPrivacy",
-                "Local file paths stay on this device and are saved with this session draft until it is sent or removed.",
-              )}
+              {
+                "Local file paths stay on this device and are saved with this session draft until it is sent or removed."
+              }
             </div>
           </div>
         )}
@@ -1092,18 +1083,15 @@ const ChatInputComponent = forwardRef<ChatInputHandle, Props>(function ChatInput
               >
                 <span>
                   {slashCommandsLoading
-                    ? t("loadingCommands", "Loading commands…")
-                    : t("slashCommandsWithCount", "Slash commands · {count}").replace(
-                        "{count}",
-                        slashCommandCountLabel,
-                      )}
+                    ? "Loading commands…"
+                    : "Slash commands · {count}".replace("{count}", slashCommandCountLabel)}
                 </span>
                 <span style={{ fontFamily: "var(--font-mono)" }}>Tab / Enter</span>
               </div>
               <div style={{ maxHeight: "calc(min(56vh, 460px) - 34px)", overflowY: "auto", padding: 10 }}>
                 {!slashCommandsLoading && filteredSlashCommands.length === 0 ? (
                   <div style={{ padding: "2px 2px 4px", fontSize: scaledChatFont(12), color: "var(--text-dim)" }}>
-                    {t("noSlashCommandsFound", "No extension, prompt, or skill commands found")}
+                    {"No extension, prompt, or skill commands found"}
                   </div>
                 ) : (
                   groupedSlashCommands.map((group) => (
@@ -1210,13 +1198,11 @@ const ChatInputComponent = forwardRef<ChatInputHandle, Props>(function ChatInput
               const suggestionStatus = activeSuggestionState?.status ?? "loading";
               const suggestionsLoading = suggestionStatus === "loading";
               const matchCountLabel =
-                atMatches.length === 1
-                  ? t("oneMatch", "1 match")
-                  : t("matchCount", "{count} matches").replace("{count}", String(atMatches.length));
+                atMatches.length === 1 ? "1 match" : "{count} matches".replace("{count}", String(atMatches.length));
               const resultHint = activeSuggestionState?.degradedReason
-                ? ` · ${t("fileSearchDegraded", "limited to this folder")}`
+                ? ` · ${"limited to this folder"}`
                 : activeSuggestionState?.truncated
-                  ? ` · ${t("fileIndexTruncated", "index truncated")}`
+                  ? ` · ${"index truncated"}`
                   : "";
               return (
                 <div
@@ -1249,11 +1235,8 @@ const ChatInputComponent = forwardRef<ChatInputHandle, Props>(function ChatInput
                   >
                     <span>
                       {suggestionsLoading
-                        ? t("loadingProjectFiles", "Loading files…")
-                        : `${t("filesAndMatchCount", "Files · {count}").replace(
-                            "{count}",
-                            matchCountLabel,
-                          )}${resultHint}`}
+                        ? "Loading files…"
+                        : `${"Files · {count}".replace("{count}", matchCountLabel)}${resultHint}`}
                     </span>
                     <span style={{ fontFamily: "var(--font-mono)" }}>Tab / Enter</span>
                   </div>
@@ -1261,10 +1244,10 @@ const ChatInputComponent = forwardRef<ChatInputHandle, Props>(function ChatInput
                     {atMatches.length === 0 ? (
                       <div style={{ padding: "6px 8px", fontSize: scaledChatFont(12), color: "var(--text-dim)" }}>
                         {suggestionsLoading
-                          ? t("searching", "Searching…")
+                          ? "Searching…"
                           : suggestionStatus === "error"
-                            ? t("fileSuggestionsUnavailable", "File suggestions are temporarily unavailable")
-                            : t("noMatchingProjectFiles", "No matching files")}
+                            ? "File suggestions are temporarily unavailable"
+                            : "No matching files"}
                       </div>
                     ) : (
                       atMatches.map((entry, index) => {
@@ -1363,10 +1346,10 @@ const ChatInputComponent = forwardRef<ChatInputHandle, Props>(function ChatInput
               onPaste={handlePaste}
               placeholder={
                 isStreaming && (onSteer || onFollowUp)
-                  ? t("steerOrQueue", "Steer now / queue follow-up…")
+                  ? "Steer now / queue follow-up…"
                   : isStreaming
-                    ? t("agentRunning", "Agent is running…")
-                    : t("messagePlaceholder", "Message… Type / for commands, @ for files")
+                    ? "Agent is running…"
+                    : "Message… Type / for commands, @ for files"
               }
               rows={1}
               style={{
@@ -1393,8 +1376,8 @@ const ChatInputComponent = forwardRef<ChatInputHandle, Props>(function ChatInput
                     disabled={!canQueueStreamingMessage}
                     title={
                       attachedImages.length
-                        ? t("imageQueueUnavailable", "Image attachments cannot be queued while the agent is running")
-                        : t("steerDescription", "Interrupt the current run and inject this message now")
+                        ? "Image attachments cannot be queued while the agent is running"
+                        : "Interrupt the current run and inject this message now"
                     }
                     style={{
                       display: "flex",
@@ -1425,7 +1408,7 @@ const ChatInputComponent = forwardRef<ChatInputHandle, Props>(function ChatInput
                       <path d="M5 1 L9 5 L5 9" />
                       <line x1="1" y1="5" x2="9" y2="5" />
                     </svg>
-                    {t("steer", "Steer")}
+                    {"Steer"}
                   </button>
                 )}
                 {onFollowUp && (
@@ -1434,8 +1417,8 @@ const ChatInputComponent = forwardRef<ChatInputHandle, Props>(function ChatInput
                     disabled={!canQueueStreamingMessage}
                     title={
                       attachedImages.length
-                        ? t("imageQueueUnavailable", "Image attachments cannot be queued while the agent is running")
-                        : t("followUpDescription", "Queue this message after the agent finishes")
+                        ? "Image attachments cannot be queued while the agent is running"
+                        : "Queue this message after the agent finishes"
                     }
                     style={{
                       display: "flex",
@@ -1467,7 +1450,7 @@ const ChatInputComponent = forwardRef<ChatInputHandle, Props>(function ChatInput
                       <polyline points="2.5 3.5 5 1 7.5 3.5" />
                       <line x1="2" y1="9" x2="8" y2="9" />
                     </svg>
-                    {t("followUp", "Follow-up")}
+                    {"Follow-up"}
                   </button>
                 )}
               </div>
@@ -1502,7 +1485,7 @@ const ChatInputComponent = forwardRef<ChatInputHandle, Props>(function ChatInput
                   transition: "background 0.15s, box-shadow 0.15s",
                 }}
               >
-                {t("send", "Send")}
+                {"Send"}
               </button>
             )}
           </div>

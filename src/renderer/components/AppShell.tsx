@@ -1,11 +1,6 @@
 import { useSessionList } from "@/hooks/useSessionList";
 import { call, subscribe } from "@/lib/api-client";
-import {
-  useState,
-  useCallback,
-  useRef,
-  useEffect,
-} from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { SessionSidebar } from "./SessionSidebar";
 import { ChatWindow } from "./ChatWindow";
 import { SessionInfoPanel } from "./SessionInfoPanel";
@@ -15,7 +10,6 @@ import { QuickChannelBinding } from "./channels/QuickChannelBinding";
 import { BrowserAuthorizationDialog } from "./browser/BrowserAuthorizationDialog";
 import { useTheme } from "@/hooks/useTheme";
 import { useIsMobile } from "@/hooks/useIsMobile";
-import { useI18n } from "@/i18n";
 import { getSessionDisplayTitle } from "@/lib/session-list";
 import { beginSessionLoadTrace } from "@/lib/session-performance";
 import { readSessionIdFromSearch, routerCompat } from "@/lib/router-compat";
@@ -41,7 +35,6 @@ export function AppShell({
 }) {
   const router = routerCompat;
   const { isDark, toggleTheme } = useTheme();
-  const { t } = useI18n();
   const sessionList = useSessionList();
   const isMobile = useIsMobile();
   const [selectedSession, setSelectedSession] = useState<SessionInfo | null>(null);
@@ -366,7 +359,7 @@ export function AppShell({
         <button
           type="button"
           onClick={() => setSettingsOpen(true)}
-          title={t("settings", "Settings")}
+          title={"Settings"}
           style={{
             width: "100%",
             height: 34,
@@ -406,7 +399,7 @@ export function AppShell({
             <circle cx="12" cy="12" r="3" />
             <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21h-4v-.09A1.7 1.7 0 0 0 8.6 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3v-4h.09A1.7 1.7 0 0 0 4.6 8.6a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3h4v.09A1.7 1.7 0 0 0 15.4 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.4 9c.12.38.33.72.6 1 .3.29.69.42 1.1.4h.09v4h-.09a1.7 1.7 0 0 0-1.7.6Z" />
           </svg>
-          {t("settings", "Settings")}
+          {"Settings"}
         </button>
       </div>
     </>
@@ -542,8 +535,8 @@ export function AppShell({
           >
             <button
               onClick={handleSidebarToggle}
-              title={sidebarOpen ? t("hideSidebar", "Hide sidebar") : t("showSidebar", "Show sidebar")}
-              aria-label={sidebarOpen ? t("hideSidebar", "Hide sidebar") : t("showSidebar", "Show sidebar")}
+              title={sidebarOpen ? "Hide sidebar" : "Show sidebar"}
+              aria-label={sidebarOpen ? "Hide sidebar" : "Show sidebar"}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -601,10 +594,8 @@ export function AppShell({
                 const rect = e.currentTarget.getBoundingClientRect();
                 toggleTheme({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
               }}
-              title={isDark ? t("switchToLight", "Switch to light mode") : t("switchToDark", "Switch to dark mode")}
-              aria-label={
-                isDark ? t("switchToLight", "Switch to light mode") : t("switchToDark", "Switch to dark mode")
-              }
+              title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+              aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
               aria-pressed={isDark}
               style={{
                 display: "flex",
@@ -735,7 +726,7 @@ export function AppShell({
                     fontSize: 15,
                   }}
                 >
-                  {t("selectSession", "Select a session from the sidebar")}
+                  {"Select a session from the sidebar"}
                 </div>
               ) : (
                 <div
@@ -766,14 +757,14 @@ export function AppShell({
                   </svg>
                   <div>
                     <div style={{ fontSize: 18, fontWeight: 600, color: "var(--text)", marginBottom: 8 }}>
-                      {t("getStarted", "Get Started")}
+                      {"Get Started"}
                     </div>
                     <div style={{ fontSize: 12, color: "var(--text-muted)", lineHeight: 1.8 }}>
                       <span style={{ color: "var(--text-dim)", marginRight: 6 }}>1.</span>
-                      {t("selectProject", "Select a project directory from the sidebar")}
+                      {"Select a project directory from the sidebar"}
                       <br />
                       <span style={{ color: "var(--text-dim)", marginRight: 6 }}>2.</span>
-                      {t("addModelsFromSettings", "Open Settings at the bottom, then add models")}
+                      {"Open Settings at the bottom, then add models"}
                     </div>
                   </div>
                 </div>

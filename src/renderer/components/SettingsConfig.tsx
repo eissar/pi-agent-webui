@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useTheme } from "@/hooks/useTheme";
 import { useIsMobile } from "@/hooks/useIsMobile";
-import { useI18n, type AppLanguage } from "@/i18n";
 import { ModelsConfig } from "./ModelsConfig";
 import { SkillsConfig, type SkillsConfigHandle } from "./SkillsConfig";
 import { PluginsConfig } from "./PluginsConfig";
@@ -18,8 +17,7 @@ import appIconUrl from "../../../build/icon.png";
 import { isAutoSessionTitleEnabled, setAutoSessionTitleEnabled } from "../lib/auto-session-title";
 import { getCacheWarmingStatus, setCacheWarmingMode } from "../lib/api-client";
 
-export type SettingsTab =
-  "general" | "browser" | "channels" | "models" | "tools" | "skills" | "plugins" | "about";
+export type SettingsTab = "general" | "browser" | "channels" | "models" | "tools" | "skills" | "plugins" | "about";
 
 interface SettingsConfigProps {
   cwd: string | null;
@@ -50,7 +48,6 @@ export function SettingsConfig({
 }: SettingsConfigProps) {
   const isMobile = useIsMobile();
   const { isDark, toggleTheme } = useTheme();
-  const { language, setLanguage, t } = useI18n();
   const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
   const activeTabRef = useRef(activeTab);
   activeTabRef.current = activeTab;
@@ -90,14 +87,14 @@ export function SettingsConfig({
   }, [activeTab, navigationRequestId]);
 
   const tabs: { id: SettingsTab; label: string }[] = [
-    { id: "general", label: t("general", "General") },
-    { id: "models", label: t("models", "Models") },
-    { id: "skills", label: t("skills", "Skills") },
-    { id: "plugins", label: t("plugins", "Plugins") },
-    { id: "browser", label: t("browser", "Browser") },
-    { id: "channels", label: t("channels", "Channels") },
-    { id: "tools", label: t("developerTools", "Developer Tools") },
-    { id: "about", label: t("about", "About") },
+    { id: "general", label: "General" },
+    { id: "models", label: "Models" },
+    { id: "skills", label: "Skills" },
+    { id: "plugins", label: "Plugins" },
+    { id: "browser", label: "Browser" },
+    { id: "channels", label: "Channels" },
+    { id: "tools", label: "Developer Tools" },
+    { id: "about", label: "About" },
   ];
 
   return (
@@ -120,7 +117,7 @@ export function SettingsConfig({
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
-        aria-label={t("settings", "Settings")}
+        aria-label={"Settings"}
         onKeyDown={(event) => {
           if (event.key === "Escape") {
             event.preventDefault();
@@ -179,10 +176,10 @@ export function SettingsConfig({
           }}
         >
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text)" }}>{t("settings", "Settings")}</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text)" }}>{"Settings"}</div>
             {!isMobile && (
               <div style={{ marginTop: 2, fontSize: 11, color: "var(--text-dim)" }}>
-                {t("settingsDescription", "Manage app preferences, models, skills, and plugins.")}
+                {"Manage app preferences, models, skills, and plugins."}
               </div>
             )}
           </div>
@@ -190,7 +187,7 @@ export function SettingsConfig({
             ref={closeButtonRef}
             type="button"
             onClick={() => requestSettingsTransition(onClose)}
-            aria-label={t("close", "Close")}
+            aria-label={"Close"}
             style={{
               background: "none",
               border: "none",
@@ -214,7 +211,7 @@ export function SettingsConfig({
         <div style={{ flex: 1, minHeight: 0, minWidth: 0, display: "flex", overflow: "hidden" }}>
           <div
             role="tablist"
-            aria-label={t("settings", "Settings")}
+            aria-label={"Settings"}
             aria-orientation="vertical"
             style={{
               width: isMobile ? 112 : 168,
@@ -288,8 +285,6 @@ export function SettingsConfig({
           >
             {activeTab === "general" && (
               <GeneralSettings
-                language={language}
-                onLanguageChange={setLanguage}
                 isDark={isDark}
                 onThemeChange={(nextDark) => {
                   if (nextDark !== isDark) toggleTheme();
@@ -332,8 +327,6 @@ export function SettingsConfig({
 }
 
 function AboutSettings({ onClose }: { onClose: () => void }) {
-  const { t } = useI18n();
-
   return (
     <div
       style={{
@@ -367,15 +360,13 @@ function AboutSettings({ onClose }: { onClose: () => void }) {
           <div>
             <h2 style={{ margin: 0, fontSize: 18, color: "var(--text)" }}>{APP_DISPLAY_NAME}</h2>
             <p style={{ margin: "5px 0 0", fontSize: 12, lineHeight: 1.6, color: "var(--text-dim)" }}>
-              {t("aboutDescription", "App, Pi, and project information.")}
+              {"App, Pi, and project information."}
             </p>
           </div>
         </section>
 
         <section>
-          <h2 style={{ margin: "0 0 12px", fontSize: 14, color: "var(--text)" }}>
-            {t("applicationInformation", "Application information")}
-          </h2>
+          <h2 style={{ margin: "0 0 12px", fontSize: 14, color: "var(--text)" }}>{"Application information"}</h2>
           <div
             style={{
               border: "1px solid var(--border)",
@@ -384,15 +375,15 @@ function AboutSettings({ onClose }: { onClose: () => void }) {
               overflow: "hidden",
             }}
           >
-            <AboutRow label={t("softwareVersion", "Software version")} value={`v${APP_VERSION}`} />
-            <AboutRow label={t("piVersion", "Pi version")} value={`v${PI_VERSION}`} />
-            <AboutRow label={t("author", "Author")} value={APP_AUTHOR} />
+            <AboutRow label={"Software version"} value={`v${APP_VERSION}`} />
+            <AboutRow label={"Pi version"} value={`v${PI_VERSION}`} />
+            <AboutRow label={"Author"} value={APP_AUTHOR} />
             <AboutRow
-              label={t("officialWebsite", "Official website")}
+              label={"Official website"}
               value={
                 <button
                   type="button"
-                  title={t("openOfficialWebsite", "Open official website")}
+                  title={"Open official website"}
                   onClick={() => void window.piBridge.openExternal(APP_WEBSITE_URL)}
                   style={{
                     maxWidth: "100%",
@@ -412,11 +403,11 @@ function AboutSettings({ onClose }: { onClose: () => void }) {
               }
             />
             <AboutRow
-              label={t("githubRepository", "GitHub repository")}
+              label={"GitHub repository"}
               value={
                 <button
                   type="button"
-                  title={t("openGithubRepository", "Open GitHub repository")}
+                  title={"Open GitHub repository"}
                   onClick={() => void window.piBridge.openExternal(APP_GITHUB_URL)}
                   style={{
                     maxWidth: "100%",
@@ -448,7 +439,6 @@ function AboutSettings({ onClose }: { onClose: () => void }) {
 type UpdateAction = "status" | "check" | "download" | "install" | "automatic" | "logs";
 
 function SoftwareUpdate({ onClose }: { onClose: () => void }) {
-  const { language, t } = useI18n();
   const [state, setState] = useState<DesktopUpdateState | null>(null);
   const [pendingAction, setPendingAction] = useState<UpdateAction | null>(null);
   const [actionFailed, setActionFailed] = useState(false);
@@ -495,15 +485,15 @@ function SoftwareUpdate({ onClose }: { onClose: () => void }) {
 
   const phase = state?.phase;
   const isBusy = pendingAction !== null;
-  const statusTitle = getUpdateStatusTitle(state, t);
+  const statusTitle = getUpdateStatusTitle(state);
 
   return (
     <section aria-labelledby={headingId} style={{ marginTop: 28 }}>
       <h2 id={headingId} style={{ margin: "0 0 6px", fontSize: 14, color: "var(--text)" }}>
-        {t("softwareUpdate", "Software update")}
+        {"Software update"}
       </h2>
       <p style={{ margin: "0 0 12px", fontSize: 12, lineHeight: 1.6, color: "var(--text-dim)" }}>
-        {t("softwareUpdateDescription", "Check stable releases and choose when a downloaded update is installed.")}
+        {"Check stable releases and choose when a downloaded update is installed."}
       </p>
 
       <div
@@ -536,7 +526,7 @@ function SoftwareUpdate({ onClose }: { onClose: () => void }) {
               <div style={{ fontSize: 13, fontWeight: 650, color: "var(--text)" }}>{statusTitle}</div>
               {state && (
                 <div style={{ marginTop: 3, fontSize: 11, color: "var(--text-dim)" }}>
-                  {t("currentVersion", "Current version")}: {displayVersion(state.currentVersion)}
+                  {"Current version"}: {displayVersion(state.currentVersion)}
                 </div>
               )}
             </div>
@@ -544,43 +534,34 @@ function SoftwareUpdate({ onClose }: { onClose: () => void }) {
 
           {state?.checkedAt && (phase === "up-to-date" || phase === "idle") && (
             <p style={updateDetailStyle}>
-              {t("lastChecked", "Last checked")}: {formatUpdateDate(state.checkedAt, language)}
+              {"Last checked"}: {formatUpdateDate(state.checkedAt)}
             </p>
           )}
 
           {phase === "disabled" && (
             <p style={updateDetailStyle}>
-              {t(
-                "updatesDisabledDescription",
-                "Software updates are available only in installed production builds on supported platforms.",
-              )}
+              {"Software updates are available only in installed production builds on supported platforms."}
             </p>
           )}
 
           {state && (phase === "available" || phase === "downloading" || phase === "downloaded") && (
-            <UpdateReleaseDetails state={state} language={language} />
+            <UpdateReleaseDetails state={state} />
           )}
 
-          {state && phase === "downloading" && <UpdateDownloadProgress state={state} language={language} />}
+          {state && phase === "downloading" && <UpdateDownloadProgress state={state} />}
 
           {state && phase === "downloaded" && (
             <p style={updateDetailStyle}>
               {state.installBlockedByActiveSessions
-                ? t(
-                    "updateInstallBlockedByActiveSessions",
-                    "Active Agent tasks must finish before restart. Choose Later to install when you next fully quit.",
-                  )
-                : t(
-                    "updateRestartWarning",
-                    "Restart now, or choose Later to install when you next fully quit the app.",
-                  )}
+                ? "Active Agent tasks must finish before restart. Choose Later to install when you next fully quit."
+                : "Restart now, or choose Later to install when you next fully quit the app."}
             </p>
           )}
 
           {state?.phase === "error" && state.error && (
             <div role="alert" aria-atomic="true" style={{ marginTop: 12 }}>
               <p style={{ margin: 0, fontSize: 12, lineHeight: 1.55, color: "#f87171" }}>
-                {getUpdateErrorMessage(state.error, t)}
+                {getUpdateErrorMessage(state.error)}
               </p>
               <code style={{ display: "block", marginTop: 5, fontSize: 10, color: "var(--text-dim)" }}>
                 {state.error.code}
@@ -590,7 +571,7 @@ function SoftwareUpdate({ onClose }: { onClose: () => void }) {
 
           {actionFailed && (
             <p role="alert" style={{ margin: "12px 0 0", fontSize: 12, lineHeight: 1.55, color: "#f87171" }}>
-              {t("updateActionFailed", "The update action could not be completed. Try again or open the logs.")}
+              {"The update action could not be completed. Try again or open the logs."}
             </p>
           )}
 
@@ -600,25 +581,19 @@ function SoftwareUpdate({ onClose }: { onClose: () => void }) {
                 primary
                 disabled={isBusy}
                 busy={pendingAction === "check"}
-                label={t("checkForUpdates", "Check for updates")}
+                label={"Check for updates"}
                 onClick={() => void performAction("check", () => window.piBridge.checkForUpdates())}
               />
             )}
             {phase === "checking" && (
-              <UpdateButton
-                primary
-                disabled
-                busy
-                label={t("checkingForUpdates", "Checking for updates…")}
-                onClick={() => undefined}
-              />
+              <UpdateButton primary disabled busy label={"Checking for updates…"} onClick={() => undefined} />
             )}
             {phase === "available" && (
               <UpdateButton
                 primary
                 disabled={isBusy}
                 busy={pendingAction === "download"}
-                label={t("downloadUpdate", "Download update")}
+                label={"Download update"}
                 onClick={() => void performAction("download", () => window.piBridge.downloadUpdate())}
               />
             )}
@@ -628,10 +603,10 @@ function SoftwareUpdate({ onClose }: { onClose: () => void }) {
                   primary
                   disabled={isBusy || state.installBlockedByActiveSessions}
                   busy={pendingAction === "install"}
-                  label={t("restartAndInstall", "Restart and install")}
+                  label={"Restart and install"}
                   onClick={() => void performAction("install", () => window.piBridge.installUpdate())}
                 />
-                <UpdateButton disabled={isBusy} label={t("installLater", "Later")} onClick={onClose} />
+                <UpdateButton disabled={isBusy} label={"Later"} onClick={onClose} />
               </>
             )}
             {state?.phase === "error" && state.canRetry && (
@@ -639,7 +614,7 @@ function SoftwareUpdate({ onClose }: { onClose: () => void }) {
                 primary
                 disabled={isBusy}
                 busy={pendingAction === "check"}
-                label={t("retryUpdate", "Retry")}
+                label={"Retry"}
                 onClick={() => void performAction("check", () => window.piBridge.checkForUpdates())}
               />
             )}
@@ -648,7 +623,7 @@ function SoftwareUpdate({ onClose }: { onClose: () => void }) {
                 primary
                 disabled={isBusy}
                 busy={pendingAction === "status"}
-                label={t("retryUpdate", "Retry")}
+                label={"Retry"}
                 onClick={() =>
                   void performAction("status", async () => {
                     setState(await window.piBridge.getUpdateState());
@@ -660,7 +635,7 @@ function SoftwareUpdate({ onClose }: { onClose: () => void }) {
               <UpdateButton
                 disabled={isBusy}
                 busy={pendingAction === "logs"}
-                label={t("openLogs", "Open logs")}
+                label={"Open logs"}
                 onClick={() => void performAction("logs", () => window.piBridge.openLogs())}
               />
             )}
@@ -680,13 +655,13 @@ function SoftwareUpdate({ onClose }: { onClose: () => void }) {
         >
           <div>
             <label htmlFor={automaticChecksControlId} style={{ fontSize: 12, color: "var(--text)" }}>
-              {t("automaticUpdateChecks", "Automatically check for updates")}
+              {"Automatically check for updates"}
             </label>
             <div
               id={automaticChecksDescriptionId}
               style={{ marginTop: 3, fontSize: 10, lineHeight: 1.45, color: "var(--text-dim)" }}
             >
-              {t("automaticUpdateChecksDescription", "Checks periodically without downloading updates automatically.")}
+              {"Checks periodically without downloading updates automatically."}
             </div>
           </div>
           <input
@@ -710,29 +685,26 @@ function SoftwareUpdate({ onClose }: { onClose: () => void }) {
   );
 }
 
-function UpdateReleaseDetails({ state, language }: { state: DesktopUpdateState; language: AppLanguage }) {
-  const { t } = useI18n();
+function UpdateReleaseDetails({ state }: { state: DesktopUpdateState }) {
   return (
     <div style={{ marginTop: 12, fontSize: 12, lineHeight: 1.55, color: "var(--text-muted)" }}>
       {state.availableVersion && (
         <div>
-          {t("availableVersion", "Available version")}: {displayVersion(state.availableVersion)}
+          {"Available version"}: {displayVersion(state.availableVersion)}
         </div>
       )}
       {state.releaseName && <div>{state.releaseName}</div>}
       {state.releaseDate && (
         <div>
-          {t("releaseDate", "Released")}: {formatUpdateDate(state.releaseDate, language)}
+          {"Released"}: {formatUpdateDate(state.releaseDate)}
         </div>
       )}
       {state.releaseNotes && (
         <div style={{ marginTop: 10 }}>
-          <div style={{ marginBottom: 5, fontWeight: 650, color: "var(--text)" }}>
-            {t("releaseNotes", "Release notes")}
-          </div>
+          <div style={{ marginBottom: 5, fontWeight: 650, color: "var(--text)" }}>{"Release notes"}</div>
           <pre
             tabIndex={0}
-            aria-label={t("releaseNotes", "Release notes")}
+            aria-label={"Release notes"}
             style={{
               margin: 0,
               maxHeight: 180,
@@ -757,8 +729,7 @@ function UpdateReleaseDetails({ state, language }: { state: DesktopUpdateState; 
   );
 }
 
-function UpdateDownloadProgress({ state, language }: { state: DesktopUpdateState; language: AppLanguage }) {
-  const { t } = useI18n();
+function UpdateDownloadProgress({ state }: { state: DesktopUpdateState }) {
   const percent = Number.isFinite(state.percent) ? Math.max(0, Math.min(100, state.percent ?? 0)) : 0;
   const progressText = `${percent.toFixed(1)}%`;
   return (
@@ -766,7 +737,7 @@ function UpdateDownloadProgress({ state, language }: { state: DesktopUpdateState
       <progress
         max={100}
         value={percent}
-        aria-label={t("updateDownloadProgress", "Update download progress")}
+        aria-label={"Update download progress"}
         aria-valuetext={progressText}
         style={{ width: "100%", height: 8, accentColor: "var(--accent)" }}
       />
@@ -784,10 +755,10 @@ function UpdateDownloadProgress({ state, language }: { state: DesktopUpdateState
         <span>{progressText}</span>
         <span>
           {state.transferred !== undefined && state.total !== undefined
-            ? `${formatBytes(state.transferred, language)} / ${formatBytes(state.total, language)}`
-            : t("calculatingDownloadSize", "Calculating size…")}
+            ? `${formatBytes(state.transferred)} / ${formatBytes(state.total)}`
+            : "Calculating size…"}
           {state.bytesPerSecond !== undefined && state.bytesPerSecond > 0
-            ? ` · ${formatBytes(state.bytesPerSecond, language)}/${t("secondShort", "s")}`
+            ? ` · ${formatBytes(state.bytesPerSecond)}/${"s"}`
             : ""}
         </span>
       </div>
@@ -833,56 +804,50 @@ function UpdateButton({
   );
 }
 
-function getUpdateStatusTitle(state: DesktopUpdateState | null, t: (key: string, fallback: string) => string): string {
-  if (!state) return t("loadingUpdateStatus", "Loading update status…");
+function getUpdateStatusTitle(state: DesktopUpdateState | null): string {
+  if (!state) return "Loading update status…";
   switch (state.phase) {
     case "disabled":
-      return t("updatesDisabled", "Updates are unavailable in this build");
+      return "Updates are unavailable in this build";
     case "idle":
-      return t("readyToCheckForUpdates", "Ready to check for updates");
+      return "Ready to check for updates";
     case "checking":
-      return t("checkingForUpdates", "Checking for updates…");
+      return "Checking for updates…";
     case "up-to-date":
-      return t("appIsUpToDate", "You are using the latest version");
+      return "You are using the latest version";
     case "available":
-      return t("updateAvailable", "An update is available");
+      return "An update is available";
     case "downloading":
-      return t("downloadingUpdate", "Downloading update…");
+      return "Downloading update…";
     case "downloaded":
-      return t("updateReadyToInstall", "Update ready to install");
+      return "Update ready to install";
     case "installing":
-      return t("installingUpdate", "Restarting to install the update…");
+      return "Restarting to install the update…";
     case "error":
-      return t("updateFailed", "Update failed");
+      return "Update failed";
   }
 }
 
-function getUpdateErrorMessage(
-  error: NonNullable<DesktopUpdateState["error"]>,
-  t: (key: string, fallback: string) => string,
-): string {
+function getUpdateErrorMessage(error: NonNullable<DesktopUpdateState["error"]>): string {
   switch (error.code) {
     case "UPDATE_OFFLINE":
-      return t("updateErrorOffline", "Unable to reach the update service. Check your network and try again.");
+      return "Unable to reach the update service. Check your network and try again.";
     case "UPDATE_NOT_PUBLISHED":
-      return t("updateErrorNotPublished", "The update is not available yet and may still be under release review.");
+      return "The update is not available yet and may still be under release review.";
     case "UPDATE_METADATA_INVALID":
-      return t(
-        "updateErrorMetadataInvalid",
-        "The update information is invalid or incomplete. This version was not changed.",
-      );
+      return "The update information is invalid or incomplete. This version was not changed.";
     case "UPDATE_SIGNATURE_INVALID":
-      return t("updateErrorSignatureInvalid", "Update signature verification failed. Installation was stopped.");
+      return "Update signature verification failed. Installation was stopped.";
     case "UPDATE_DOWNLOAD_FAILED":
-      return t("updateErrorDownloadFailed", "The download failed. You can continue using this version and try again.");
+      return "The download failed. You can continue using this version and try again.";
     case "UPDATE_BUSY":
-      return t("updateErrorBusy", "Another update task is already in progress.");
+      return "Another update task is already in progress.";
     case "UPDATE_INVALID_STATE":
-      return t("updateErrorInvalidState", "This update action is not available in the current state.");
+      return "This update action is not available in the current state.";
     case "UPDATE_UNSUPPORTED":
-      return t("updateErrorUnsupported", "This build or platform does not support automatic updates.");
+      return "This build or platform does not support automatic updates.";
     case "UPDATE_UNKNOWN":
-      return t("updateErrorUnknown", "An unexpected update error occurred. This version was not changed.");
+      return "An unexpected update error occurred. This version was not changed.";
   }
 }
 
@@ -897,18 +862,18 @@ function displayVersion(version: string): string {
   return version.startsWith("v") ? version : `v${version}`;
 }
 
-function formatUpdateDate(value: string, language: AppLanguage): string {
+function formatUpdateDate(value: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat(language, { dateStyle: "medium", timeStyle: "short" }).format(date);
+  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(date);
 }
 
-function formatBytes(value: number, language: AppLanguage): string {
+function formatBytes(value: number): string {
   if (!Number.isFinite(value) || value <= 0) return "0 B";
   const units = ["B", "KB", "MB", "GB"];
   const unitIndex = Math.max(0, Math.min(Math.floor(Math.log(value) / Math.log(1024)), units.length - 1));
   const amount = value / 1024 ** unitIndex;
-  return `${new Intl.NumberFormat(language, { maximumFractionDigits: unitIndex === 0 ? 0 : 1 }).format(amount)} ${units[unitIndex]}`;
+  return `${new Intl.NumberFormat(undefined, { maximumFractionDigits: unitIndex === 0 ? 0 : 1 }).format(amount)} ${units[unitIndex]}`;
 }
 
 const updateDetailStyle: React.CSSProperties = {
@@ -948,23 +913,18 @@ function AboutRow({ label, value, last = false }: { label: string; value: React.
 }
 
 function GeneralSettings({
-  language,
-  onLanguageChange,
   isDark,
   onThemeChange,
   chatAppearance,
   chatAppearanceSaving,
   onChatAppearanceChange,
 }: {
-  language: AppLanguage;
-  onLanguageChange: (language: AppLanguage) => void;
   isDark: boolean;
   onThemeChange: (dark: boolean) => void;
   chatAppearance: ChatAppearancePreferences;
   chatAppearanceSaving: boolean;
   onChatAppearanceChange: (preferences: ChatAppearancePreferences) => Promise<void>;
 }) {
-  const { t } = useI18n();
   const [backgroundMode, setBackgroundMode] = useState(true);
   const [backgroundModeLoading, setBackgroundModeLoading] = useState(true);
   const [backgroundModeSaving, setBackgroundModeSaving] = useState(false);
@@ -980,7 +940,6 @@ function GeneralSettings({
   const [cacheWarmingSaving, setCacheWarmingSaving] = useState(false);
   const [cacheWarmingError, setCacheWarmingError] = useState<"load" | "save" | "partial" | null>(null);
   const [chatAppearanceError, setChatAppearanceError] = useState(false);
-  const languageControlId = useId();
   const backgroundModeControlId = useId();
   const managedProcessesControlId = useId();
   const autoSessionTitleControlId = useId();
@@ -1095,69 +1054,30 @@ function GeneralSettings({
     if (!managedProcessCapability || managedProcessCapability.ready) return null;
     switch (managedProcessCapability.errorCode) {
       case "ARCH_UNSUPPORTED":
-        return t("managedProcessesArchUnsupported", "Managed processes require Windows x64 on this platform.");
+        return "Managed processes require Windows x64 on this platform.";
       case "HELPER_MISSING":
-        return t(
-          "managedProcessesHelperMissing",
-          "The Windows process helper is missing. Reinstall the app, then restart it.",
-        );
+        return "The Windows process helper is missing. Reinstall the app, then restart it.";
       case "HELPER_INTEGRITY":
-        return t(
-          "managedProcessesHelperIntegrity",
-          "The Windows process helper failed its integrity check. Reinstall the app, then restart it.",
-        );
+        return "The Windows process helper failed its integrity check. Reinstall the app, then restart it.";
       case "OWNER_IDENTITY_UNAVAILABLE":
-        return t(
-          "managedProcessesOwnerUnavailable",
-          "Windows process ownership could not be verified. Restart the app before enabling this feature.",
-        );
+        return "Windows process ownership could not be verified. Restart the app before enabling this feature.";
       case "REAPER_UNHEALTHY":
-        return t(
-          "managedProcessesReaperUnhealthy",
-          "A previous process tree could not be safely verified as stopped. Restart the app or export diagnostics.",
-        );
+        return "A previous process tree could not be safely verified as stopped. Restart the app or export diagnostics.";
       default:
-        return t("managedProcessesUnsupported", "Managed processes are not available on this platform.");
+        return "Managed processes are not available on this platform.";
     }
   })();
   const managedProcessesUnavailable = !managedProcessCapability?.ready;
   return (
     <div style={{ width: "100%", overflowY: "auto", padding: "28px clamp(18px, 5vw, 52px)" }}>
       <section style={{ maxWidth: 620 }}>
-        <h2 style={{ margin: 0, fontSize: 14, color: "var(--text)" }}>
-          {t("interfaceLanguage", "Interface language")}
-        </h2>
+        <h2 style={{ margin: 0, fontSize: 14, color: "var(--text)" }}>{"Managed processes"}</h2>
         <p style={{ margin: "6px 0 16px", fontSize: 12, lineHeight: 1.6, color: "var(--text-dim)" }}>
-          {t("interfaceLanguageDescription", "Choose the language used by the app. Changes take effect immediately.")}
+          {
+            "Let Agents run development servers and watchers under app-owned lifecycle control. Processes have the same local access as Bash and are not a sandbox."
+          }
         </p>
-        <SettingRow label={t("language", "Language")} controlId={languageControlId}>
-          <select
-            id={languageControlId}
-            value={language}
-            onChange={(event) => onLanguageChange(event.target.value as AppLanguage)}
-            style={selectStyle}
-          >
-            <option value="en-US">English</option>
-            <option value="zh-CN">简体中文</option>
-            <option value="zh-TW">繁體中文</option>
-          </select>
-        </SettingRow>
-      </section>
-
-      <div style={{ height: 1, background: "var(--border)", maxWidth: 620, margin: "28px 0" }} />
-
-      <section style={{ maxWidth: 620 }}>
-        <h2 style={{ margin: 0, fontSize: 14, color: "var(--text)" }}>{t("managedProcesses", "Managed processes")}</h2>
-        <p style={{ margin: "6px 0 16px", fontSize: 12, lineHeight: 1.6, color: "var(--text-dim)" }}>
-          {t(
-            "managedProcessesDescription",
-            "Let Agents run development servers and watchers under app-owned lifecycle control. Processes have the same local access as Bash and are not a sandbox.",
-          )}
-        </p>
-        <SettingRow
-          label={t("managedProcessesEnable", "Enable managed background processes")}
-          controlId={managedProcessesControlId}
-        >
+        <SettingRow label={"Enable managed background processes"} controlId={managedProcessesControlId}>
           <label
             htmlFor={managedProcessesControlId}
             style={{
@@ -1193,20 +1113,14 @@ function GeneralSettings({
           managedProcessCapability.backend === "windows-job" &&
           managedProcessCapability.helperProvenance === "windows-native-dev" && (
             <p style={{ margin: "8px 0 0", fontSize: 12, lineHeight: 1.55, color: "var(--text-dim)" }}>
-              {t("managedProcessesDeveloperBuild", "Developer build — not a release-validated Windows helper.")}
+              {"Developer build — not a release-validated Windows helper."}
             </p>
           )}
         {managedProcessesError && (
           <p role="alert" style={{ margin: "8px 0 0", fontSize: 12, lineHeight: 1.55, color: "#f87171" }}>
             {managedProcessesError === "save"
-              ? t(
-                  "managedProcessesSaveFailed",
-                  "Managed process settings could not be saved. The previous setting was restored.",
-                )
-              : t(
-                  "managedProcessesLoadFailed",
-                  "Managed process settings could not be loaded. The feature remains disabled.",
-                )}
+              ? "Managed process settings could not be saved. The previous setting was restored."
+              : "Managed process settings could not be loaded. The feature remains disabled."}
           </p>
         )}
       </section>
@@ -1214,11 +1128,11 @@ function GeneralSettings({
       <div style={{ height: 1, background: "var(--border)", maxWidth: 620, margin: "28px 0" }} />
 
       <section style={{ maxWidth: 620 }}>
-        <h2 style={{ margin: 0, fontSize: 14, color: "var(--text)" }}>{t("backgroundMode", "Background mode")}</h2>
+        <h2 style={{ margin: 0, fontSize: 14, color: "var(--text)" }}>{"Background mode"}</h2>
         <p style={{ margin: "6px 0 16px", fontSize: 12, lineHeight: 1.6, color: "var(--text-dim)" }}>
-          {t("backgroundModeDescription", "Keep messaging channels connected when the window is closed.")}
+          {"Keep messaging channels connected when the window is closed."}
         </p>
-        <SettingRow label={t("closeToTray", "Close window to tray")} controlId={backgroundModeControlId}>
+        <SettingRow label={"Close window to tray"} controlId={backgroundModeControlId}>
           <label
             htmlFor={backgroundModeControlId}
             style={{
@@ -1251,8 +1165,8 @@ function GeneralSettings({
         {backgroundModeError && (
           <p role="alert" style={{ margin: "8px 0 0", fontSize: 12, lineHeight: 1.55, color: "#f87171" }}>
             {backgroundModeError === "save"
-              ? t("backgroundModeSaveFailed", "Background mode could not be saved. The previous setting was restored.")
-              : t("backgroundModeLoadFailed", "Background mode could not be loaded. The default remains selected.")}
+              ? "Background mode could not be saved. The previous setting was restored."
+              : "Background mode could not be loaded. The default remains selected."}
           </p>
         )}
       </section>
@@ -1260,15 +1174,12 @@ function GeneralSettings({
       <div style={{ height: 1, background: "var(--border)", maxWidth: 620, margin: "28px 0" }} />
 
       <section style={{ maxWidth: 620 }}>
-        <h2 style={{ margin: 0, fontSize: 14, color: "var(--text)" }}>{t("conversationSettings", "Conversation")}</h2>
+        <h2 style={{ margin: 0, fontSize: 14, color: "var(--text)" }}>{"Conversation"}</h2>
         <p style={{ margin: "6px 0 16px", fontSize: 12, lineHeight: 1.6, color: "var(--text-dim)" }}>
-          {t(
-            "conversationSettingsDescription",
-            "Control automatic titles, chat text size, and the conversation reading width.",
-          )}
+          {"Control automatic titles, chat text size, and the conversation reading width."}
         </p>
         <div style={{ display: "grid", gap: 10 }}>
-          <SettingRow label={t("autoSessionTitle", "Auto-title new sessions")} controlId={autoSessionTitleControlId}>
+          <SettingRow label={"Auto-title new sessions"} controlId={autoSessionTitleControlId}>
             <label
               htmlFor={autoSessionTitleControlId}
               style={{
@@ -1299,7 +1210,7 @@ function GeneralSettings({
               />
             </label>
           </SettingRow>
-          <SettingRow label={t("cacheWarming", "Prompt cache warming")} controlId={cacheWarmingControlId}>
+          <SettingRow label={"Prompt cache warming"} controlId={cacheWarmingControlId}>
             <select
               id={cacheWarmingControlId}
               value={cacheWarmingMode}
@@ -1309,27 +1220,24 @@ function GeneralSettings({
               }}
               style={{ ...selectStyle, cursor: cacheWarmingSaving ? "wait" : "pointer" }}
             >
-              <option value="off">{t("cacheWarmingOff", "Off")}</option>
-              <option value="streaming">{t("cacheWarmingStreaming", "During long tool runs")}</option>
-              <option value="idle">{t("cacheWarmingIdle", "Also while idle")}</option>
+              <option value="off">{"Off"}</option>
+              <option value="streaming">{"During long tool runs"}</option>
+              <option value="idle">{"Also while idle"}</option>
             </select>
           </SettingRow>
           <p style={{ margin: 0, fontSize: 12, lineHeight: 1.55, color: "var(--text-dim)" }}>
-            {t(
-              "cacheWarmingDescription",
-              "Cache warming may use model tokens. This setting is shared with the Pi CLI.",
-            )}
+            {"Cache warming may use model tokens. This setting is shared with the Pi CLI."}
           </p>
           {cacheWarmingError && (
             <p role="alert" style={{ margin: 0, fontSize: 12, lineHeight: 1.55, color: "var(--danger)" }}>
               {cacheWarmingError === "load"
-                ? t("cacheWarmingLoadFailed", "The Pi cache warming setting could not be read.")
+                ? "The Pi cache warming setting could not be read."
                 : cacheWarmingError === "partial"
-                  ? t("cacheWarmingPartial", "Saved, but some active sessions could not update. Reopen those sessions.")
-                  : t("cacheWarmingSaveFailed", "The Pi cache warming setting could not be saved.")}
+                  ? "Saved, but some active sessions could not update. Reopen those sessions."
+                  : "The Pi cache warming setting could not be saved."}
             </p>
           )}
-          <SettingRow label={t("chatFontSize", "Chat text size")} controlId={chatFontSizeControlId}>
+          <SettingRow label={"Chat text size"} controlId={chatFontSizeControlId}>
             <select
               id={chatFontSizeControlId}
               value={chatAppearance.fontSize}
@@ -1342,13 +1250,13 @@ function GeneralSettings({
               }}
               style={{ ...selectStyle, cursor: chatAppearanceSaving ? "wait" : "pointer" }}
             >
-              <option value="small">{t("chatFontSizeSmall", "Small")}</option>
-              <option value="standard">{t("chatFontSizeStandard", "Standard")}</option>
-              <option value="large">{t("chatFontSizeLarge", "Large")}</option>
-              <option value="extra-large">{t("chatFontSizeExtraLarge", "Extra large")}</option>
+              <option value="small">{"Small"}</option>
+              <option value="standard">{"Standard"}</option>
+              <option value="large">{"Large"}</option>
+              <option value="extra-large">{"Extra large"}</option>
             </select>
           </SettingRow>
-          <SettingRow label={t("chatLayout", "Conversation width")} controlId={chatLayoutControlId}>
+          <SettingRow label={"Conversation width"} controlId={chatLayoutControlId}>
             <select
               id={chatLayoutControlId}
               value={chatAppearance.layout}
@@ -1361,11 +1269,11 @@ function GeneralSettings({
               }}
               style={{ ...selectStyle, cursor: chatAppearanceSaving ? "wait" : "pointer" }}
             >
-              <option value="fixed">{t("chatLayoutFixed", "Comfortable width")}</option>
-              <option value="wide">{t("chatLayoutWide", "Expanded width")}</option>
+              <option value="fixed">{"Comfortable width"}</option>
+              <option value="wide">{"Expanded width"}</option>
             </select>
           </SettingRow>
-          <SettingRow label={t("chatAssistantWidth", "Model reply width")} controlId={chatAssistantWidthControlId}>
+          <SettingRow label={"Model reply width"} controlId={chatAssistantWidthControlId}>
             <select
               id={chatAssistantWidthControlId}
               value={chatAppearance.assistantWidth ?? "comfortable"}
@@ -1378,14 +1286,14 @@ function GeneralSettings({
               }}
               style={{ ...selectStyle, cursor: chatAppearanceSaving ? "wait" : "pointer" }}
             >
-              <option value="comfortable">{t("chatAssistantWidthComfortable", "Comfortable width")}</option>
-              <option value="full">{t("chatAssistantWidthFull", "Fill conversation column")}</option>
+              <option value="comfortable">{"Comfortable width"}</option>
+              <option value="full">{"Fill conversation column"}</option>
             </select>
           </SettingRow>
         </div>
         {chatAppearanceError && (
           <p role="alert" style={{ margin: "8px 0 0", fontSize: 12, lineHeight: 1.55, color: "var(--danger)" }}>
-            {t("chatAppearanceSaveFailed", "Chat appearance could not be saved. The previous settings were restored.")}
+            {"Chat appearance could not be saved. The previous settings were restored."}
           </p>
         )}
       </section>
@@ -1393,19 +1301,19 @@ function GeneralSettings({
       <div style={{ height: 1, background: "var(--border)", maxWidth: 620, margin: "28px 0" }} />
 
       <section style={{ maxWidth: 620 }}>
-        <h2 style={{ margin: 0, fontSize: 14, color: "var(--text)" }}>{t("appearance", "Appearance")}</h2>
+        <h2 style={{ margin: 0, fontSize: 14, color: "var(--text)" }}>{"Appearance"}</h2>
         <p style={{ margin: "6px 0 16px", fontSize: 12, lineHeight: 1.6, color: "var(--text-dim)" }}>
-          {t("appearanceDescription", "Choose the color mode used by the app.")}
+          {"Choose the color mode used by the app."}
         </p>
-        <SettingRow label={t("theme", "Theme")} controlId={themeControlId}>
+        <SettingRow label={"Theme"} controlId={themeControlId}>
           <select
             id={themeControlId}
             value={isDark ? "dark" : "light"}
             onChange={(event) => onThemeChange(event.target.value === "dark")}
             style={selectStyle}
           >
-            <option value="light">{t("light", "Light")}</option>
-            <option value="dark">{t("dark", "Dark")}</option>
+            <option value="light">{"Light"}</option>
+            <option value="dark">{"Dark"}</option>
           </select>
         </SettingRow>
       </section>
@@ -1437,7 +1345,6 @@ function SettingRow({ label, controlId, children }: { label: string; controlId: 
 }
 
 function ProjectRequired() {
-  const { t } = useI18n();
   return (
     <div
       style={{
@@ -1450,14 +1357,9 @@ function ProjectRequired() {
       }}
     >
       <div style={{ maxWidth: 380 }}>
-        <div style={{ fontSize: 14, fontWeight: 650, color: "var(--text)" }}>
-          {t("projectRequiredTitle", "Select a project first")}
-        </div>
+        <div style={{ fontSize: 14, fontWeight: 650, color: "var(--text)" }}>{"Select a project first"}</div>
         <div style={{ marginTop: 7, fontSize: 12, lineHeight: 1.6, color: "var(--text-dim)" }}>
-          {t(
-            "projectRequiredDescription",
-            "Skills and plugins depend on the current project. Select a project directory from the sidebar first.",
-          )}
+          {"Skills and plugins depend on the current project. Select a project directory from the sidebar first."}
         </div>
       </div>
     </div>

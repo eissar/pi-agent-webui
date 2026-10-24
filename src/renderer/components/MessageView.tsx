@@ -13,7 +13,6 @@ import {
 import { getUserBubbleStyle } from "@/lib/channel-message-style";
 import { CHANNEL_ATTACHMENT_PROMPT_PLACEHOLDER, channelAttachmentCopyText } from "@shared/channel-message";
 import { parseSkillInvocation, skillInvocationCommandText, type SkillInvocation } from "@shared/skill-invocation";
-import { useI18n } from "@/i18n";
 import { useTheme } from "@/hooks/useTheme";
 import { ThinkingExpansionStore } from "@/lib/thinking-expansion-store";
 import { parseUnifiedPatch, type SplitDiffCell } from "@/lib/patch";
@@ -189,11 +188,7 @@ export const MessageView = memo(function MessageView({
       );
     }
     return (
-      <CustomMessageView
-        message={message as CustomMessage}
-        cwd={cwd}
-        onLoadDeferredContent={onLoadDeferredContent}
-      />
+      <CustomMessageView message={message as CustomMessage} cwd={cwd} onLoadDeferredContent={onLoadDeferredContent} />
     );
   }
   return null;
@@ -220,7 +215,6 @@ function UserMessageView({
   onEditContent?: (content: string) => void;
   onLoadDeferredContent?: (entryId: string, blockIndex?: number) => Promise<void>;
 }) {
-  const { t } = useI18n();
   const { isDark } = useTheme();
   const [hovered, setHovered] = useState(false);
   const { copied, copy } = useCopyFeedback();
@@ -246,7 +240,7 @@ function UserMessageView({
   const visibleContent = isChannelAttachmentPlaceholder
     ? imageBlocks.length > 0
       ? ""
-      : attachmentCopyContent || t("channelAttachment", "Attachment")
+      : attachmentCopyContent || "Attachment"
     : skillInvocation
       ? (skillInvocation.userMessage ?? "")
       : content;
@@ -543,11 +537,8 @@ function SkillInvocationView({
   cwd?: string;
   followedByContent: boolean;
 }) {
-  const { t } = useI18n();
   const [expanded, setExpanded] = useState(false);
-  const toggleTitle = expanded
-    ? t("collapseSkillInvocation", "Hide skill instructions")
-    : t("expandSkillInvocation", "Show skill instructions");
+  const toggleTitle = expanded ? "Hide skill instructions" : "Show skill instructions";
 
   return (
     <div
@@ -596,9 +587,7 @@ function SkillInvocationView({
         >
           <polyline points="4 2.5 7.5 6 4 9.5" />
         </svg>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: scaledChatFont(11), fontWeight: 650 }}>
-          {t("skillInvocation", "skill")}
-        </span>
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: scaledChatFont(11), fontWeight: 650 }}>{"skill"}</span>
         <span
           style={{
             minWidth: 0,
@@ -657,7 +646,6 @@ function AssistantMessageView({
   entryId?: string;
   thinkingExpansionStore?: ThinkingExpansionStore;
 }) {
-  const { t } = useI18n();
   const time = showTimestamp ? formatTime(message.timestamp) : null;
   const blockItems = (message.content ?? [])
     .map((block, originalIndex) => ({ block, originalIndex }))
@@ -671,10 +659,7 @@ function AssistantMessageView({
   blockItemsRef.current = blockItems;
   const failureDetail = isAssistantFailure(message)
     ? (getAssistantFailureDetail(message) ??
-      t(
-        "modelRequestFailedFallback",
-        "The model service did not return error details. Check the API key, service URL, and model configuration.",
-      ))
+      "The model service did not return error details. Check the API key, service URL, and model configuration.")
     : null;
 
   // Streaming-based timing for thinking blocks
@@ -879,7 +864,7 @@ function AssistantMessageView({
               whiteSpace: "pre-wrap",
             }}
           >
-            <div style={{ fontWeight: 600, marginBottom: 3 }}>{t("modelRequestFailed", "Model request failed")}</div>
+            <div style={{ fontWeight: 600, marginBottom: 3 }}>{"Model request failed"}</div>
             <div>{failureDetail}</div>
           </div>
         )}
@@ -1017,15 +1002,7 @@ function BlockView({
   return null;
 }
 
-function TextBlock({
-  block,
-  isStreaming,
-  cwd,
-}: {
-  block: TextContent;
-  isStreaming?: boolean;
-  cwd?: string;
-}) {
+function TextBlock({ block, isStreaming, cwd }: { block: TextContent; isStreaming?: boolean; cwd?: string }) {
   return (
     <div
       style={{
@@ -1060,7 +1037,6 @@ function ThinkingBlock({
   if (!localStoreRef.current) localStoreRef.current = new ThinkingExpansionStore(1);
   const stateStore = store ?? localStoreRef.current;
   const expanded = stateStore.getSignal(stateKey).value;
-  const { t } = useI18n();
   const toggleExpanded = () => stateStore.toggle(stateKey);
   return (
     <div
@@ -1090,7 +1066,7 @@ function ThinkingBlock({
         }}
       >
         <span style={{ fontSize: 10 }}>{expanded ? "▾" : "▸"}</span>
-        <span>{t("thinkingLabel", "thinking")}</span>
+        <span>{"thinking"}</span>
         {duration !== undefined && (
           <span
             style={{
@@ -1105,7 +1081,7 @@ function ThinkingBlock({
         )}
         {duration === undefined && !expanded && (
           <span style={{ marginLeft: "auto", fontSize: scaledChatFont(11), color: "var(--text-dim)" }}>
-            {t("collapsed", "collapsed")}
+            {"collapsed"}
           </span>
         )}
       </button>
@@ -1139,7 +1115,6 @@ function ToolCallBlock({
   onLoadDeferredContent?: (entryId: string, blockIndex?: number) => Promise<void>;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const { t } = useI18n();
   const inputStr = JSON.stringify(block.input, null, 2);
   const isEditTool = isEditToolName(block.toolName);
   const resultDiff = result && !result.isError ? getResultDiff(result) : null;
@@ -1157,7 +1132,7 @@ function ToolCallBlock({
   const preview = getToolPreview(block);
   const browserTabId = isBrowserToolName(block.toolName) ? browserTabIdFromResult(resultText) : null;
   const browserSummary =
-    isBrowserToolName(block.toolName) && resultText && !isError ? browserResultSummary(resultText, t) : null;
+    isBrowserToolName(block.toolName) && resultText && !isError ? browserResultSummary(resultText) : null;
 
   return (
     <div
@@ -1318,7 +1293,7 @@ function browserTabIdFromResult(value: string | null): string | null {
   }
 }
 
-function browserResultSummary(value: string, t: (key: string, fallback: string) => string): string | null {
+function browserResultSummary(value: string): string | null {
   try {
     const parsed = JSON.parse(value) as Record<string, unknown>;
     if (typeof parsed.inspectionId === "string" && typeof parsed.changed === "boolean") {
@@ -1329,32 +1304,29 @@ function browserResultSummary(value: string, t: (key: string, fallback: string) 
             .join(", ")
         : "";
       return parsed.changed
-        ? formatBrowserSummary(t("browserToolInspectChanged", "Page changed · generation {generation}{truncated}"), {
+        ? formatBrowserSummary("Page changed · generation {generation}{truncated}", {
             generation: Number(parsed.generation ?? 0),
             truncated: truncated ? ` · truncated: ${truncated}` : "",
           })
-        : formatBrowserSummary(t("browserToolInspectUnchanged", "Page unchanged · generation {generation}"), {
+        : formatBrowserSummary("Page unchanged · generation {generation}", {
             generation: Number(parsed.generation ?? 0),
           });
     }
     if (typeof parsed.differenceRatio === "number") {
-      return formatBrowserSummary(t("browserToolVisualDifference", "Visual difference: {percent}% · {pixels} pixels"), {
+      return formatBrowserSummary("Visual difference: {percent}% · {pixels} pixels", {
         percent: (parsed.differenceRatio * 100).toFixed(3),
         pixels: Number(parsed.differentPixels ?? 0).toLocaleString(),
       });
     }
     if (typeof parsed.total === "number" && typeof parsed.failed === "number" && isRecord(parsed.byResourceType)) {
-      return formatBrowserSummary(
-        t("browserToolNetworkSummary", "Network: {total} requests · {failed} failed · {pending} pending"),
-        {
-          total: parsed.total,
-          failed: parsed.failed,
-          pending: Number(parsed.pending ?? 0),
-        },
-      );
+      return formatBrowserSummary("Network: {total} requests · {failed} failed · {pending} pending", {
+        total: parsed.total,
+        failed: parsed.failed,
+        pending: Number(parsed.pending ?? 0),
+      });
     }
     if (Array.isArray(parsed.entries)) {
-      return formatBrowserSummary(t("browserToolConsoleSummary", "Console: {count} entries{truncated}"), {
+      return formatBrowserSummary("Console: {count} entries{truncated}", {
         count: parsed.entries.length,
         truncated: parsed.truncated === true ? " · more available" : "",
       });

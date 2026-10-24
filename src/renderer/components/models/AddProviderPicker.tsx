@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import { useI18n } from "@/i18n";
 import type { ProviderStatus as OAuthProvider, ApiKeyProviderStatus as ApiKeyProvider } from "@contract/types";
 import { ProviderIcon } from "./ProviderIcon";
 
@@ -20,7 +19,6 @@ export function AddProviderPicker({
   onAddCustom,
   onClose,
 }: AddProviderPickerProps) {
-  const { t } = useI18n();
   const [search, setSearch] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -38,8 +36,8 @@ export function AddProviderPicker({
     "custom",
     "openai-compatible",
     "anthropic-compatible",
-    t("modelCustom", "Custom"),
-    t("modelCompatibleProvider", "OpenAI / Anthropic compatible"),
+    "Custom",
+    "OpenAI / Anthropic compatible",
   ]
     .join(" ")
     .toLowerCase();
@@ -82,7 +80,7 @@ export function AddProviderPicker({
       <div
         role="dialog"
         aria-modal="true"
-        aria-label={t("addProvider", "Add provider")}
+        aria-label={"Add provider"}
         onKeyDown={(event) => {
           if (event.key !== "Escape") return;
           event.preventDefault();
@@ -131,7 +129,7 @@ export function AddProviderPicker({
             ref={inputRef}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder={t("modelSearchProviders", "Search providers…")}
+            placeholder={"Search providers…"}
             style={{
               flex: 1,
               background: "none",
@@ -148,7 +146,7 @@ export function AddProviderPicker({
         <div style={{ flex: 1, overflowY: "auto", padding: 14 }}>
           {totalCount === 0 ? (
             <div style={{ padding: "20px 0", fontSize: 12, color: "var(--text-dim)", textAlign: "center" }}>
-              {t("modelNoProvidersMatch", "No providers match")}
+              {"No providers match"}
             </div>
           ) : (
             <div
@@ -169,7 +167,7 @@ export function AddProviderPicker({
                     letterSpacing: "0.07em",
                   }}
                 >
-                  {t("modelCustom", "Custom")}
+                  {"Custom"}
                 </div>
               )}
               {showCustom && (
@@ -200,10 +198,10 @@ export function AddProviderPicker({
                         whiteSpace: "nowrap",
                       }}
                     >
-                      {t("modelCompatibleProvider", "OpenAI / Anthropic compatible")}
+                      {"OpenAI / Anthropic compatible"}
                     </div>
                     <div style={{ fontSize: 10, color: "var(--text-dim)", marginTop: 2 }}>
-                      {t("modelCustomEndpointFormat", "Custom endpoint format")}
+                      {"Custom endpoint format"}
                     </div>
                   </div>
                   <span
@@ -249,7 +247,7 @@ export function AddProviderPicker({
                     letterSpacing: "0.07em",
                   }}
                 >
-                  {t("modelSubscriptions", "Subscriptions")}
+                  {"Subscriptions"}
                 </div>
               )}
               {availableOAuth.map((p) => (
@@ -301,7 +299,7 @@ export function AddProviderPicker({
                     letterSpacing: "0.07em",
                   }}
                 >
-                  {t("modelApiKey", "API Key")}
+                  {"API Key"}
                 </div>
               )}
               {availableApiKey.map((p) => (
@@ -336,7 +334,7 @@ export function AddProviderPicker({
                       {p.displayName}
                     </div>
                     <div style={{ fontSize: 10, color: "var(--text-dim)", marginTop: 2 }}>
-                      {t("modelCount", "{count} models").replace("{count}", String(p.modelCount))}
+                      {"{count} models".replace("{count}", String(p.modelCount))}
                     </div>
                   </div>
                   <ProviderIcon id={p.id} size={28} />

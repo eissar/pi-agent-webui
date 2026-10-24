@@ -1,7 +1,6 @@
 import { call } from "@/lib/api-client";
 import { useEffect, useState, useCallback, useRef, type CSSProperties } from "react";
 import type { SessionInfo } from "@/lib/types";
-import { useI18n } from "@/i18n";
 import { getSessionDisplayTitle } from "@/lib/session-list";
 import { formatNumber, formatRelativeDateTime } from "@/lib/locale-format";
 
@@ -129,11 +128,10 @@ export function SessionTreeItem({
 }
 
 function RunningSessionIndicator() {
-  const { t } = useI18n();
   return (
     <span
-      title={t("agentRunning", "Agent is running…")}
-      aria-label={t("agentRunningStatus", "Agent running")}
+      title={"Agent is running…"}
+      aria-label={"Agent running"}
       style={{
         width: 14,
         height: 14,
@@ -162,11 +160,10 @@ function RunningSessionIndicator() {
 }
 
 function UnreadSessionIndicator() {
-  const { t } = useI18n();
   return (
     <span
-      title={t("newSessionActivity", "New activity")}
-      aria-label={t("newSessionActivityLabel", "New session activity")}
+      title={"New activity"}
+      aria-label={"New session activity"}
       style={{
         width: 14,
         height: 14,
@@ -229,7 +226,6 @@ function SessionItem({
   collapsed?: boolean;
   onToggleCollapse?: () => void;
 }) {
-  const { language, t } = useI18n();
   const [hovered, setHovered] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState("");
@@ -296,19 +292,19 @@ function SessionItem({
       closeActionsMenu();
       // ISSUE-001: block delete while agent is running
       if (isRunning) {
-        window.alert(t("deleteRunningSessionBlocked", "This session is still running. Stop it before deleting."));
+        window.alert("This session is still running. Stop it before deleting.");
         return;
       }
       setConfirmDelete(true);
     },
-    [closeActionsMenu, isRunning, t],
+    [closeActionsMenu, isRunning],
   );
 
   const handleDeleteConfirm = useCallback(
     async (e: React.MouseEvent) => {
       e.stopPropagation();
       if (isRunning) {
-        window.alert(t("deleteRunningSessionBlocked", "This session is still running. Stop it before deleting."));
+        window.alert("This session is still running. Stop it before deleting.");
         setConfirmDelete(false);
         return;
       }
@@ -318,13 +314,11 @@ function SessionItem({
         await call("sessions.delete", { id: session.id });
         onDeleted?.(session.id);
       } catch (err) {
-        window.alert(
-          (err instanceof Error ? err.message : String(err)) || t("deleteSessionFailed", "Failed to delete session."),
-        );
+        window.alert((err instanceof Error ? err.message : String(err)) || "Failed to delete session.");
         setDeleting(false);
       }
     },
-    [session.id, onDeleted, isRunning, t],
+    [session.id, onDeleted, isRunning],
   );
 
   const handleDeleteCancel = useCallback((e: React.MouseEvent) => {
@@ -385,10 +379,7 @@ function SessionItem({
               whiteSpace: "nowrap",
             }}
           >
-            {t("deleteSessionConfirm", "Delete “{title}”?").replace(
-              "{title}",
-              `${title.slice(0, 22)}${title.length > 22 ? "…" : ""}`,
-            )}
+            {"Delete “{title}”?".replace("{title}", `${title.slice(0, 22)}${title.length > 22 ? "…" : ""}`)}
           </div>
           <div style={{ display: "flex", gap: 5, flexShrink: 0 }}>
             <button
@@ -425,7 +416,7 @@ function SessionItem({
                 <path d="M10 11v6M14 11v6" />
                 <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
               </svg>
-              {t("delete", "Delete")}
+              {"Delete"}
             </button>
             <button
               onClick={handleDeleteCancel}
@@ -445,7 +436,7 @@ function SessionItem({
                 whiteSpace: "nowrap",
               }}
             >
-              {t("cancel", "Cancel")}
+              {"Cancel"}
             </button>
           </div>
         </>
@@ -483,13 +474,7 @@ function SessionItem({
               onClick();
             }}
             aria-current={isSelected ? "page" : undefined}
-            aria-label={
-              isRunning
-                ? `${title} · ${t("agentRunningStatus", "Agent running")}`
-                : isUnread
-                  ? `${title} · ${t("newSessionActivity", "New activity")}`
-                  : title
-            }
+            aria-label={isRunning ? `${title} · ${"Agent running"}` : isUnread ? `${title} · ${"New activity"}` : title}
             style={{
               alignSelf: "stretch",
               flex: 1,
@@ -539,11 +524,7 @@ function SessionItem({
                   color: "var(--text)",
                 }}
                 title={
-                  isRunning
-                    ? `${title} · ${t("agentRunning", "Agent is running…")}`
-                    : isUnread
-                      ? `${title} · ${t("newSessionActivity", "New activity")}`
-                      : title
+                  isRunning ? `${title} · ${"Agent is running…"}` : isUnread ? `${title} · ${"New activity"}` : title
                 }
               >
                 {isRunning ? (
@@ -578,7 +559,7 @@ function SessionItem({
                   paddingLeft: 13,
                 }}
               >
-                <span title={session.modified}>{formatRelativeDateTime(session.modified, language)}</span>
+                <span title={session.modified}>{formatRelativeDateTime(session.modified)}</span>
                 <span
                   style={{
                     fontFamily: "var(--font-mono)",
@@ -589,11 +570,11 @@ function SessionItem({
                     borderRadius: 4,
                   }}
                 >
-                  {t("messageCount", "{count} msgs").replace("{count}", formatNumber(session.messageCount, language))}
+                  {"{count} msgs".replace("{count}", formatNumber(session.messageCount))}
                 </span>
                 {session.worktreeBranch && (
                   <span
-                    title={t("worktreePath", "Worktree: {path}").replace("{path}", session.cwd)}
+                    title={"Worktree: {path}".replace("{path}", session.cwd)}
                     style={{
                       display: "flex",
                       alignItems: "center",
@@ -636,8 +617,8 @@ function SessionItem({
                 e.stopPropagation();
                 onToggleCollapse?.();
               }}
-              title={collapsed ? t("expandForks", "Expand forks") : t("collapseForks", "Collapse forks")}
-              aria-label={collapsed ? t("expandForks", "Expand forks") : t("collapseForks", "Collapse forks")}
+              title={collapsed ? "Expand forks" : "Collapse forks"}
+              aria-label={collapsed ? "Expand forks" : "Collapse forks"}
               aria-expanded={!collapsed}
               style={{
                 display: "flex",
@@ -692,8 +673,8 @@ function SessionItem({
               type="button"
               ref={actionsSummaryRef}
               className="session-actions-summary"
-              title={t("sessionActions", "Session actions")}
-              aria-label={t("sessionActionsFor", "Session actions for {title}").replace("{title}", title)}
+              title={"Session actions"}
+              aria-label={"Session actions for {title}".replace("{title}", title)}
               aria-haspopup="menu"
               aria-expanded={actionsOpen}
               onClick={(event) => {
@@ -723,7 +704,7 @@ function SessionItem({
             {actionsOpen && (
               <div
                 role="menu"
-                aria-label={t("sessionActions", "Session actions")}
+                aria-label={"Session actions"}
                 style={{
                   position: "absolute",
                   top: 36,
@@ -757,7 +738,7 @@ function SessionItem({
                   >
                     <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
                   </svg>
-                  {t("rename", "Rename")}
+                  {"Rename"}
                 </button>
                 <button
                   type="button"
@@ -782,7 +763,7 @@ function SessionItem({
                     <path d="M10 11v6M14 11v6" />
                     <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
                   </svg>
-                  {t("delete", "Delete")}
+                  {"Delete"}
                 </button>
               </div>
             )}

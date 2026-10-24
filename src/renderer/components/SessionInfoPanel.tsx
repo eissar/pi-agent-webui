@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useI18n } from "@/i18n";
 import { copyText } from "@/lib/clipboard";
 import { formatCompactNumber } from "@/lib/locale-format";
 import type { SessionPresentationStore } from "@/lib/session-presentation-store";
@@ -21,7 +20,6 @@ export function SessionInfoPanel({
   toggleTopPanel: () => void;
   isMobile: boolean;
 }) {
-  const { t, language } = useI18n();
   const presentation = store?.presentationSignal.value ?? null;
   const sessionStats = presentation?.stats ?? null;
   const contextUsage = presentation?.contextUsage ?? null;
@@ -90,16 +88,16 @@ export function SessionInfoPanel({
 
           const tooltipParts: string[] = [];
           if (tokenStats) {
-            tooltipParts.push(`${t("usageInput", "Input")}: ${tokenStats.input.toLocaleString(language)}`);
-            tooltipParts.push(`${t("usageOutput", "Output")}: ${tokenStats.output.toLocaleString(language)}`);
-            tooltipParts.push(`${t("cacheRead", "Cache read")}: ${tokenStats.cacheRead.toLocaleString(language)}`);
-            tooltipParts.push(`${t("cacheWrite", "Cache write")}: ${tokenStats.cacheWrite.toLocaleString(language)}`);
-            if (c > 0) tooltipParts.push(`${t("usageCost", "Cost")}: $${c.toFixed(4)}`);
+            tooltipParts.push(`${"Input"}: ${tokenStats.input.toLocaleString()}`);
+            tooltipParts.push(`${"Output"}: ${tokenStats.output.toLocaleString()}`);
+            tooltipParts.push(`${"Cache read"}: ${tokenStats.cacheRead.toLocaleString()}`);
+            tooltipParts.push(`${"Cache write"}: ${tokenStats.cacheWrite.toLocaleString()}`);
+            if (c > 0) tooltipParts.push(`${"Cost"}: $${c.toFixed(4)}`);
           }
           if (contextUsage?.contextWindow) {
             const pct = contextUsage.percent;
             tooltipParts.push(
-              `${t("usageContext", "Context")}: ${pct !== null ? pct.toFixed(1) + "%" : t("unknown", "unknown")} / ${contextUsage.contextWindow.toLocaleString(language)} ${t("tokens", "tokens")}`,
+              `${"Context"}: ${pct !== null ? pct.toFixed(1) + "%" : "unknown"} / ${contextUsage.contextWindow.toLocaleString()} ${"tokens"}`,
             );
           }
           const tooltip = tooltipParts.join("  |  ");
@@ -108,8 +106,8 @@ export function SessionInfoPanel({
             <button
               type="button"
               onClick={toggleTopPanel}
-              title={tooltip || t("sessionInfo", "Session info")}
-              aria-label={t("sessionInfo", "Session info")}
+              title={tooltip || "Session info"}
+              aria-label={"Session info"}
               aria-pressed={activeTopPanel === "session"}
               style={{
                 marginLeft: "auto",
@@ -153,7 +151,7 @@ export function SessionInfoPanel({
               </svg>
               {!isMobile && tokenStats && tokenStats.total > 0 && (
                 <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                  {fmt(tokenStats.total)} {t("tokens", "tokens")}
+                  {fmt(tokenStats.total)} {"tokens"}
                 </span>
               )}
               {ctxStr && (
@@ -205,41 +203,41 @@ export function SessionInfoPanel({
                 (() => {
                   const sessionRows = [
                     ...(sessionStats.sessionName
-                      ? [{ label: t("sessionName", "Name"), value: sessionStats.sessionName, copyField: null }]
+                      ? [{ label: "Name", value: sessionStats.sessionName, copyField: null }]
                       : []),
                     {
-                      label: t("sessionFile", "File"),
-                      value: sessionStats.sessionFile ?? t("inMemory", "In-memory"),
+                      label: "File",
+                      value: sessionStats.sessionFile ?? "In-memory",
                       copyField: "file" as const,
                     },
-                    { label: t("sessionId", "ID"), value: sessionStats.sessionId, copyField: "id" as const },
+                    { label: "ID", value: sessionStats.sessionId, copyField: "id" as const },
                   ];
                   const messageRows = [
-                    [t("user", "User"), sessionStats.userMessages.toLocaleString(language)],
-                    [t("assistant", "Assistant"), sessionStats.assistantMessages.toLocaleString(language)],
-                    [t("toolCalls", "Tool Calls"), sessionStats.toolCalls.toLocaleString(language)],
-                    [t("toolResults", "Tool Results"), sessionStats.toolResults.toLocaleString(language)],
-                    [t("total", "Total"), sessionStats.totalMessages.toLocaleString(language)],
+                    ["User", sessionStats.userMessages.toLocaleString()],
+                    ["Assistant", sessionStats.assistantMessages.toLocaleString()],
+                    ["Tool Calls", sessionStats.toolCalls.toLocaleString()],
+                    ["Tool Results", sessionStats.toolResults.toLocaleString()],
+                    ["Total", sessionStats.totalMessages.toLocaleString()],
                   ];
                   const tokenRows = [
-                    [t("usageInput", "Input"), sessionStats.tokens.input.toLocaleString(language)],
-                    [t("usageOutput", "Output"), sessionStats.tokens.output.toLocaleString(language)],
+                    ["Input", sessionStats.tokens.input.toLocaleString()],
+                    ["Output", sessionStats.tokens.output.toLocaleString()],
                     ...(sessionStats.tokens.cacheRead > 0
-                      ? [[t("cacheRead", "Cache read"), sessionStats.tokens.cacheRead.toLocaleString(language)]]
+                      ? [["Cache read", sessionStats.tokens.cacheRead.toLocaleString()]]
                       : []),
                     ...(sessionStats.tokens.cacheWrite > 0
-                      ? [[t("cacheWrite", "Cache write"), sessionStats.tokens.cacheWrite.toLocaleString(language)]]
+                      ? [["Cache write", sessionStats.tokens.cacheWrite.toLocaleString()]]
                       : []),
-                    [t("total", "Total"), sessionStats.tokens.total.toLocaleString(language)],
+                    ["Total", sessionStats.tokens.total.toLocaleString()],
                   ];
                   const ctx = contextUsage ?? sessionStats.contextUsage;
                   const extraTokenRows = [
-                    ...(sessionStats.cost > 0 ? [[t("usageCost", "Cost"), `$${sessionStats.cost.toFixed(4)}`]] : []),
+                    ...(sessionStats.cost > 0 ? [["Cost", `$${sessionStats.cost.toFixed(4)}`]] : []),
                     ...(ctx?.contextWindow
                       ? [
                           [
-                            t("usageContext", "Context"),
-                            `${ctx.percent !== null ? `${ctx.percent.toFixed(1)}%` : "?"} / ${formatCompactNumber(ctx.contextWindow, language)}`,
+                            "Context",
+                            `${ctx.percent !== null ? `${ctx.percent.toFixed(1)}%` : "?"} / ${formatCompactNumber(ctx.contextWindow)}`,
                           ],
                         ]
                       : []),
@@ -286,13 +284,8 @@ export function SessionInfoPanel({
                     const feedback = sessionCopyFeedback?.field === field ? sessionCopyFeedback.status : null;
                     const copied = feedback === "copied";
                     const failed = feedback === "error";
-                    const defaultLabel =
-                      field === "file" ? t("copyFilePath", "Copy file path") : t("copySessionId", "Copy session ID");
-                    const label = copied
-                      ? t("copied", "Copied")
-                      : failed
-                        ? t("copyFailed", "Copy failed")
-                        : defaultLabel;
+                    const defaultLabel = field === "file" ? "Copy file path" : "Copy session ID";
+                    const label = copied ? "Copied" : failed ? "Copy failed" : defaultLabel;
                     return (
                       <button
                         type="button"
@@ -381,7 +374,7 @@ export function SessionInfoPanel({
                   const sessionInfoSection = (
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text)", marginBottom: 6 }}>
-                        {t("sessionInfo", "Session info")}
+                        {"Session info"}
                       </div>
                       <div
                         style={{
@@ -412,8 +405,7 @@ export function SessionInfoPanel({
                       </div>
                       {sessionCopyFeedback?.status === "error" && (
                         <div role="alert" style={{ marginTop: 8, color: "var(--error, #ef4444)" }}>
-                          {t("copyFailed", "Copy failed")}.{" "}
-                          {t("checkClipboardPermission", "Check clipboard permission and retry.")}
+                          {"Copy failed"}. {"Check clipboard permission and retry."}
                         </div>
                       )}
                     </div>
@@ -433,14 +425,14 @@ export function SessionInfoPanel({
                       }}
                     >
                       {sessionInfoSection}
-                      {section(t("messages", "Messages"), messageRows)}
-                      {section(t("tokenStatistics", "Tokens"), [...tokenRows, ...extraTokenRows], "right", true)}
+                      {section("Messages", messageRows)}
+                      {section("Tokens", [...tokenRows, ...extraTokenRows], "right", true)}
                     </div>
                   );
                 })()
               ) : (
                 <div style={{ fontSize: 12, color: "var(--text-muted)", fontStyle: "italic" }}>
-                  {t("loadSessionInfoHint", "Send a message or run /session to load session info")}
+                  {"Send a message or run /session to load session info"}
                 </div>
               )}
             </div>

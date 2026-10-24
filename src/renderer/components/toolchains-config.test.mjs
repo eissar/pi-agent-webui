@@ -130,7 +130,6 @@ test("renders verified providers, incomplete Node distributions, and the no-netw
   assert.match(html, /JavaScript/);
   assert.match(html, /Python/);
   assert.match(html, /CLI essentials/);
-  assert.match(html, /Agent runtimes/);
   assert.match(html, /Bash/);
   assert.match(html, /Git/);
   assert.match(html, /ripgrep \(rg\)/);

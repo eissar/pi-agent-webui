@@ -69,8 +69,6 @@ export const architecturePolicy = {
       reason: "Existing toolchain installation/validation owner; keep its bounded-operation behavior.",
     },
   },
-  // Domain dictionaries now fit the ordinary module limit. Their static
-  // composition, duplicate keys and language parity are checked by check:i18n.
   dataModules: {},
   // An exception, when necessary, must name an exact rule/from/to edge and
   // provide both reason and removeWhen. Wildcards and unused exceptions fail.

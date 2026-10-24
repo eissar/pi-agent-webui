@@ -28,7 +28,6 @@ import { useObservedElementHeight } from "@/hooks/useObservedElementHeight";
 import type { SessionPresentationStore } from "@/lib/session-presentation-store";
 import { MessageRenderKeyRegistry, type MessageRenderRole } from "@/lib/message-render-key";
 import { ToolMessageIndex } from "@/lib/tool-message-index";
-import { useI18n } from "@/i18n";
 import type { ThinkingExpansionStore } from "@/lib/thinking-expansion-store";
 import { skillInvocationCommandText } from "@shared/skill-invocation";
 
@@ -52,18 +51,18 @@ interface Props {
   processDetailsExpansionStore: ThinkingExpansionStore;
 }
 
-function phaseLabel(phase: AgentPhase, t: (key: string, fallback: string) => string): string {
+function phaseLabel(phase: AgentPhase): string {
   if (phase?.kind === "running_tools") {
     const names = phase.tools.map((t) => t.name);
-    const running = t("runningTools", "Running");
-    if (names.length === 0) return t("runningTool", "Running tool…");
+    const running = "Running";
+    if (names.length === 0) return "Running tool…";
     if (names.length === 1) return `${running} ${names[0]}…`;
     if (names.length <= 3) return `${running} ${names.join(", ")}…`;
     return `${running} ${names.slice(0, 2).join(", ")} (+${names.length - 2})…`;
   }
-  if (phase?.kind === "waiting_model") return t("waitingForModel", "Waiting for model…");
-  if (phase?.kind === "running_command") return t("runningCommand", "Running command…");
-  return t("thinking", "Thinking…");
+  if (phase?.kind === "waiting_model") return "Waiting for model…";
+  if (phase?.kind === "running_command") return "Running command…";
+  return "Thinking…";
 }
 
 const CHAT_MINIMAP_WIDTH = 36;
@@ -189,7 +188,6 @@ export function ChatWindow({
 }: Props) {
   const { soundEnabled, onSoundToggle, playDoneSound, unlockAudio } = useAudio();
   const isMobile = useIsMobile();
-  const { t } = useI18n();
   // Promotion keeps this view mounted; selecting another session remounts it.
   const [draftPromotionFrom] = useState(() => (!session && newSessionCwd ? `new:${newSessionCwd}` : undefined));
   const messageRenderKeys = useRef(new MessageRenderKeyRegistry()).current;
@@ -824,7 +822,7 @@ export function ChatWindow({
 
                   {agentRunning && !streamState.streamingMessage && (
                     <div className="py-2 text-[13px] text-text-muted">
-                      <span className="animate-[pulse_1.5s_infinite]">{phaseLabel(agentPhase, t)}</span>
+                      <span className="animate-[pulse_1.5s_infinite]">{phaseLabel(agentPhase)}</span>
                     </div>
                   )}
 
@@ -857,8 +855,8 @@ export function ChatWindow({
                 type="button"
                 className="chat-scroll-to-bottom"
                 onClick={reattachAutoFollow}
-                aria-label={t("scrollToBottom", "Scroll to bottom")}
-                title={agentRunning ? t("jumpToLatest", "Jump to latest") : t("scrollToBottom", "Scroll to bottom")}
+                aria-label={"Scroll to bottom"}
+                title={agentRunning ? "Jump to latest" : "Scroll to bottom"}
                 style={{
                   bottom: 12,
                   right: isMobile ? 12 : CHAT_MINIMAP_WIDTH + 12,
@@ -1095,7 +1093,6 @@ function ExtensionDialog({
     response: { value: string } | { confirmed: boolean } | { cancelled: true },
   ) => void;
 }) {
-  const { t } = useI18n();
   const [value, setValue] = useState(request.method === "editor" ? (request.prefill ?? "") : "");
 
   useEffect(() => {
@@ -1136,9 +1133,7 @@ function ExtensionDialog({
         }}
       >
         <div style={{ padding: "12px 14px", borderBottom: "1px solid var(--border)" }}>
-          <div style={{ color: "var(--text)", fontSize: scaledChatFont(14), fontWeight: 650 }}>
-            {request.title}
-          </div>
+          <div style={{ color: "var(--text)", fontSize: scaledChatFont(14), fontWeight: 650 }}>{request.title}</div>
           <div
             style={{
               marginTop: 3,
@@ -1147,7 +1142,7 @@ function ExtensionDialog({
               fontFamily: "var(--font-mono)",
             }}
           >
-            {t("extensionRequest", "Extension request")}
+            {"Extension request"}
           </div>
         </div>
 
@@ -1257,7 +1252,7 @@ function ExtensionDialog({
               cursor: "pointer",
             }}
           >
-            {t("cancel", "Cancel")}
+            {"Cancel"}
           </button>
           {request.method === "confirm" ? (
             <button
@@ -1271,7 +1266,7 @@ function ExtensionDialog({
                 cursor: "pointer",
               }}
             >
-              {t("confirm", "Confirm")}
+              {"Confirm"}
             </button>
           ) : request.method !== "select" ? (
             <button
@@ -1285,7 +1280,7 @@ function ExtensionDialog({
                 cursor: "pointer",
               }}
             >
-              {t("submit", "Submit")}
+              {"Submit"}
             </button>
           ) : null}
         </div>

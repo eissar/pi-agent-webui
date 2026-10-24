@@ -22,7 +22,6 @@ run("dependency contract", "node", ["scripts/check-dependency-contract.mjs"]);
 run("architecture boundaries and structure", "node", ["scripts/check-architecture.mjs"]);
 run("unit tests", "npm", ["test"]);
 run("contract coverage", "node", ["scripts/check-contract-coverage.mjs"]);
-run("Browser i18n invariants", "npm", ["run", "check:browser-i18n"]);
 run("build", "npm", ["run", "build:renderer"]);
 
 console.log("\n[verify] all checks passed\n");

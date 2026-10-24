@@ -15,7 +15,6 @@ import type {
 } from "@shared/toolchains/types";
 import { TOOL_PREFERENCES } from "@shared/toolchains/types";
 import { useIsMobile } from "@/hooks/useIsMobile";
-import { useI18n } from "@/i18n";
 
 const TOOL_CATEGORIES: ReadonlyArray<{
   id: "javascript" | "python" | "cli";
@@ -87,22 +86,20 @@ const CACHE_LABELS: Record<ToolchainCacheId, string> = {
   downloads: "Downloads",
 };
 
-type Translate = (key: string, fallback: string) => string;
 type DeveloperToolSelection = ToolCapabilityId;
 
-function toolCategoryTitle(category: (typeof TOOL_CATEGORIES)[number]["id"], t: Translate): string {
+function toolCategoryTitle(category: (typeof TOOL_CATEGORIES)[number]["id"]): string {
   switch (category) {
     case "javascript":
-      return t("toolGroupJavaScript", "JavaScript");
+      return "JavaScript";
     case "python":
-      return t("toolGroupPython", "Python");
+      return "Python";
     case "cli":
-      return t("toolGroupCli", "CLI essentials");
+      return "CLI essentials";
   }
 }
 
 export function ToolchainsConfig({ cwd }: { cwd?: string | null }) {
-  const { t } = useI18n();
   const [state, setState] = useState<PublicToolchainState | null>(null);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -156,7 +153,7 @@ export function ToolchainsConfig({ cwd }: { cwd?: string | null }) {
       const nextState = cwd && request.action !== "rescan" ? await window.piBridge.getToolchainState(cwd) : actionState;
       setState(nextState);
     } catch (error) {
-      if (!String(error).includes("TOOLCHAIN_CANCELLED")) setActionError(friendlyToolchainError(error, t));
+      if (!String(error).includes("TOOLCHAIN_CANCELLED")) setActionError(friendlyToolchainError(error));
     } finally {
       setPendingAction(null);
     }
@@ -193,7 +190,6 @@ export function ToolchainStateView({
   onAction?: (request: ToolchainActionRequest) => void;
 }) {
   const isMobile = useIsMobile();
-  const { language, t } = useI18n();
   const [selected, setSelected] = useState<DeveloperToolSelection>("js.node");
   const selectedCapability = selected;
   const capabilityState = selectedCapability ? state?.capabilities[selectedCapability] : undefined;
@@ -206,7 +202,7 @@ export function ToolchainStateView({
 
   return (
     <div
-      aria-label={t("developerTools", "Developer Tools")}
+      aria-label={"Developer Tools"}
       style={{
         position: "relative",
         flex: 1,
@@ -219,7 +215,7 @@ export function ToolchainStateView({
       }}
     >
       <aside
-        aria-label={t("toolList", "Developer tool list")}
+        aria-label={"Developer tool list"}
         style={{
           width: isMobile ? "100%" : 210,
           maxHeight: isMobile ? "40vh" : undefined,
@@ -252,7 +248,7 @@ export function ToolchainStateView({
                     letterSpacing: "0.06em",
                   }}
                 >
-                  <span>{toolCategoryTitle(category.id, t)}</span>
+                  <span>{toolCategoryTitle(category.id)}</span>
                   <span style={{ letterSpacing: 0, fontWeight: 500 }}>
                     {state ? `${readyCount}/${category.capabilities.length}` : "–"}
                   </span>
@@ -265,7 +261,7 @@ export function ToolchainStateView({
                       key={capability}
                       type="button"
                       data-tool-id={capability}
-                      aria-label={`${CAPABILITY_LABELS[capability]} · ${healthLabel(itemState?.health ?? "missing", t)}`}
+                      aria-label={`${CAPABILITY_LABELS[capability]} · ${healthLabel(itemState?.health ?? "missing")}`}
                       aria-current={selectedItem ? "true" : undefined}
                       onClick={() => setSelected(capability)}
                       style={{
@@ -339,7 +335,7 @@ export function ToolchainStateView({
             <span
               title={
                 state?.lastScanAt
-                  ? new Intl.DateTimeFormat(language, { dateStyle: "medium", timeStyle: "short" }).format(
+                  ? new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(
                       new Date(state.lastScanAt),
                     )
                   : undefined
@@ -354,14 +350,14 @@ export function ToolchainStateView({
               }}
             >
               {!state
-                ? t("toolCategoryScanning", "Scanning…")
+                ? "Scanning…"
                 : state.coreReady
                   ? `${state.platform}-${state.arch} · r${state.revision}`
-                  : t("toolDiscoveryStarting", "Tool discovery is starting…")}
+                  : "Tool discovery is starting…"}
             </span>
           </div>
           <ActionButton disabled={rescanPending} busy={rescanPending} onClick={onRescan} fullWidth>
-            {rescanPending ? t("rescanningTools", "Scanning…") : t("rescanTools", "Rescan")}
+            {rescanPending ? "Scanning…" : "Rescan"}
           </ActionButton>
         </div>
       </aside>
@@ -382,7 +378,6 @@ export function ToolchainStateView({
           pendingAction={pendingAction}
           disabled={disabled}
           onAction={onAction}
-          t={t}
         />
       </main>
     </div>
@@ -404,7 +399,6 @@ function ToolDetail({
   pendingAction,
   disabled,
   onAction,
-  t,
 }: {
   capability: ToolCapabilityId;
   state?: PublicCapabilityState;
@@ -420,7 +414,6 @@ function ToolDetail({
   pendingAction: string | null;
   disabled: boolean;
   onAction?: (request: ToolchainActionRequest) => void;
-  t: Translate;
 }) {
   const health = state?.health ?? "missing";
   const componentVisible = Boolean(
@@ -451,7 +444,7 @@ function ToolDetail({
             fontSize: 10,
           }}
         >
-          {state?.provider ? providerLabel(state.provider, t) : t("toolProviderNone", "Not found")}
+          {state?.provider ? providerLabel(state.provider) : "Not found"}
         </span>
         <code
           title={state?.pathLabel}
@@ -466,7 +459,7 @@ function ToolDetail({
             fontSize: 11,
           }}
         >
-          {state?.pathLabel ?? t("toolExecutableMissing", "No executable selected")}
+          {state?.pathLabel ?? "No executable selected"}
         </code>
         <span
           style={{
@@ -482,7 +475,7 @@ function ToolDetail({
             aria-hidden="true"
             style={{ width: 7, height: 7, borderRadius: "50%", background: healthColor(health) }}
           />
-          {healthLabel(health, t)}
+          {healthLabel(health)}
         </span>
       </div>
 
@@ -491,48 +484,33 @@ function ToolDetail({
           {CAPABILITY_LABELS[capability]}
         </div>
         <div style={{ marginTop: 5, fontSize: 12, lineHeight: 1.6, color: "var(--text-muted)" }}>
-          {t(
-            "toolDetailDescription",
-            "Choose which verified provider Pi Desktop should use for Skills, Plugins, Agent commands, and project operations.",
-          )}
+          {
+            "Choose which verified provider Pi Desktop should use for Skills, Plugins, Agent commands, and project operations."
+          }
         </div>
       </div>
 
       {(failed || actionError) && (
         <div role="alert" style={{ color: "var(--danger)", fontSize: 12 }}>
-          {actionError ??
-            t("toolDiscoveryFailed", "Tool discovery failed. Existing selections were not changed; try rescanning.")}
+          {actionError ?? "Tool discovery failed. Existing selections were not changed; try rescanning."}
         </div>
       )}
       {stateReadOnly && (
         <div role="alert" style={{ color: "var(--warning)", fontSize: 12 }}>
-          {t(
-            "toolStateReadOnly",
-            "These tool settings were written by a newer Pi Desktop. This version will not modify or delete them.",
-          )}
+          {"These tool settings were written by a newer Pi Desktop. This version will not modify or delete them."}
         </div>
       )}
 
-      <DetailSection title={t("toolResolution", "Tool resolution")}>
+      <DetailSection title={"Tool resolution"}>
         <DetailGrid>
-          <DetailPair
-            label={t("toolHealth", "Status")}
-            value={healthLabel(health, t)}
-            valueColor={healthColor(health)}
-          />
-          <DetailPair
-            label={t("toolProvider", "Provider")}
-            value={state?.provider ? providerLabel(state.provider, t) : t("toolProviderNone", "Not found")}
-          />
-          <DetailPair label={t("toolVersion", "Version")} value={state?.version ? `v${state.version}` : "—"} mono />
-          <DetailPair
-            label={t("toolCandidatesLabel", "Detected candidates")}
-            value={`${state?.candidates.length ?? 0}`}
-          />
+          <DetailPair label={"Status"} value={healthLabel(health)} valueColor={healthColor(health)} />
+          <DetailPair label={"Provider"} value={state?.provider ? providerLabel(state.provider) : "Not found"} />
+          <DetailPair label={"Version"} value={state?.version ? `v${state.version}` : "—"} mono />
+          <DetailPair label={"Detected candidates"} value={`${state?.candidates.length ?? 0}`} />
         </DetailGrid>
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
           <label htmlFor={`tool-preference-${capability}`} style={{ fontSize: 12, color: "var(--text-dim)" }}>
-            {t("toolPreference", "Preference")}
+            {"Preference"}
           </label>
           <select
             id={`tool-preference-${capability}`}
@@ -560,18 +538,18 @@ function ToolDetail({
                   preference === "custom" && !state?.candidates.some((candidate) => candidate.provider === "custom")
                 }
               >
-                {preferenceLabel(preference, t)}
+                {preferenceLabel(preference)}
               </option>
             ))}
           </select>
           <ActionButton disabled={disabled} onClick={() => onAction?.({ action: "choose-custom-tool", capability })}>
-            {t("chooseCustomTool", "Choose…")}
+            {"Choose…"}
           </ActionButton>
         </div>
       </DetailSection>
 
       {state?.candidates.length ? (
-        <DetailSection title={t("toolCandidatesTitle", "Detected providers")}>
+        <DetailSection title={"Detected providers"}>
           <div style={{ border: "1px solid var(--border)", borderRadius: 7, overflow: "hidden" }}>
             {state.candidates.map((candidate, index) => (
               <div
@@ -596,7 +574,7 @@ function ToolDetail({
                   }}
                 />
                 <span style={{ fontSize: 11, color: "var(--text-muted)", flexShrink: 0 }}>
-                  {providerLabel(candidate.provider, t)}
+                  {providerLabel(candidate.provider)}
                 </span>
                 <code
                   style={{
@@ -612,7 +590,7 @@ function ToolDetail({
                   {candidate.pathLabel}
                 </code>
                 <span style={{ fontSize: 10, color: "var(--text-dim)", flexShrink: 0 }}>
-                  {candidate.version ? `v${candidate.version}` : healthLabel(candidate.health, t)}
+                  {candidate.version ? `v${candidate.version}` : healthLabel(candidate.health)}
                 </span>
               </div>
             ))}
@@ -621,29 +599,19 @@ function ToolDetail({
       ) : null}
 
       {componentVisible && component && (
-        <DetailSection title={t("managedRuntime", "Managed runtime")}>
+        <DetailSection title={"Managed runtime"}>
           <DetailGrid>
-            <DetailPair label={t("managedComponents", "Component")} value={COMPONENT_LABELS[component.componentId]} />
+            <DetailPair label={"Component"} value={COMPONENT_LABELS[component.componentId]} />
+            <DetailPair label={"Version"} value={component.activeVersion ? `v${component.activeVersion}` : "—"} mono />
             <DetailPair
-              label={t("toolVersion", "Version")}
-              value={component.activeVersion ? `v${component.activeVersion}` : "—"}
-              mono
-            />
-            <DetailPair
-              label={t("toolAvailableVersion", "Available version")}
+              label={"Available version"}
               value={component.availableVersion ? `v${component.availableVersion}` : "—"}
               mono
             />
-            <DetailPair label={t("toolPlatform", "Platform")} value={component.platformArch ?? "—"} mono />
-            <DetailPair
-              label={t("toolDownloadSize", "Download size")}
-              value={formatBytes(component.downloadBytes, t)}
-            />
-            <DetailPair label={t("toolDiskUsage", "Disk usage")} value={formatBytes(component.diskBytes, t)} />
-            <DetailPair
-              label={t("toolSource", "Source")}
-              value={component.sourceName ?? t("toolSourceUnknown", "Official source")}
-            />
+            <DetailPair label={"Platform"} value={component.platformArch ?? "—"} mono />
+            <DetailPair label={"Download size"} value={formatBytes(component.downloadBytes)} />
+            <DetailPair label={"Disk usage"} value={formatBytes(component.diskBytes)} />
+            <DetailPair label={"Source"} value={component.sourceName ?? "Official source"} />
           </DetailGrid>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {component.canInstall && (
@@ -653,7 +621,7 @@ function ToolDetail({
                 busy={pendingAction === installKey}
                 onClick={() => onAction?.({ action: "install-component", componentId: component.componentId })}
               >
-                {updateAvailable ? t("updateManagedTool", "Update") : t("installManagedTool", "Install")}
+                {updateAvailable ? "Update" : "Install"}
               </ActionButton>
             )}
             {component.canRepair && (
@@ -662,7 +630,7 @@ function ToolDetail({
                 busy={pendingAction === repairKey}
                 onClick={() => onAction?.({ action: "repair-component", componentId: component.componentId })}
               >
-                {t("repairManagedTool", "Repair")}
+                {"Repair"}
               </ActionButton>
             )}
             {component.canRemove && (
@@ -671,35 +639,35 @@ function ToolDetail({
                 busy={pendingAction === removeKey}
                 onClick={() => onAction?.({ action: "remove-component", componentId: component.componentId })}
               >
-                {t("removeManagedTool", "Remove")}
+                {"Remove"}
               </ActionButton>
             )}
             {component.licenseUrl && (
               <ActionButton onClick={() => void window.piBridge.openExternal(component.licenseUrl!)}>
-                {t("viewToolLicense", "License")}
+                {"License"}
               </ActionButton>
             )}
             {cancellable && (
               <ActionButton
                 onClick={() => onAction?.({ action: "cancel-component-install", componentId: component.componentId })}
               >
-                {t("cancel", "Cancel")}
+                {"Cancel"}
               </ActionButton>
             )}
           </div>
           {operationVisible && operation && (
             <div style={{ marginTop: 4 }}>
               <div style={{ fontSize: 11, color: operation.error ? "var(--danger)" : "var(--text-muted)" }}>
-                {operationPhase(operation.phase, t)}
+                {operationPhase(operation.phase)}
               </div>
-              <OperationProgress operation={operation} t={t} />
+              <OperationProgress operation={operation} />
             </div>
           )}
         </DetailSection>
       )}
 
       {(cache || downloadsCache) && (
-        <DetailSection title={t("toolPrivateStorage", "Private storage")}>
+        <DetailSection title={"Private storage"}>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {cache && cacheId && (
               <CacheDetail
@@ -708,7 +676,6 @@ function ToolDetail({
                 disabled={disabled}
                 busy={pendingAction === `cache:${cacheId}`}
                 onAction={onAction}
-                t={t}
               />
             )}
             {downloadsCache && cacheId !== "downloads" && (
@@ -718,7 +685,6 @@ function ToolDetail({
                 disabled={disabled}
                 busy={pendingAction === "cache:downloads"}
                 onAction={onAction}
-                t={t}
               />
             )}
           </div>
@@ -726,7 +692,7 @@ function ToolDetail({
       )}
 
       {projectSummary?.length ? (
-        <DetailSection title={t("toolProjectRequirements", "Current project")}>
+        <DetailSection title={"Current project"}>
           <div style={{ fontSize: 11, lineHeight: 1.65, color: "var(--text-muted)" }}>
             {projectSummary.map((line) => (
               <div key={line}>{line}</div>
@@ -736,14 +702,12 @@ function ToolDetail({
       ) : null}
 
       <p style={{ margin: 0, paddingTop: 2, fontSize: 10, lineHeight: 1.65, color: "var(--text-dim)" }}>
-        {t(
-          "toolDiscoveryPrivacy",
-          "Scanning does not run shell profiles or access the network. Pi Desktop does not modify the system PATH, shell profile, or registry.",
-        )}{" "}
-        {t(
-          "toolDownloadPrivacy",
-          "Managed installs contact the displayed official source and expose your IP address, platform, and architecture. Downloads stay inside Pi Desktop data.",
-        )}
+        {
+          "Scanning does not run shell profiles or access the network. Pi Desktop does not modify the system PATH, shell profile, or registry."
+        }{" "}
+        {
+          "Managed installs contact the displayed official source and expose your IP address, platform, and architecture. Downloads stay inside Pi Desktop data."
+        }
       </p>
     </div>
   );
@@ -808,14 +772,12 @@ function CacheDetail({
   disabled,
   busy,
   onAction,
-  t,
 }: {
   cacheId: ToolchainCacheId;
   cache: PublicToolchainCacheState;
   disabled: boolean;
   busy: boolean;
   onAction?: (request: ToolchainActionRequest) => void;
-  t: Translate;
 }) {
   return (
     <div
@@ -832,22 +794,22 @@ function CacheDetail({
     >
       <div>
         <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted)" }}>
-          {CACHE_LABELS[cacheId]} {t("toolCache", "cache")}
+          {CACHE_LABELS[cacheId]} {"cache"}
         </div>
-        <div style={{ marginTop: 2, fontSize: 10, color: "var(--text-dim)" }}>{formatBytes(cache.diskBytes, t)}</div>
+        <div style={{ marginTop: 2, fontSize: 10, color: "var(--text-dim)" }}>{formatBytes(cache.diskBytes)}</div>
       </div>
       <ActionButton
         disabled={disabled || !cache.canClear}
         busy={busy}
         onClick={() => onAction?.({ action: "clear-cache", cacheId })}
       >
-        {t("clearToolCache", "Clear cache")}
+        {"Clear cache"}
       </ActionButton>
     </div>
   );
 }
 
-function OperationProgress({ operation, t }: { operation: PublicToolchainOperation; t: Translate }) {
+function OperationProgress({ operation }: { operation: PublicToolchainOperation }) {
   const percent =
     operation.totalBytes && operation.downloadedBytes !== undefined
       ? Math.min(100, Math.max(0, (operation.downloadedBytes / operation.totalBytes) * 100))
@@ -867,12 +829,12 @@ function OperationProgress({ operation, t }: { operation: PublicToolchainOperati
       )}
       {operation.totalBytes !== undefined && (
         <div style={{ marginTop: 4, fontSize: 9, color: "var(--text-dim)" }}>
-          {formatBytes(operation.downloadedBytes, t)} / {formatBytes(operation.totalBytes, t)}
+          {formatBytes(operation.downloadedBytes)} / {formatBytes(operation.totalBytes)}
         </div>
       )}
       {operation.error && (
         <div role="alert" style={{ marginTop: 5, fontSize: 10, color: "var(--danger)" }}>
-          {friendlyErrorCode(operation.error.code, t)}
+          {friendlyErrorCode(operation.error.code)}
         </div>
       )}
     </div>
@@ -953,67 +915,44 @@ function actionKey(request: ToolchainActionRequest): string {
   }
 }
 
-function friendlyToolchainError(error: unknown, t: Translate): string {
+function friendlyToolchainError(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error ?? "");
   const code = message.match(/TOOLCHAIN_[A-Z_]+/)?.[0];
-  if (code) return friendlyErrorCode(code, t);
+  if (code) return friendlyErrorCode(code);
   if (/ENOENT|not found|cannot find/i.test(message)) {
-    return t(
-      "toolActionMissing",
-      "A required developer tool is unavailable. Rescan or install the matching Essentials profile.",
-    );
+    return "A required developer tool is unavailable. Rescan or install the matching Essentials profile.";
   }
-  return t(
-    "toolActionFailed",
-    "The developer-tool action failed. Existing tools were not changed; try again or open logs.",
-  );
+  return "The developer-tool action failed. Existing tools were not changed; try again or open logs.";
 }
 
-function friendlyErrorCode(code: string, t: Translate): string {
+function friendlyErrorCode(code: string): string {
   if (code === "TOOLCHAIN_DOWNLOAD_OFFLINE")
-    return t("toolErrorOffline", "The official download source is unreachable. Check the network and retry.");
+    return "The official download source is unreachable. Check the network and retry.";
   if (code === "TOOLCHAIN_DOWNLOAD_REJECTED")
-    return t(
-      "toolErrorDownloadRejected",
-      "The official download request or redirect was rejected. Retry, then open logs if it continues.",
-    );
+    return "The official download request or redirect was rejected. Retry, then open logs if it continues.";
   if (code === "TOOLCHAIN_INTEGRITY_FAILED")
-    return t("toolErrorIntegrity", "The downloaded file failed integrity verification and was discarded.");
-  if (code === "TOOLCHAIN_EXTRACTION_FAILED")
-    return t("toolErrorExtraction", "The verified archive could not be safely extracted.");
+    return "The downloaded file failed integrity verification and was discarded.";
+  if (code === "TOOLCHAIN_EXTRACTION_FAILED") return "The verified archive could not be safely extracted.";
   if (code === "TOOLCHAIN_INSTALL_BUSY")
-    return t(
-      "toolErrorBusy",
-      "This component is being installed or may still be used by a running Agent command. Retry when it is idle.",
-    );
-  if (code === "TOOLCHAIN_PERMISSION_DENIED")
-    return t("toolErrorPermission", "Pi Desktop cannot write or execute its private tool directory.");
-  if (code === "TOOLCHAIN_DISK_FULL")
-    return t("toolErrorDiskFull", "There is not enough disk space to install this developer tool.");
+    return "This component is being installed or may still be used by a running Agent command. Retry when it is idle.";
+  if (code === "TOOLCHAIN_PERMISSION_DENIED") return "Pi Desktop cannot write or execute its private tool directory.";
+  if (code === "TOOLCHAIN_DISK_FULL") return "There is not enough disk space to install this developer tool.";
   if (code === "TOOLCHAIN_UNSUPPORTED")
-    return t("toolErrorUnsupported", "This managed tool is not available for the current platform and architecture.");
-  if (code === "TOOLCHAIN_MODIFIED")
-    return t("toolErrorModified", "The managed runtime was modified; repair it before use.");
+    return "This managed tool is not available for the current platform and architecture.";
+  if (code === "TOOLCHAIN_MODIFIED") return "The managed runtime was modified; repair it before use.";
   if (code === "TOOLCHAIN_INVALID_SELECTION")
-    return t("toolErrorInvalidSelection", "The selected executable did not provide the requested healthy tool.");
-  if (code === "TOOLCHAIN_BROKEN")
-    return t("toolErrorBroken", "The downloaded tool could not pass its startup verification.");
+    return "The selected executable did not provide the requested healthy tool.";
+  if (code === "TOOLCHAIN_BROKEN") return "The downloaded tool could not pass its startup verification.";
   if (code === "TOOLCHAIN_INVALID_CATALOG")
-    return t("toolErrorCatalog", "This application build does not contain a valid catalog entry for the tool.");
+    return "This application build does not contain a valid catalog entry for the tool.";
   if (code.endsWith("_REQUIRED") || code === "TOOLCHAIN_CAPABILITY_REQUIRED") {
-    return t(
-      "toolErrorRequired",
-      "A required developer tool is unavailable. Rescan or install the matching Essentials profile.",
-    );
+    return "A required developer tool is unavailable. Rescan or install the matching Essentials profile.";
   }
-  return t(
-    "toolActionFailed",
-    "The developer-tool action failed. Existing tools were not changed; try again or open logs.",
-  );
+  return "The developer-tool action failed. Existing tools were not changed; try again or open logs.";
 }
 
-function formatBytes(bytes: number | undefined, t: Translate): string {
-  if (bytes === undefined) return t("toolSizeUnknown", "Unknown");
+function formatBytes(bytes: number | undefined): string {
+  if (bytes === undefined) return "Unknown";
   if (bytes === 0) return "0 B";
   const units = ["B", "KB", "MB", "GB", "TB"];
   const unit = Math.min(units.length - 1, Math.floor(Math.log(bytes) / Math.log(1024)));
@@ -1021,55 +960,55 @@ function formatBytes(bytes: number | undefined, t: Translate): string {
   return `${value >= 10 || unit === 0 ? value.toFixed(0) : value.toFixed(1)} ${units[unit]}`;
 }
 
-function operationPhase(phase: PublicToolchainOperation["phase"], t: Translate): string {
+function operationPhase(phase: PublicToolchainOperation["phase"]): string {
   const labels: Record<PublicToolchainOperation["phase"], string> = {
-    idle: t("toolPhaseIdle", "Idle"),
-    queued: t("toolPhaseQueued", "Queued"),
-    downloading: t("toolPhaseDownloading", "Downloading"),
-    verifying: t("toolPhaseVerifying", "Verifying"),
-    extracting: t("toolPhaseExtracting", "Extracting"),
-    probing: t("toolPhaseProbing", "Testing"),
-    activating: t("toolPhaseActivating", "Activating"),
-    ready: t("toolPhaseReady", "Ready"),
-    error: t("toolPhaseError", "Failed"),
-    cancelled: t("toolPhaseCancelled", "Cancelled"),
+    idle: "Idle",
+    queued: "Queued",
+    downloading: "Downloading",
+    verifying: "Verifying",
+    extracting: "Extracting",
+    probing: "Testing",
+    activating: "Activating",
+    ready: "Ready",
+    error: "Failed",
+    cancelled: "Cancelled",
   };
   return labels[phase];
 }
 
-function preferenceLabel(preference: ToolPreference, t: Translate): string {
+function preferenceLabel(preference: ToolPreference): string {
   const labels: Record<ToolPreference, string> = {
-    auto: t("toolPreferenceAuto", "Auto"),
-    system: t("toolPreferenceSystem", "System"),
-    bundled: t("toolPreferenceBundled", "Bundled"),
-    managed: t("toolPreferenceManaged", "Managed"),
-    custom: t("toolPreferenceCustom", "Custom"),
+    auto: "Auto",
+    system: "System",
+    bundled: "Bundled",
+    managed: "Managed",
+    custom: "Custom",
   };
   return labels[preference];
 }
 
-function providerLabel(provider: ToolProvider, t: Translate): string {
+function providerLabel(provider: ToolProvider): string {
   const labels: Record<ToolProvider, string> = {
-    project: t("toolProviderProject", "Project"),
-    custom: t("toolProviderCustom", "Custom"),
-    system: t("toolProviderSystem", "System"),
-    bundled: t("toolProviderBundled", "Bundled"),
-    managed: t("toolProviderManaged", "Managed"),
-    "legacy-upstream-managed": t("toolProviderLegacy", "Legacy"),
+    project: "Project",
+    custom: "Custom",
+    system: "System",
+    bundled: "Bundled",
+    managed: "Managed",
+    "legacy-upstream-managed": "Legacy",
   };
   return labels[provider];
 }
 
-function healthLabel(health: ToolHealth, t: Translate): string {
+function healthLabel(health: ToolHealth): string {
   const labels: Record<ToolHealth, string> = {
-    healthy: t("toolHealthHealthy", "Ready"),
-    missing: t("toolHealthMissing", "Missing"),
-    incomplete: t("toolHealthIncomplete", "Incomplete"),
-    unsupported: t("toolHealthUnsupported", "Unsupported"),
-    unverified: t("toolHealthUnverified", "Unverified"),
-    broken: t("toolHealthBroken", "Broken"),
-    modified: t("toolHealthModified", "Modified"),
-    "blocked-by-trust": t("toolHealthBlockedByTrust", "Trust required"),
+    healthy: "Ready",
+    missing: "Missing",
+    incomplete: "Incomplete",
+    unsupported: "Unsupported",
+    unverified: "Unverified",
+    broken: "Broken",
+    modified: "Modified",
+    "blocked-by-trust": "Trust required",
   };
   return labels[health];
 }

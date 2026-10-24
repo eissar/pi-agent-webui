@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect, useCallback, type SetStateAction } from "react";
-import { useI18n } from "@/i18n";
 import {
   DraftPersistenceController,
   MAX_PERSISTED_DRAFT_FILES,
@@ -53,7 +52,6 @@ export function useComposerDraft({
   cwd?: string | null;
   onReplace: () => void;
 }) {
-  const { t } = useI18n();
   const [value, setValueState] = useState(() => (draftKey ? (getDraft(draftKey)?.value ?? "") : ""));
   const [attachedImages, setAttachedImagesState] = useState<AttachedImage[]>(() =>
     draftKey ? (getDraft(draftKey)?.images.map(draftImageToAttachedImage) ?? []) : [],
@@ -78,10 +76,7 @@ export function useComposerDraft({
   const draftPersistenceRef = useRef<DraftPersistenceController | null>(null);
   draftPersistenceErrorHandlerRef.current = () =>
     setSubmissionNotice(
-      t(
-        "draftPersistenceFailed",
-        "Draft could not be saved on this device. Your current input is still on screen; check available storage.",
-      ),
+      "Draft could not be saved on this device. Your current input is still on screen; check available storage.",
     );
   if (!draftPersistenceRef.current) {
     draftPersistenceRef.current = new DraftPersistenceController(500, undefined, () =>
@@ -126,33 +121,33 @@ export function useComposerDraft({
         }
         if (selection.rejected.some(({ reason }) => reason === "count")) {
           notices.push(
-            t(
-              "draftImageCountLimit",
-              "A draft can save up to {count} images. Remove an image before adding another.",
-            ).replace("{count}", String(MAX_PERSISTED_DRAFT_IMAGES)),
+            "A draft can save up to {count} images. Remove an image before adding another.".replace(
+              "{count}",
+              String(MAX_PERSISTED_DRAFT_IMAGES),
+            ),
           );
         }
         if (selection.rejected.some(({ reason }) => reason === "bytes")) {
           notices.push(
-            t(
-              "draftImageSizeLimit",
-              "The total image size exceeds the {size} MB draft limit. Remove or compress some images.",
-            ).replace("{size}", String(MAX_PERSISTED_DRAFT_IMAGE_BYTES / 1024 / 1024)),
+            "The total image size exceeds the {size} MB draft limit. Remove or compress some images.".replace(
+              "{size}",
+              String(MAX_PERSISTED_DRAFT_IMAGE_BYTES / 1024 / 1024),
+            ),
           );
         }
       }
       if (generation === imageBatchGenerationRef.current && failures.length > 0) {
         notices.push(
           images.length > 0
-            ? t("someImagesAttachFailed", "{failed} of {total} images could not be attached")
+            ? "{failed} of {total} images could not be attached"
                 .replace("{failed}", String(failures.length))
                 .replace("{total}", String(imageFiles.length))
-            : t("imagesAttachFailed", "The selected images could not be attached"),
+            : "The selected images could not be attached",
         );
       }
       return notices;
     },
-    [setAttachedImages, t],
+    [setAttachedImages],
   );
 
   const processLocalFileReferences = useCallback(
@@ -167,12 +162,7 @@ export function useComposerDraft({
         else pathlessCount += 1;
       }
       if (pathlessCount > 0) {
-        notices.push(
-          t("pathlessFilesAttachFailed", "{count} files had no local path and were not added").replace(
-            "{count}",
-            String(pathlessCount),
-          ),
-        );
+        notices.push("{count} files had no local path and were not added".replace("{count}", String(pathlessCount)));
       }
       if (newFiles.length === 0) return notices;
 
@@ -192,7 +182,7 @@ export function useComposerDraft({
       setAttachedFiles(next);
       if (limitReached) {
         notices.push(
-          t("localFileReferenceLimit", "A maximum of {count} local file references can be added").replace(
+          "A maximum of {count} local file references can be added".replace(
             "{count}",
             String(MAX_PERSISTED_DRAFT_FILES),
           ),
@@ -200,7 +190,7 @@ export function useComposerDraft({
       }
       return notices;
     },
-    [setAttachedFiles, t],
+    [setAttachedFiles],
   );
 
   const processFiles = useCallback(
@@ -271,14 +261,14 @@ export function useComposerDraft({
       setSubmissionNotice(
         action === "restore"
           ? kind === "send"
-            ? t("messageNotSentDraftRestored", "Message was not sent. Your draft was restored.")
-            : t("messageNotQueuedDraftRestored", "Message could not be queued. Your draft was restored.")
+            ? "Message was not sent. Your draft was restored."
+            : "Message could not be queued. Your draft was restored."
           : kind === "send"
-            ? t("messageNotSentNewDraftKept", "The previous message was not sent. Your newer draft was kept.")
-            : t("messageNotQueuedNewDraftKept", "The previous message could not be queued. Your newer draft was kept."),
+            ? "The previous message was not sent. Your newer draft was kept."
+            : "The previous message could not be queued. Your newer draft was kept.",
       );
     },
-    [setAttachedFiles, setAttachedImages, setValue, t],
+    [setAttachedFiles, setAttachedImages, setValue],
   );
 
   const commitCurrentDraft = useCallback(() => {
@@ -385,7 +375,7 @@ export function useComposerDraft({
         cwd: cwd ?? undefined,
       });
       if (!inspections || inspections.length !== files.length) {
-        setSubmissionNotice(t("localFileValidationFailed", "Local file references could not be validated."));
+        setSubmissionNotice("Local file references could not be validated.");
         return false;
       }
       const invalidNames = files
@@ -393,16 +383,13 @@ export function useComposerDraft({
         .map((file) => file.name);
       if (invalidNames.length > 0) {
         setSubmissionNotice(
-          t("localFilesUnavailable", "These local files are missing or unavailable: {files}").replace(
-            "{files}",
-            invalidNames.join(", "),
-          ),
+          "These local files are missing or unavailable: {files}".replace("{files}", invalidNames.join(", ")),
         );
         return false;
       }
       return true;
     },
-    [cwd, t],
+    [cwd],
   );
 
   const getRevision = useCallback(() => inputRevisionRef.current, []);

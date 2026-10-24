@@ -1,5 +1,4 @@
 import { type ReactNode } from "react";
-import { useI18n } from "@/i18n";
 import type { ThinkingExpansionStore } from "@/lib/thinking-expansion-store";
 import { scaledChatFont } from "@/lib/chat-appearance";
 
@@ -13,19 +12,9 @@ interface Props {
 
 export function ProcessDetailsGroup({ messageCount, toolCallCount, children, stateKey, expansionStore }: Props) {
   const expanded = expansionStore.getSignal(stateKey).value;
-  const { language, t } = useI18n();
-  const parts = [
-    t("processDetails", "Process details"),
-    language !== "en-US"
-      ? `${messageCount} ${t("messagesCount", "messages")}`
-      : `${messageCount} ${messageCount === 1 ? "message" : "messages"}`,
-  ];
+  const parts = ["Process details", `${messageCount} ${messageCount === 1 ? "message" : "messages"}`];
   if (toolCallCount > 0) {
-    parts.push(
-      language !== "en-US"
-        ? `${toolCallCount} ${t("toolCallsCount", "tool calls")}`
-        : `${toolCallCount} ${toolCallCount === 1 ? "tool call" : "tool calls"}`,
-    );
+    parts.push(`${toolCallCount} ${toolCallCount === 1 ? "tool call" : "tool calls"}`);
   }
 
   return (
@@ -48,11 +37,7 @@ export function ProcessDetailsGroup({ messageCount, toolCallCount, children, sta
           fontSize: scaledChatFont(12),
           textAlign: "left",
         }}
-        title={
-          expanded
-            ? t("collapseProcessDetails", "Collapse process details")
-            : t("expandProcessDetails", "Expand process details")
-        }
+        title={expanded ? "Collapse process details" : "Expand process details"}
       >
         <svg
           width="12"

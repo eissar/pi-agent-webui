@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { ModelCatalogStatus, ModelsListResult } from "@contract/types";
 import { listModels, cancelModelsRefresh, refreshModels as requestModelsRefresh } from "@/lib/api-client";
 import { LatestRequestGate } from "@/lib/latest-request-gate";
-import { useI18n } from "@/i18n";
 import type { NoticeType } from "@/lib/notice-queue";
 
 type SelectedModel = { provider: string; modelId: string };
@@ -17,7 +16,6 @@ export interface SessionModelsOptions {
 
 /** Owns the model catalog, user selection and request lifetimes for one session view. */
 export function useSessionModels({ isNew, cwd, refreshKey, addNotice }: SessionModelsOptions) {
-  const { t } = useI18n();
   const [modelNames, setModelNames] = useState<Record<string, string>>({});
   const [modelList, setModelList] = useState<ModelEntry[]>([]);
   const [modelCatalog, setModelCatalog] = useState<ModelCatalogStatus>({
@@ -110,10 +108,7 @@ export function useSessionModels({ isNew, cwd, refreshKey, addNotice }: SessionM
         return;
       addNotice({
         type: "error",
-        message: t(
-          "modelDirectoryRefreshFailed",
-          "Unable to refresh the model directory. Cached models remain available.",
-        ),
+        message: "Unable to refresh the model directory. Cached models remain available.",
       });
     } finally {
       if (modelRefreshRequestRef.current === requestId) {
@@ -121,7 +116,7 @@ export function useSessionModels({ isNew, cwd, refreshKey, addNotice }: SessionM
         setModelRefreshing(false);
       }
     }
-  }, [addNotice, applyModelsResult, cwd, t]);
+  }, [addNotice, applyModelsResult, cwd]);
 
   // Load model list
   useEffect(() => {
@@ -133,18 +128,12 @@ export function useSessionModels({ isNew, cwd, refreshKey, addNotice }: SessionM
         type: "warning",
         message:
           modelListSizeRef.current > 0
-            ? t(
-                "modelDirectoryLoadFailedCached",
-                "Unable to load the model directory. Cached models remain available; retry from the model picker.",
-              )
-            : t(
-                "modelDirectoryLoadFailed",
-                "Unable to load the model directory. Retry from the model picker or check the Agent Host connection.",
-              ),
+            ? "Unable to load the model directory. Cached models remain available; retry from the model picker."
+            : "Unable to load the model directory. Retry from the model picker or check the Agent Host connection.",
       });
     });
     return () => controller.abort();
-  }, [addNotice, loadModels, refreshKey, t]);
+  }, [addNotice, loadModels, refreshKey]);
 
   useEffect(
     () => () => {

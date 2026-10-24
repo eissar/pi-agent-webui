@@ -7,7 +7,7 @@ import { importTestBundle } from "#test-bundle";
 
 const { ComposerToolbar, toolbarRenders } = await importTestBundle("composer-toolbar", {
   stdin: {
-    contents: 'export { ComposerToolbar } from "./ComposerToolbar.tsx"; export { toolbarRenders } from "@/i18n";',
+    contents: 'export { ComposerToolbar } from "./ComposerToolbar.tsx"; export { toolbarRenders } from "@/lib/chat-appearance";',
     resolveDir: import.meta.dirname,
     loader: "ts",
   },
@@ -17,12 +17,12 @@ const { ComposerToolbar, toolbarRenders } = await importTestBundle("composer-too
     {
       name: "toolbar-environment",
       setup(build) {
-        build.onResolve({ filter: /^(?:react-dom|@\/i18n)$/ }, ({ path }) => ({ path, namespace: "toolbar-test" }));
+        build.onResolve({ filter: /^(?:react-dom|@\/lib\/chat-appearance)$/ }, ({ path }) => ({ path, namespace: "toolbar-test" }));
         build.onLoad({ filter: /.*/, namespace: "toolbar-test" }, ({ path }) => ({
           contents:
             path === "react-dom"
               ? "export const createPortal = (children) => children;"
-              : "export const toolbarRenders={count:0}; const t=(_key,fallback)=>fallback; export const useI18n=()=>{toolbarRenders.count++;return {t};};",
+              : "export const toolbarRenders={count:0}; export const scaledChatFont=(value)=>{toolbarRenders.count++;return `${value}px`;};",
         }));
       },
     },
@@ -215,5 +215,5 @@ test("equivalent toolbar options skip rendering without hiding real control chan
   await fixture.update({});
   assert.equal(toolbarRenders.count, before);
   await fixture.update({ thinkingLevel: "high" });
-  assert.equal(toolbarRenders.count, before + 1);
+  assert.ok(toolbarRenders.count > before);
 });

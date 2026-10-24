@@ -1,6 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { call } from "@/lib/api-client";
-import { useI18n } from "@/i18n";
 import type { SessionInfo } from "@/lib/types";
 import { getRecentProjects } from "@/hooks/useSidebarWorkspace";
 import { abbreviateHomePath } from "@/lib/display-path";
@@ -23,7 +22,6 @@ export function ProjectPicker({
   restoringInitialSession,
   setSelectedCwd,
 }: Props) {
-  const { t } = useI18n();
   const deferFocus = useDeferredFocus();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [projectFilter, setProjectFilter] = useState("");
@@ -42,7 +40,7 @@ export function ProjectPicker({
     try {
       const result = await call("system.validateCwd", { path: path });
       if (!result.ok) {
-        setCustomPathError(result.error ?? t("invalidDirectory", "Invalid directory"));
+        setCustomPathError(result.error ?? "Invalid directory");
         return;
       }
       setSelectedCwd(result.path ?? path);
@@ -54,7 +52,7 @@ export function ProjectPicker({
     } finally {
       setCustomPathValidating(false);
     }
-  }, [customPathValue, customPathValidating, setSelectedCwd, t]);
+  }, [customPathValue, customPathValidating, setSelectedCwd]);
 
   const handleDefaultCwd = useCallback(async () => {
     try {
@@ -78,7 +76,7 @@ export function ProjectPicker({
       if (!dir) return;
       const result = await call("system.validateCwd", { path: dir });
       if (!result.ok) {
-        setCustomPathError(result.error ?? t("invalidDirectory", "Invalid directory"));
+        setCustomPathError(result.error ?? "Invalid directory");
         return;
       }
       setSelectedCwd(result.path ?? dir);
@@ -89,7 +87,7 @@ export function ProjectPicker({
     } catch (e) {
       setCustomPathError(e instanceof Error ? e.message : String(e));
     }
-  }, [setSelectedCwd, t]);
+  }, [setSelectedCwd]);
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -154,7 +152,7 @@ export function ProjectPicker({
               color: "var(--text-dim)",
             }}
           >
-            {restoringInitialSession ? "" : t("selectProjectEllipsis", "Select project…")}
+            {restoringInitialSession ? "" : "Select project…"}
           </span>
         )}
       </button>
@@ -185,7 +183,7 @@ export function ProjectPicker({
                   setDropdownOpen(false);
                 }
               }}
-              placeholder={t("filterProjects", "Filter projects…")}
+              placeholder={"Filter projects…"}
               autoFocus
               style={{
                 width: "100%",
@@ -254,9 +252,7 @@ export function ProjectPicker({
             </button>
           ))}
           {visibleProjects.length === 0 && projectFilter.trim() && (
-            <div style={{ padding: "8px 10px", fontSize: 11, color: "var(--text-dim)" }}>
-              {t("noMatchingProjects", "No matching projects")}
-            </div>
+            <div style={{ padding: "8px 10px", fontSize: 11, color: "var(--text-dim)" }}>{"No matching projects"}</div>
           )}
         </div>
 
@@ -295,7 +291,7 @@ export function ProjectPicker({
             >
               <path d="M1 3A1 1 0 0 1 2 2H4L5 3.5H8.5a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-.5.5h-7A.5.5 0 0 1 1 8V3Z" />
             </svg>
-            <span>{t("useDefaultDirectory", "Use default directory")}</span>
+            <span>{"Use default directory"}</span>
           </button>
         )}
 
@@ -333,7 +329,7 @@ export function ProjectPicker({
             >
               <path d="M1 3A1 1 0 0 1 2 2H4L5 3.5H8.5a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-.5.5h-7A.5.5 0 0 1 1 8V3Z" />
             </svg>
-            <span>{t("browseFolder", "Browse folder…")}</span>
+            <span>{"Browse folder…"}</span>
           </button>
         )}
 
@@ -373,7 +369,7 @@ export function ProjectPicker({
               <line x1="5" y1="1" x2="5" y2="9" />
               <line x1="1" y1="5" x2="9" y2="5" />
             </svg>
-            <span>{t("customPath", "Custom path…")}</span>
+            <span>{"Custom path…"}</span>
           </button>
         ) : (
           <div style={{ padding: "6px 8px", borderTop: visibleProjects.length > 0 ? "none" : undefined }}>
@@ -439,7 +435,7 @@ export function ProjectPicker({
                   opacity: customPathValidating || !customPathValue.trim() ? 0.65 : 1,
                 }}
               >
-                {customPathValidating ? t("checking", "Checking…") : t("open", "Open")}
+                {customPathValidating ? "Checking…" : "Open"}
               </button>
               <button
                 onClick={() => {
@@ -458,7 +454,7 @@ export function ProjectPicker({
                   cursor: "pointer",
                 }}
               >
-                {t("cancel", "Cancel")}
+                {"Cancel"}
               </button>
             </div>
           </div>

@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
 import { Field, SecretTextInput, SectionTitle, TextInput } from "../form-controls";
-import { useI18n } from "@/i18n";
 import { call } from "@/lib/api-client";
 import type { ApiKeyProviderStatus as ApiKeyProvider } from "@contract/types";
 import { type ModelSelectionControl, ManagedModelsControl } from "./ManagedModelsControl";
@@ -18,7 +17,6 @@ export function ApiKeyDetail({
   onRefresh: () => void;
   modelSelection: ModelSelectionControl;
 }) {
-  const { t } = useI18n();
   const [apiKey, setApiKey] = useState("");
   const [saving, setSaving] = useState(false);
   const [removing, setRemoving] = useState(false);
@@ -72,7 +70,7 @@ export function ApiKeyDetail({
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <SectionTitle>{t("modelApiKey", "API Key")}</SectionTitle>
+        <SectionTitle>{"API Key"}</SectionTitle>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <span
             style={{
@@ -84,38 +82,32 @@ export function ApiKeyDetail({
             }}
           />
           <span style={{ fontSize: 11, color: provider.configured ? "#4ade80" : "var(--text-dim)" }}>
-            {provider.configured ? t("configured", "configured") : t("notConfigured", "not configured")}
+            {provider.configured ? "configured" : "not configured"}
           </span>
         </div>
       </div>
 
       <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)", lineHeight: 1.5 }}>
         {provider.configured
-          ? t(
-              "modelApiKeyStored",
-              "API key is stored. Enter a new key below to replace it, or disconnect to remove it.",
-            )
-          : t("modelEnterApiKey", "Enter your {provider} API key to enable {count} models.")
+          ? "API key is stored. Enter a new key below to replace it, or disconnect to remove it."
+          : "Enter your {provider} API key to enable {count} models."
               .replace("{provider}", provider.displayName)
               .replace("{count}", String(provider.modelCount))}
       </p>
 
-      <Field label={t("modelBaseUrl", "Base URL")}>
+      <Field label={"Base URL"}>
         <TextInput
           value={baseUrl}
           onChange={onBaseUrlChange}
-          placeholder={t("modelBaseUrlPlaceholder", "Leave empty to use the provider default")}
+          placeholder={"Leave empty to use the provider default"}
           mono
         />
         <span style={{ fontSize: 10, color: "var(--text-dim)", marginTop: 2 }}>
-          {t(
-            "modelBaseUrlHint",
-            "Overrides the endpoint for this provider. Use the Save button below to apply changes.",
-          )}
+          {"Overrides the endpoint for this provider. Use the Save button below to apply changes."}
         </span>
       </Field>
 
-      <Field label={t("modelApiKey", "API Key")}>
+      <Field label={"API Key"}>
         <div style={{ display: "flex", gap: 6 }}>
           <SecretTextInput
             value={apiKey}
@@ -123,7 +115,7 @@ export function ApiKeyDetail({
             onKeyDown={(e) => {
               if (e.key === "Enter" && apiKey.trim()) void handleSave();
             }}
-            placeholder={provider.configured ? t("modelReplaceApiKey", "Enter new key to replace…") : "sk-…"}
+            placeholder={provider.configured ? "Enter new key to replace…" : "sk-…"}
             style={{ flex: 1 }}
             autoComplete="off"
             spellCheck={false}
@@ -161,7 +153,7 @@ export function ApiKeyDetail({
                 <polyline points="20 6 9 17 4 12" />
               </svg>
             )}
-            {savedOk ? t("saved", "Saved") : saving ? t("saving", "Saving…") : t("save", "Save")}
+            {savedOk ? "Saved" : saving ? "Saving…" : "Save"}
           </button>
         </div>
       </Field>
@@ -186,7 +178,7 @@ export function ApiKeyDetail({
             fontSize: 12,
           }}
         >
-          {removing ? t("modelRemoving", "Removing…") : t("modelDisconnect", "Disconnect")}
+          {removing ? "Removing…" : "Disconnect"}
         </button>
       )}
     </div>

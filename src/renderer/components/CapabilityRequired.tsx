@@ -1,7 +1,6 @@
 import { useState } from "react";
 import type { ToolCapabilityId, ToolchainActionRequest } from "@shared/toolchains/types";
 import { isToolCapabilityId } from "@shared/toolchains/types";
-import { useI18n } from "@/i18n";
 
 export interface CapabilityIssue {
   code: string;
@@ -37,14 +36,13 @@ export function CapabilityRequired({
   onContinue: () => void | Promise<void>;
   onCancel: () => void;
 }) {
-  const { t } = useI18n();
   const [pending, setPending] = useState<"install" | "rescan" | "choose" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const installAction = installActionForIssue(
     issue,
     typeof window === "undefined" ? "linux" : window.piBridge.platform,
   );
-  const label = capabilityLabel(issue.capability, t);
+  const label = capabilityLabel(issue.capability);
 
   const installAndContinue = async (): Promise<void> => {
     if (!installAction) return;
@@ -55,9 +53,7 @@ export function CapabilityRequired({
       await onContinue();
     } catch (caught) {
       if (String(caught).includes("TOOLCHAIN_CANCELLED")) return;
-      setError(
-        t("capabilityInstallFailed", "The required tools could not be installed. Nothing was added to system PATH."),
-      );
+      setError("The required tools could not be installed. Nothing was added to system PATH.");
     } finally {
       setPending(null);
     }
@@ -69,7 +65,7 @@ export function CapabilityRequired({
     try {
       await window.piBridge.rescanToolchains(cwd);
     } catch {
-      setError(t("capabilityRescanFailed", "Tool rescan failed. Existing selections were not changed."));
+      setError("Tool rescan failed. Existing selections were not changed.");
     } finally {
       setPending(null);
     }
@@ -84,7 +80,7 @@ export function CapabilityRequired({
       onCancel();
     } catch (caught) {
       if (String(caught).includes("TOOLCHAIN_CANCELLED")) return;
-      setError(t("capabilitySelectionFailed", "The selected executable did not provide the required healthy tool."));
+      setError("The selected executable did not provide the required healthy tool.");
     } finally {
       setPending(null);
     }
@@ -102,35 +98,28 @@ export function CapabilityRequired({
       }}
     >
       <div style={{ fontSize: 12, fontWeight: 700 }}>
-        {t("capabilityRequiredTitle", "{tool} is required for this operation.").replace("{tool}", label)}
+        {"{tool} is required for this operation.".replace("{tool}", label)}
       </div>
       <p style={{ margin: "5px 0 10px", fontSize: 11, lineHeight: 1.55, color: "var(--text-muted)" }}>
-        {t(
-          "capabilityRequiredDescription",
-          "No verified tool satisfying this operation was found. Pi Desktop will not download one in the background.",
-        )}
+        {"No verified tool satisfying this operation was found. Pi Desktop will not download one in the background."}
       </p>
       {error && <p style={{ margin: "0 0 9px", fontSize: 11, color: "#f87171" }}>{error}</p>}
       <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
         {installAction && (
           <PromptButton primary disabled={pending !== null} onClick={() => void installAndContinue()}>
-            {pending === "install"
-              ? t("installingAndContinue", "Installing…")
-              : t("installAndContinue", "Install and continue")}
+            {pending === "install" ? "Installing…" : "Install and continue"}
           </PromptButton>
         )}
         <PromptButton disabled={pending !== null} onClick={() => void rescan()}>
-          {pending === "rescan" ? t("rescanningTools", "Scanning…") : t("rescanTools", "Rescan")}
+          {pending === "rescan" ? "Scanning…" : "Rescan"}
         </PromptButton>
         {issue.capability && (
           <PromptButton disabled={pending !== null} onClick={() => void chooseExisting()}>
-            {pending === "choose"
-              ? t("checkingSelectedTool", "Checking…")
-              : t("chooseExistingTool", "Choose existing…")}
+            {pending === "choose" ? "Checking…" : "Choose existing…"}
           </PromptButton>
         )}
         <PromptButton disabled={pending !== null} onClick={onCancel}>
-          {t("cancel", "Cancel")}
+          {"Cancel"}
         </PromptButton>
       </div>
     </div>
@@ -200,11 +189,8 @@ export function installActionForIssue(
   return undefined;
 }
 
-function capabilityLabel(
-  capability: ToolCapabilityId | undefined,
-  t: (key: string, fallback: string) => string,
-): string {
-  if (!capability) return t("developerTool", "A developer tool");
+function capabilityLabel(capability: ToolCapabilityId | undefined): string {
+  if (!capability) return "A developer tool";
   const labels: Partial<Record<ToolCapabilityId, string>> = {
     "js.node": "Node.js/npm",
     "js.npm": "Node.js/npm",

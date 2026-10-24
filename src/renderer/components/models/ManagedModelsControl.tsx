@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { SectionTitle } from "../form-controls";
-import { useI18n } from "@/i18n";
 import { isModelEnabled, setProviderModelsEnabled, toggleModelEnabled } from "@/lib/model-selection";
 import type { ModelPreferencesResult } from "@contract/types";
 
@@ -20,7 +19,6 @@ export function ManagedModelsControl({
   error,
   onChange,
 }: ModelSelectionControl & { providerId: string }) {
-  const { t } = useI18n();
   const [query, setQuery] = useState("");
   useEffect(() => setQuery(""), [providerId]);
 
@@ -48,10 +46,10 @@ export function ManagedModelsControl({
       }}
     >
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-        <SectionTitle>{t("models", "Models")}</SectionTitle>
+        <SectionTitle>{"Models"}</SectionTitle>
         {!loading && preferences && (
           <span style={{ fontSize: 11, color: "var(--text-dim)", whiteSpace: "nowrap" }}>
-            {t("modelEnabledCount", "{enabled} of {total} enabled")
+            {"{enabled} of {total} enabled"
               .replace("{enabled}", String(enabledCount))
               .replace("{total}", String(providerModels.length))}
           </span>
@@ -59,20 +57,13 @@ export function ManagedModelsControl({
       </div>
 
       <p style={{ margin: 0, fontSize: 11, color: "var(--text-muted)", lineHeight: 1.5 }}>
-        {t(
-          "modelSelectionDescription",
-          "Choose which models appear in the model picker. The active model in an existing session is not changed.",
-        )}
+        {"Choose which models appear in the model picker. The active model in an existing session is not changed."}
       </p>
 
-      {loading && (
-        <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)" }}>
-          {t("modelLoadingModels", "Loading models…")}
-        </p>
-      )}
+      {loading && <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)" }}>{"Loading models…"}</p>}
       {!loading && preferences && providerModels.length === 0 && (
         <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)" }}>
-          {t("modelNoAvailableModels", "No models are currently available for this provider.")}
+          {"No models are currently available for this provider."}
         </p>
       )}
 
@@ -95,7 +86,7 @@ export function ManagedModelsControl({
                 fontSize: 11,
               }}
             >
-              {t("modelEnableAll", "Enable all")}
+              {"Enable all"}
             </button>
             <button
               type="button"
@@ -115,7 +106,7 @@ export function ManagedModelsControl({
                 fontSize: 11,
               }}
             >
-              {t("modelDisableAll", "Disable all")}
+              {"Disable all"}
             </button>
           </div>
 
@@ -124,8 +115,8 @@ export function ManagedModelsControl({
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder={t("modelSearchModels", "Search models…")}
-              aria-label={t("modelSearchProviderModels", "Search provider models")}
+              placeholder={"Search models…"}
+              aria-label={"Search provider models"}
               style={{
                 width: "100%",
                 boxSizing: "border-box",
@@ -206,19 +197,13 @@ export function ManagedModelsControl({
               );
             })}
             {visibleModels.length === 0 && (
-              <span style={{ padding: "10px", color: "var(--text-muted)", fontSize: 12 }}>
-                {t("modelNoMatchingModels", "No matching models.")}
-              </span>
+              <span style={{ padding: "10px", color: "var(--text-muted)", fontSize: 12 }}>{"No matching models."}</span>
             )}
           </div>
         </>
       )}
 
-      {saving && (
-        <p style={{ margin: 0, fontSize: 11, color: "var(--text-muted)" }}>
-          {t("modelSavingSelection", "Saving selection…")}
-        </p>
-      )}
+      {saving && <p style={{ margin: 0, fontSize: 11, color: "var(--text-muted)" }}>{"Saving selection…"}</p>}
       {error && <p style={{ margin: 0, fontSize: 11, color: "#f87171", lineHeight: 1.4 }}>{error}</p>}
     </div>
   );

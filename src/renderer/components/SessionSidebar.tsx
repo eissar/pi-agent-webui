@@ -1,7 +1,6 @@
 import { subscribeRunning } from "@/lib/api-client";
 import { useEffect, useState, useCallback, useRef } from "react";
 import type { SessionInfo } from "@/lib/types";
-import { useI18n } from "@/i18n";
 import {
   loadUnreadSessionIds as loadStoredUnreadSessionIds,
   saveUnreadSessionIds as saveStoredUnreadSessionIds,
@@ -63,7 +62,6 @@ export function SessionSidebar({
   selectedCwd: selectedCwdProp,
   onCwdChange,
 }: Props) {
-  const { t } = useI18n();
   const {
     sessions: allSessions,
     loading,
@@ -74,14 +72,8 @@ export function SessionSidebar({
   const error =
     listError == null
       ? null
-      : (listError instanceof Error ? listError.message : String(listError)) ||
-        t("sessionListLoadFailed", "Failed to load sessions.");
-  const {
-    selectedCwd,
-    setSelectedCwd,
-    selectedProject,
-    homeDir,
-  } = useSidebarWorkspace({
+      : (listError instanceof Error ? listError.message : String(listError)) || "Failed to load sessions.";
+  const { selectedCwd, setSelectedCwd, selectedProject, homeDir } = useSidebarWorkspace({
     allSessions,
     selectedCwd: selectedCwdProp,
     onCwdChange,
@@ -267,9 +259,9 @@ export function SessionSidebar({
   // Build parent-child tree within the filtered set
   const sessionTree = buildSessionTree(filteredSessions);
   const sessionGroups: { id: SessionDateGroup; label: string; nodes: SessionTreeNode[] }[] = [
-    { id: "today", label: t("sessionsToday", "Today"), nodes: [] },
-    { id: "recent", label: t("sessionsRecent", "Last 7 days"), nodes: [] },
-    { id: "older", label: t("sessionsOlder", "Older"), nodes: [] },
+    { id: "today", label: "Today", nodes: [] },
+    { id: "recent", label: "Last 7 days", nodes: [] },
+    { id: "older", label: "Older", nodes: [] },
   ];
   for (const node of sessionTree) {
     sessionGroups.find((group) => group.id === sessionDateGroup(node.session.modified))?.nodes.push(node);
@@ -321,7 +313,7 @@ export function SessionSidebar({
               e.currentTarget.style.color = "var(--text-muted)";
               e.currentTarget.style.borderColor = "var(--border)";
             }}
-            title={t("refresh", "Refresh")}
+            title={"Refresh"}
           >
             {sessionRefreshDone ? (
               <svg
@@ -376,11 +368,7 @@ export function SessionSidebar({
             transition: "opacity 0.12s",
             opacity: selectedCwd ? 1 : 0.7,
           }}
-          title={
-            selectedCwd
-              ? `${t("newSessionIn", "New session in selected project")}: ${selectedCwd}`
-              : t("selectProjectFirst", "Select a project first")
-          }
+          title={selectedCwd ? `${"New session in selected project"}: ${selectedCwd}` : "Select a project first"}
           onMouseEnter={(e) => {
             if (!selectedCwd) return;
             e.currentTarget.style.opacity = "0.9";
@@ -390,7 +378,7 @@ export function SessionSidebar({
           }}
         >
           <span style={{ fontSize: 14, lineHeight: 1 }}>+</span>
-          {t("newSession", "new session")}
+          {"new session"}
         </button>
         <ProjectPicker
           selectedCwd={selectedCwd}
@@ -403,10 +391,7 @@ export function SessionSidebar({
       </div>
 
       {/* Session list */}
-      <nav
-        aria-label={t("sessions", "Sessions")}
-        style={{ flex: "1 1 auto", overflowY: "auto", padding: "0", minHeight: 80 }}
-      >
+      <nav aria-label={"Sessions"} style={{ flex: "1 1 auto", overflowY: "auto", padding: "0", minHeight: 80 }}>
         <div style={{ padding: "10px 10px 6px" }}>
           <div
             style={{
@@ -422,10 +407,8 @@ export function SessionSidebar({
               textTransform: "uppercase",
             }}
           >
-            <span>{t("sessions", "Sessions")}</span>
-            <span
-              aria-label={t("sessionCount", "{count} sessions").replace("{count}", String(filteredSessions.length))}
-            >
+            <span>{"Sessions"}</span>
+            <span aria-label={"{count} sessions".replace("{count}", String(filteredSessions.length))}>
               {filteredSessions.length}
             </span>
           </div>
@@ -455,8 +438,8 @@ export function SessionSidebar({
               type="search"
               value={sessionFilter}
               onChange={(event) => setSessionFilter(event.target.value)}
-              placeholder={t("searchSessions", "Search sessions")}
-              aria-label={t("searchSessions", "Search sessions")}
+              placeholder={"Search sessions"}
+              aria-label={"Search sessions"}
               style={{
                 width: "100%",
                 height: 34,
@@ -473,8 +456,8 @@ export function SessionSidebar({
               <button
                 type="button"
                 onClick={() => setSessionFilter("")}
-                title={t("clearSessionSearch", "Clear session search")}
-                aria-label={t("clearSessionSearch", "Clear session search")}
+                title={"Clear session search"}
+                aria-label={"Clear session search"}
                 style={{
                   position: "absolute",
                   top: 1,
@@ -495,17 +478,11 @@ export function SessionSidebar({
             )}
           </div>
         </div>
-        {loading && (
-          <div style={{ padding: "16px 14px", color: "var(--text-muted)", fontSize: 12 }}>
-            {t("loading", "Loading…")}
-          </div>
-        )}
+        {loading && <div style={{ padding: "16px 14px", color: "var(--text-muted)", fontSize: 12 }}>{"Loading…"}</div>}
         {error && <div style={{ padding: "12px 14px", color: "var(--danger)", fontSize: 12 }}>{error}</div>}
         {!loading && !error && filteredSessions.length === 0 && (
           <div style={{ padding: "16px 14px", color: "var(--text-muted)", fontSize: 13 }}>
-            {sessionFilter.trim()
-              ? t("noMatchingSessions", "No matching sessions")
-              : t("noSessionsFound", "No sessions found")}
+            {sessionFilter.trim() ? "No matching sessions" : "No sessions found"}
           </div>
         )}
         <div style={{ padding: "0 6px 10px", display: "flex", flexDirection: "column", gap: 4 }}>

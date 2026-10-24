@@ -14,7 +14,6 @@ import {
   type SessionLoadTrace,
 } from "@/lib/session-performance";
 import { sessionClientErrorMessage } from "@/lib/session-error-message";
-import { useI18n } from "@/i18n";
 
 const INITIAL_HISTORY_TURNS = 20;
 const HISTORY_PAGE_MAX_BYTES = 1024 * 1024;
@@ -43,7 +42,6 @@ export function useSessionHistory({
   onSessionLoaded,
   prepareSessionSnapshot,
 }: SessionHistoryOptions) {
-  const { t } = useI18n();
   const [data, setData] = useState<SessionDetail | null>(null);
   const [loading, setLoading] = useState(!isNew);
   const [error, setError] = useState<string | null>(null);
@@ -241,7 +239,7 @@ export function useSessionHistory({
           if (showLoading) resetHistory(false);
           return null;
         }
-        setError(sessionClientErrorMessage(cause, t, t("sessionLoadFailed", "Failed to load session.")));
+        setError(sessionClientErrorMessage(cause, "Failed to load session."));
         return null;
       } finally {
         if (isCurrent(scope) && loadingOwnerRef.current === request) {
@@ -258,7 +256,6 @@ export function useSessionHistory({
       prepareSessionSnapshot,
       resetHistory,
       sessionIdRef,
-      t,
       updatePagingState,
     ],
   );
@@ -299,10 +296,10 @@ export function useSessionHistory({
       } catch (cause) {
         if (!navigation.isCurrent()) return;
         navigation.cancel();
-        setError(sessionClientErrorMessage(cause, t, t("sessionLoadFailed", "Failed to load session.")));
+        setError(sessionClientErrorMessage(cause, "Failed to load session."));
       }
     },
-    [beginNavigation, commitHistory, sessionIdRef, t, updatePagingState],
+    [beginNavigation, commitHistory, sessionIdRef, updatePagingState],
   );
 
   const loadOlder = useCallback(async () => {

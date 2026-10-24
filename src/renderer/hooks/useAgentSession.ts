@@ -16,7 +16,6 @@ import {
   removeLastHistoryMessage,
   replaceLastHistoryMessage,
 } from "@/lib/session-history-update";
-import { useI18n } from "@/i18n";
 import { useSessionModels } from "./useSessionModels";
 import { useSessionHistory } from "./useSessionHistory";
 import { useChatViewport } from "./useChatViewport";
@@ -141,7 +140,6 @@ export interface AttachedImage {
 }
 
 export function useAgentSession(opts: UseAgentSessionOptions) {
-  const { t } = useI18n();
   const {
     session,
     newSessionCwd,
@@ -651,13 +649,13 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
         case "prompt_error":
           addNotice({
             type: "error",
-            message: (event.errorMessage as string | undefined) ?? t("commandFailed", "Command failed"),
+            message: (event.errorMessage as string | undefined) ?? "Command failed",
           });
           break;
         case "extension_error":
           addNotice({
             type: "error",
-            message: (event.error as string | undefined) ?? t("extensionCommandFailed", "Extension command failed"),
+            message: (event.error as string | undefined) ?? "Extension command failed",
           });
           break;
         case "message_end": {
@@ -706,7 +704,6 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
       isActive,
       loadSession,
       runtimeGate,
-      t,
       updateHistory,
     ],
   );
@@ -810,7 +807,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
         }
         addNotice({
           type: "error",
-          message: sessionClientErrorMessage(e, t, t("messageSendFailed", "Failed to send message.")),
+          message: sessionClientErrorMessage(e, "Failed to send message."),
         });
         optimisticUserMessageKeyRef.current = null;
         agentRunningRef.current = false;
@@ -827,7 +824,6 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
       newSessionModel,
       newSessionDefaultModel,
       session,
-      t,
       isActive,
       ensureNewSession,
       ensureEventsConnected,
@@ -988,7 +984,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
         if (result.error) {
           addNotice({ type: "error", message: result.error });
         } else if (result.action !== "openSessionStats") {
-          addNotice({ type: "success", message: result.message ?? t("commandCompleted", "Command completed") });
+          addNotice({ type: "success", message: result.message ?? "Command completed" });
         }
         return result;
       };
@@ -999,7 +995,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
             if (!sid || isCompacting) {
               return complete({
                 handled: true,
-                error: t("noActiveSessionToCompact", "No active session to compact"),
+                error: "No active session to compact",
               });
             }
             runtimeGate.touch("compaction");
@@ -1011,37 +1007,37 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
             if (!ownsView()) return { handled: true };
             dispatchTurn({ type: "compaction-result", result: readCompactResult(result, "manual") });
             if (await loadSession(sid, true)) promoteNewSession();
-            return complete({ handled: true, message: t("contextCompacted", "Compacted context") });
+            return complete({ handled: true, message: "Compacted context" });
           }
 
           case "reload": {
             if (!sid) {
-              return complete({ handled: true, error: t("noActiveSessionToReload", "No active session to reload") });
+              return complete({ handled: true, error: "No active session to reload" });
             }
             await sendAgentCommand(sid, { type: "reload" });
             if (!ownsView()) return { handled: true };
             await Promise.all([loadSession(sid, false, true), loadTools(sid), loadSlashCommands(), loadModels()]);
             return complete({
               handled: true,
-              message: t("sessionResourcesReloaded", "Reloaded session resources"),
+              message: "Reloaded session resources",
             });
           }
 
           case "name": {
             if (!sid) {
-              return complete({ handled: true, error: t("noActiveSessionToName", "No active session to name") });
+              return complete({ handled: true, error: "No active session to name" });
             }
-            if (!args) return complete({ handled: true, error: t("nameCommandUsage", "Usage: /name <name>") });
+            if (!args) return complete({ handled: true, error: "Usage: /name <name>" });
             await sendAgentCommand(sid, { type: "set_session_name", name: args });
             if (await loadSession(sid)) promoteNewSession();
             return complete({
               handled: true,
-              message: t("sessionRenamedTo", "Session renamed to {name}").replace("{name}", args),
+              message: "Session renamed to {name}".replace("{name}", args),
             });
           }
 
           case "session": {
-            if (!sid) return complete({ handled: true, error: t("noActiveSession", "No active session") });
+            if (!sid) return complete({ handled: true, error: "No active session" });
             const stats = await sendAgentCommand(sid, { type: "get_session_stats" });
             if (!ownsView()) return { handled: true };
             if (stats) {
@@ -1052,20 +1048,20 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
           }
 
           case "copy": {
-            if (!sid) return complete({ handled: true, error: t("noActiveSession", "No active session") });
+            if (!sid) return complete({ handled: true, error: "No active session" });
             const data = await sendAgentCommand(sid, { type: "get_last_assistant_text" });
             if (!ownsView()) return { handled: true };
             const textToCopy = data?.text ?? "";
             if (!textToCopy) {
               return complete({
                 handled: true,
-                error: t("noAssistantMessageToCopy", "No assistant message to copy"),
+                error: "No assistant message to copy",
               });
             }
             await navigator.clipboard.writeText(textToCopy);
             return complete({
               handled: true,
-              message: t("copiedLastAssistantMessage", "Copied last assistant message"),
+              message: "Copied last assistant message",
             });
           }
 
@@ -1090,7 +1086,6 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
       promoteNewSession,
       runtimeGate,
       onSessionStatsPanelOpen,
-      t,
     ],
   );
 
@@ -1105,7 +1100,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
         const error = new Error("The active session is no longer available");
         addNotice({
           type: "error",
-          message: t("steerFailedNotQueued", "Unable to steer the running agent. The message was not queued."),
+          message: "Unable to steer the running agent. The message was not queued.",
         });
         throw error;
       }
@@ -1120,12 +1115,12 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
         console.error("Failed to steer:", error);
         addNotice({
           type: "error",
-          message: t("steerFailedNotQueued", "Unable to steer the running agent. The message was not queued."),
+          message: "Unable to steer the running agent. The message was not queued.",
         });
         throw error;
       }
     },
-    [addNotice, t],
+    [addNotice],
   );
 
   const handlePromptWithStreamingBehavior = useCallback(
@@ -1135,7 +1130,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
         const error = new Error("The active session is no longer available");
         addNotice({
           type: "error",
-          message: t("promptQueueFailedNotQueued", "Unable to queue this prompt. The message was not queued."),
+          message: "Unable to queue this prompt. The message was not queued.",
         });
         throw error;
       }
@@ -1151,12 +1146,12 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
         console.error("Failed to queue prompt:", error);
         addNotice({
           type: "error",
-          message: t("promptQueueFailedNotQueued", "Unable to queue this prompt. The message was not queued."),
+          message: "Unable to queue this prompt. The message was not queued.",
         });
         throw error;
       }
     },
-    [addNotice, t],
+    [addNotice],
   );
 
   const handleFollowUp = useCallback(
@@ -1166,7 +1161,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
         const error = new Error("The active session is no longer available");
         addNotice({
           type: "error",
-          message: t("followUpQueueFailedNotQueued", "Unable to queue this follow-up. The message was not queued."),
+          message: "Unable to queue this follow-up. The message was not queued.",
         });
         throw error;
       }
@@ -1181,12 +1176,12 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
         console.error("Failed to follow up:", error);
         addNotice({
           type: "error",
-          message: t("followUpQueueFailedNotQueued", "Unable to queue this follow-up. The message was not queued."),
+          message: "Unable to queue this follow-up. The message was not queued.",
         });
         throw error;
       }
     },
-    [addNotice, t],
+    [addNotice],
   );
 
   const handleAbortCompaction = useCallback(async () => {
@@ -1217,9 +1212,9 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
       }
     } catch (e) {
       console.error("Failed to recall queued messages:", e);
-      addNotice({ type: "error", message: t("queuedMessagesRecallFailed", "Failed to recall queued messages") });
+      addNotice({ type: "error", message: "Failed to recall queued messages" });
     }
-  }, [captureCommandView, opts.chatInputRef, addNotice, runtimeGate, t]);
+  }, [captureCommandView, opts.chatInputRef, addNotice, runtimeGate]);
 
   const handleThinkingLevelChange = useCallback(
     async (level: ThinkingLevelOption) => {
