@@ -7,7 +7,6 @@ import {
   useState,
   type ImgHTMLAttributes,
   type JSX,
-  type MouseEvent,
   type ReactNode,
 } from "react";
 import ReactMarkdown, { defaultUrlTransform, type Components } from "react-markdown";
@@ -18,7 +17,6 @@ import { resolveLocalFileHref } from "@/lib/file-links";
 import { markdownRehypePlugins, markdownRemarkPlugins } from "@/lib/markdown";
 import { shouldHighlightCode } from "@/lib/code-highlight-policy";
 import { SessionProfiler } from "./SessionProfiler";
-import { useI18n } from "@/i18n";
 import { scaledChatFont } from "@/lib/chat-appearance";
 
 interface MarkdownBodyProps {
@@ -28,12 +26,11 @@ interface MarkdownBodyProps {
   cwd?: string;
   imageBasePath?: string;
   sourceSessionId?: string | null;
-  onOpenFile?: (filePath: string) => void;
 }
 
 type MarkdownRenderContextValue = Pick<
   MarkdownBodyProps,
-  "isStreaming" | "cwd" | "imageBasePath" | "sourceSessionId" | "onOpenFile"
+  "isStreaming" | "cwd" | "imageBasePath" | "sourceSessionId"
 >;
 
 const MarkdownRenderContext = createContext<MarkdownRenderContextValue>({});
@@ -61,65 +58,6 @@ function MarkdownPre({ children }: MarkdownComponentProps<"pre">) {
   return <>{children}</>;
 }
 
-function MarkdownAnchor({ href, children, node: _node, ...props }: MarkdownComponentProps<"a">) {
-  const { cwd, onOpenFile } = useContext(MarkdownRenderContext);
-  const { language, t } = useI18n();
-  const [menuError, setMenuError] = useState(false);
-  const filePath = onOpenFile ? resolveLocalFileHref(href, cwd) : null;
-  if (!filePath || !onOpenFile) {
-    return (
-      <a href={href} {...props}>
-        {children}
-      </a>
-    );
-  }
-
-  // Absolute links (attachments, agent-printed paths) reveal in Explorer;
-  // relative repo links still open in the in-app viewer.
-  const hrefText = typeof href === "string" ? href : "";
-  const revealInFolder = /^file:/i.test(hrefText) || /^[a-zA-Z]:[\\/]/.test(hrefText) || hrefText.startsWith("/");
-
-  const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
-    if (event.defaultPrevented || event.button !== 0) return;
-    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-    const target = event.currentTarget.getAttribute("target");
-    if (target && target !== "_self") return;
-    event.preventDefault();
-    if (revealInFolder && window.piBridge?.showItemInFolder) {
-      void window.piBridge.showItemInFolder(filePath);
-      return;
-    }
-    onOpenFile(filePath);
-  };
-
-  const handleContextMenu = (event: MouseEvent<HTMLAnchorElement>) => {
-    // Chromium (Electron 43) does not reliably report file: links in the
-    // native context-menu event, so we show the rich file menu ourselves.
-    if (event.defaultPrevented) return;
-    event.preventDefault();
-    const request = window.piBridge.showFileContextMenu({
-      href: filePath,
-      cwd,
-      source: "rendered-agent-text",
-      language,
-    });
-    void request.then((result) => setMenuError(!result.shown)).catch(() => setMenuError(true));
-  };
-
-  return (
-    <>
-      <a href={href} {...props} onClick={handleClick} onContextMenu={handleContextMenu}>
-        {children}
-      </a>
-      {menuError && (
-        <span role="status" style={{ marginLeft: 4, color: "var(--danger)", fontSize: "0.85em" }}>
-          {t("fileContextMenuUnavailable", "The file menu could not be opened.")}
-        </span>
-      )}
-    </>
-  );
-}
-
 function MarkdownImg({ src, alt, node: _node, ...props }: MarkdownComponentProps<"img">) {
   const { cwd, imageBasePath, sourceSessionId } = useContext(MarkdownRenderContext);
   return (
@@ -145,7 +83,6 @@ function MarkdownTable({ children }: MarkdownComponentProps<"table">) {
 const markdownComponents: Components = {
   code: MarkdownCode,
   pre: MarkdownPre,
-  a: MarkdownAnchor,
   img: MarkdownImg,
   table: MarkdownTable,
 };
@@ -165,14 +102,13 @@ export const MarkdownBody = memo(function MarkdownBody({
   cwd,
   imageBasePath,
   sourceSessionId,
-  onOpenFile,
 }: MarkdownBodyProps) {
   // Bound synchronous parsing while content grows; settlement renders the original source in full.
   const lightweightPreview = isStreaming && children.length > 2048;
   const normalizedMarkdown = lightweightPreview ? "" : children;
   const renderContext = useMemo(
-    () => ({ isStreaming, cwd, imageBasePath, sourceSessionId, onOpenFile }),
-    [cwd, imageBasePath, isStreaming, onOpenFile, sourceSessionId],
+    () => ({ isStreaming, cwd, imageBasePath, sourceSessionId }),
+    [cwd, imageBasePath, isStreaming, sourceSessionId],
   );
 
   return (

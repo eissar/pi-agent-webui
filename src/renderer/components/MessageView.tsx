@@ -38,7 +38,6 @@ interface Props {
   toolCallDurations?: ReadonlyMap<string, number>;
   modelNames?: Record<string, string>;
   cwd?: string;
-  onOpenFile?: (filePath: string) => void;
   entryId?: string;
   onFork?: (entryId: string) => void;
   forking?: boolean;
@@ -134,7 +133,6 @@ export const MessageView = memo(function MessageView({
   toolCallDurations,
   modelNames,
   cwd,
-  onOpenFile,
   entryId,
   onFork,
   forking,
@@ -151,7 +149,6 @@ export const MessageView = memo(function MessageView({
       <UserMessageView
         message={message as UserMessage}
         cwd={cwd}
-        onOpenFile={onOpenFile}
         entryId={entryId}
         onFork={onFork}
         forking={forking}
@@ -171,7 +168,6 @@ export const MessageView = memo(function MessageView({
         toolCallDurations={toolCallDurations}
         modelNames={modelNames}
         cwd={cwd}
-        onOpenFile={onOpenFile}
         showTimestamp={showTimestamp}
         prevTimestamp={prevTimestamp}
         onLoadDeferredContent={onLoadDeferredContent}
@@ -197,7 +193,6 @@ export const MessageView = memo(function MessageView({
       <CustomMessageView
         message={message as CustomMessage}
         cwd={cwd}
-        onOpenFile={onOpenFile}
         onLoadDeferredContent={onLoadDeferredContent}
       />
     );
@@ -208,7 +203,6 @@ export const MessageView = memo(function MessageView({
 function UserMessageView({
   message,
   cwd,
-  onOpenFile,
   entryId,
   onFork,
   forking,
@@ -219,7 +213,6 @@ function UserMessageView({
 }: {
   message: UserMessage;
   cwd?: string;
-  onOpenFile?: (filePath: string) => void;
   entryId?: string;
   onFork?: (entryId: string) => void;
   forking?: boolean;
@@ -304,7 +297,6 @@ function UserMessageView({
             <SkillInvocationView
               invocation={skillInvocation}
               cwd={cwd}
-              onOpenFile={onOpenFile}
               followedByContent={imageBlocks.length > 0 || Boolean(visibleContent)}
             />
           )}
@@ -340,7 +332,7 @@ function UserMessageView({
             </div>
           )}
           {visibleContent && (
-            <MarkdownBody className="markdown-user-message" cwd={cwd} onOpenFile={onOpenFile}>
+            <MarkdownBody className="markdown-user-message" cwd={cwd}>
               {visibleContent}
             </MarkdownBody>
           )}
@@ -546,12 +538,10 @@ function UserMessageView({
 function SkillInvocationView({
   invocation,
   cwd,
-  onOpenFile,
   followedByContent,
 }: {
   invocation: SkillInvocation;
   cwd?: string;
-  onOpenFile?: (filePath: string) => void;
   followedByContent: boolean;
 }) {
   const { t } = useI18n();
@@ -634,7 +624,7 @@ function SkillInvocationView({
             overflowWrap: "anywhere",
           }}
         >
-          <MarkdownBody className="markdown-skill-invocation" cwd={cwd} onOpenFile={onOpenFile}>
+          <MarkdownBody className="markdown-skill-invocation" cwd={cwd}>
             {invocation.content}
           </MarkdownBody>
         </div>
@@ -650,7 +640,6 @@ function AssistantMessageView({
   toolCallDurations,
   modelNames,
   cwd,
-  onOpenFile,
   showTimestamp,
   prevTimestamp,
   onLoadDeferredContent,
@@ -663,7 +652,6 @@ function AssistantMessageView({
   toolCallDurations?: ReadonlyMap<string, number>;
   modelNames?: Record<string, string>;
   cwd?: string;
-  onOpenFile?: (filePath: string) => void;
   showTimestamp?: boolean;
   prevTimestamp?: number;
   onLoadDeferredContent?: (entryId: string, blockIndex?: number) => Promise<void>;
@@ -870,7 +858,6 @@ function AssistantMessageView({
             }
             toolCallDurations={toolCallDurations}
             cwd={cwd}
-            onOpenFile={onOpenFile}
             onLoadDeferredContent={onLoadDeferredContent}
             thinkingStateKey={`${entryId ?? "assistant"}:${originalIndex}`}
             thinkingExpansionStore={thinkingExpansionStore}
@@ -987,7 +974,6 @@ function BlockView({
   streamingDuration,
   toolCallDurations,
   cwd,
-  onOpenFile,
   onLoadDeferredContent,
   thinkingStateKey,
   thinkingExpansionStore,
@@ -998,13 +984,12 @@ function BlockView({
   streamingDuration?: number;
   toolCallDurations?: ReadonlyMap<string, number>;
   cwd?: string;
-  onOpenFile?: (filePath: string) => void;
   onLoadDeferredContent?: (entryId: string, blockIndex?: number) => Promise<void>;
   thinkingStateKey: string;
   thinkingExpansionStore?: ThinkingExpansionStore;
 }) {
   if (block.type === "text") {
-    return <TextBlock block={block as TextContent} isStreaming={isStreaming} cwd={cwd} onOpenFile={onOpenFile} />;
+    return <TextBlock block={block as TextContent} isStreaming={isStreaming} cwd={cwd} />;
   }
   if (block.type === "thinking") {
     return (
@@ -1037,12 +1022,10 @@ function TextBlock({
   block,
   isStreaming,
   cwd,
-  onOpenFile,
 }: {
   block: TextContent;
   isStreaming?: boolean;
   cwd?: string;
-  onOpenFile?: (filePath: string) => void;
 }) {
   return (
     <div
@@ -1055,7 +1038,7 @@ function TextBlock({
         lineHeight: 1.6,
       }}
     >
-      <MarkdownBody isStreaming={isStreaming} cwd={cwd} onOpenFile={onOpenFile}>
+      <MarkdownBody isStreaming={isStreaming} cwd={cwd}>
         {block.text}
       </MarkdownBody>
       {isStreaming && <span className="stream-caret" aria-hidden="true" />}
@@ -1801,12 +1784,10 @@ function CompactionFileList({ title, files }: { title: string; files: string[] }
 function CustomMessageView({
   message,
   cwd,
-  onOpenFile,
   onLoadDeferredContent,
 }: {
   message: CustomMessage;
   cwd?: string;
-  onOpenFile?: (filePath: string) => void;
   onLoadDeferredContent?: (entryId: string, blockIndex?: number) => Promise<void>;
 }) {
   const isHiddenDisplay = message.display === false;
@@ -1889,7 +1870,7 @@ function CustomMessageView({
               </div>
             )}
             {text ? (
-              <MarkdownBody className="markdown-custom-message" cwd={cwd} onOpenFile={onOpenFile}>
+              <MarkdownBody className="markdown-custom-message" cwd={cwd}>
                 {text}
               </MarkdownBody>
             ) : (

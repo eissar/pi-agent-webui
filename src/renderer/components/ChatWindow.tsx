@@ -49,7 +49,6 @@ interface Props {
   onSystemPromptChange?: (prompt: string | null) => void;
   presentationStore: SessionPresentationStore;
   onSessionStatsPanelOpen?: () => void;
-  onOpenFile?: (filePath: string) => void;
   thinkingExpansionStore: ThinkingExpansionStore;
   processDetailsExpansionStore: ThinkingExpansionStore;
 }
@@ -186,7 +185,6 @@ export function ChatWindow({
   onSystemPromptChange,
   presentationStore,
   onSessionStatsPanelOpen,
-  onOpenFile,
   thinkingExpansionStore,
   processDetailsExpansionStore,
 }: Props) {
@@ -666,7 +664,6 @@ export function ChatWindow({
                             toolCallDurations={toolData?.durations}
                             modelNames={modelNames}
                             cwd={messageCwd}
-                            onOpenFile={onOpenFile}
                             entryId={entryIds[idx]}
                             onFork={
                               agentRunning || isNew || (idx === 0 && msg.role === "user") ? undefined : handleFork
@@ -820,7 +817,6 @@ export function ChatWindow({
                         isStreaming
                         modelNames={modelNames}
                         cwd={messageCwd}
-                        onOpenFile={onOpenFile}
                         entryId="streaming"
                         thinkingExpansionStore={thinkingExpansionStore}
                       />

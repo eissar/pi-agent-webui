@@ -2,7 +2,6 @@ import { useSessionList } from "@/hooks/useSessionList";
 import { call, subscribe } from "@/lib/api-client";
 import {
   useState,
-  useReducer,
   useCallback,
   useRef,
   useEffect,
@@ -15,7 +14,6 @@ import { ChatWindow } from "./ChatWindow";
 import { SessionInfoPanel } from "./SessionInfoPanel";
 import { SessionPresentationStore } from "@/lib/session-presentation-store";
 import { FileExplorer } from "./FileExplorer";
-import { TabBar } from "./TabBar";
 import { SettingsConfig, type SettingsTab } from "./SettingsConfig";
 import { QuickChannelBinding } from "./channels/QuickChannelBinding";
 import { BrowserDock } from "./browser/BrowserDock";
@@ -23,11 +21,9 @@ import { BrowserAuthorizationDialog } from "./browser/BrowserAuthorizationDialog
 import { useTheme } from "@/hooks/useTheme";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { useI18n } from "@/i18n";
-import { getFileName } from "@/lib/file-paths";
 import { getSessionDisplayTitle } from "@/lib/session-list";
 import { formatNumber } from "@/lib/locale-format";
 import { beginSessionLoadTrace } from "@/lib/session-performance";
-import { reduceFileTabState } from "@/lib/file-tab-state";
 import { readSessionIdFromSearch, routerCompat } from "@/lib/router-compat";
 import { SessionProfiler } from "./SessionProfiler";
 import { buildAtMentionText } from "@/lib/file-fuzzy";
@@ -178,11 +174,8 @@ export function AppShell({
     setSidebarOpen((open) => !open);
   }, [isMobile]);
 
-  // Right panel — file tabs only
-  const [{ tabs: fileTabs, activeTabId: activeFileTabId }, dispatchFileTab] = useReducer(reduceFileTabState, {
-    tabs: [],
-    activeTabId: EXPLORER_TAB_ID,
-  });
+  // Right panel — which panel is showing
+  const [activeFileTabId, setActiveFileTabId] = useState(EXPLORER_TAB_ID);
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
   const [rightPanelBounds, setRightPanelBounds] = useState(() =>
     getRightPanelWidthBounds(window.innerWidth, sidebarOpen),
@@ -327,7 +320,7 @@ export function AppShell({
   useEffect(() => {
     const openBrowserTab = (event: Event) => {
       const tabId = (event as CustomEvent<{ tabId?: string }>).detail?.tabId;
-      dispatchFileTab({ type: "select", tabId: BROWSER_TAB_ID });
+      setActiveFileTabId(BROWSER_TAB_ID);
       openRightPanel();
       if (tabId) void window.piBridge.browserActivateTab(tabId).catch(() => undefined);
     };
@@ -341,7 +334,7 @@ export function AppShell({
         if (event.type !== "tab-created" || !event.tab.ownerSessionId) return;
         void window.piBridge.browserGetSettings().then((settings) => {
           if (!settings.settings.panel.openOnAgentUse) return;
-          dispatchFileTab({ type: "select", tabId: BROWSER_TAB_ID });
+          setActiveFileTabId(BROWSER_TAB_ID);
           openRightPanel();
         });
       }),
@@ -635,45 +628,17 @@ export function AppShell({
     [selectedSession, router],
   );
 
-  // File viewer removed: opening a file is a no-op.
-  const handleOpenFile = useCallback((_filePath: string, _fileName: string, _sourceSessionId?: string | null) => {}, []);
-
-  const handleOpenLinkedFile = useCallback(
-    (filePath: string) => {
-      handleOpenFile(filePath, getFileName(filePath), selectedSession?.id ?? null);
-    },
-    [handleOpenFile, selectedSession?.id],
-  );
-
-  const handleCloseFileTab = useCallback((tabId: string) => {
-    dispatchFileTab({ type: "close", tabId, fallbackTabId: EXPLORER_TAB_ID });
-  }, []);
-
-  const previousFileTabCountRef = useRef(fileTabs.length);
-  useEffect(() => {
-    if (
-      previousFileTabCountRef.current > 0 &&
-      fileTabs.length === 0 &&
-      activeFileTabId !== BROWSER_TAB_ID &&
-      activeFileTabId !== HERDR_TERMINAL_TAB_ID
-    ) {
-      setRightPanelOpen(false);
-    }
-    previousFileTabCountRef.current = fileTabs.length;
-  }, [activeFileTabId, fileTabs.length]);
-
   // Show chat area if a session is selected, or if we have a cwd to start a new session in
   const effectiveNewSessionCwd = newSessionCwd ?? (selectedSession === null && activeCwd ? activeCwd : null);
   const showChat = selectedSession !== null || effectiveNewSessionCwd !== null;
   // While restoring initial session from URL, don't show the placeholder
   const showPlaceholder = initialSessionRestored && !showChat;
 
-  const activeFileTab = fileTabs.find((t) => t.id === activeFileTabId) ?? null;
   const explorerCwd = activeCwd ?? selectedSession?.cwd ?? newSessionCwd;
 
   useEffect(() => {
     if (!activeCwd || isMobile) return;
-    dispatchFileTab({ type: "select", tabId: EXPLORER_TAB_ID });
+    setActiveFileTabId(EXPLORER_TAB_ID);
   }, [activeCwd, isMobile]);
 
   const sidebarContent = (
@@ -1027,7 +992,7 @@ export function AppShell({
                 rightInset={!selectedSession && !rightPanelOpen ? 44 : 0}
                 onOpenTerminal={(pane) => {
                   setHerdrTerminalPane(pane);
-                  dispatchFileTab({ type: "select", tabId: HERDR_TERMINAL_TAB_ID });
+                  setActiveFileTabId(HERDR_TERMINAL_TAB_ID);
                   openRightPanel();
                 }}
               />
@@ -1056,7 +1021,6 @@ export function AppShell({
                   chatInputRef={chatInputRef}
                   presentationStore={presentationStore}
                   onSessionStatsPanelOpen={openSessionStatsPanel}
-                  onOpenFile={handleOpenLinkedFile}
                   thinkingExpansionStore={thinkingExpansionRegistryRef.current.get(
                     selectedSession?.id ?? `new:${effectiveNewSessionCwd ?? "untitled"}`,
                   )}
@@ -1169,7 +1133,7 @@ export function AppShell({
           >
             <button
               type="button"
-              onClick={() => dispatchFileTab({ type: "select", tabId: EXPLORER_TAB_ID })}
+              onClick={() => setActiveFileTabId(EXPLORER_TAB_ID)}
               aria-pressed={activeFileTabId === EXPLORER_TAB_ID}
               style={{
                 display: "flex",
@@ -1204,7 +1168,7 @@ export function AppShell({
             </button>
             <button
               type="button"
-              onClick={() => dispatchFileTab({ type: "select", tabId: BROWSER_TAB_ID })}
+              onClick={() => setActiveFileTabId(BROWSER_TAB_ID)}
               aria-pressed={activeFileTabId === BROWSER_TAB_ID}
               style={{
                 display: "flex",
@@ -1240,7 +1204,7 @@ export function AppShell({
             </button>
             <button
               type="button"
-              onClick={() => dispatchFileTab({ type: "select", tabId: HERDR_TERMINAL_TAB_ID })}
+              onClick={() => setActiveFileTabId(HERDR_TERMINAL_TAB_ID)}
               aria-pressed={activeFileTabId === HERDR_TERMINAL_TAB_ID}
               style={{
                 display: "flex",
@@ -1261,14 +1225,7 @@ export function AppShell({
               <span aria-hidden="true">›_</span>
               {t("herdrTerminal", "Herdr Terminal")}
             </button>
-            <div style={{ flex: 1, overflow: "hidden" }}>
-              <TabBar
-                tabs={fileTabs}
-                activeTabId={activeFileTabId}
-                onSelectTab={(tabId) => dispatchFileTab({ type: "select", tabId })}
-                onCloseTab={handleCloseFileTab}
-              />
-            </div>
+            <div style={{ flex: 1 }} />
             {activeFileTabId === EXPLORER_TAB_ID && explorerCwd && (
               <button
                 type="button"
@@ -1337,7 +1294,6 @@ export function AppShell({
                 <div style={{ height: "100%", overflowY: "auto", overflowX: "hidden", paddingTop: 4 }}>
                   <FileExplorer
                     cwd={explorerCwd}
-                    onOpenFile={handleOpenFile}
                     refreshKey={explorerRefreshKey}
                     onAtMention={handleAtMention}
                   />
