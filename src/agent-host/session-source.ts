@@ -8,6 +8,3 @@ export function getAgentSessionSource(sessionManager: object): "local" | "unknow
   return sessionSources.get(sessionManager) ?? "unknown";
 }
 
-// Compatibility aliases for the existing Browser call sites.
-export const setBrowserSessionSource = setAgentSessionSource;
-export const getBrowserSessionSource = getAgentSessionSource;

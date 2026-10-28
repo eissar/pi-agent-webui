@@ -17,14 +17,7 @@ import type { ExtensionUiRequest, ExtensionUiResponse, ExtensionWidgetItem } fro
 import { toolchainRuntime } from "./toolchain-runtime";
 import { createToolchainBashOptions } from "./toolchain-bash";
 import { createDesktopSearchToolDefinitions } from "./toolchain-search";
-import {
-  browserToolNamesForSnapshot,
-  createBrowserToolDefinitions,
-  isBrowserToolName,
-  setBrowserSessionSource,
-} from "./browser-tools";
-import { browserCapabilityRuntime } from "./browser-capability-runtime";
-import { browserAgentRuntime } from "./browser-agent-runtime";
+import { setAgentSessionSource } from "./session-source";
 import { projectExtensionDiagnostics } from "./extension-diagnostics";
 import { getDesktopSessionToolNames, setDesktopSessionToolNames } from "./session-tool-store";
 import { createDesktopPromptExtension, SessionPromptPolicy } from "./session-prompt-policy";
@@ -119,7 +112,7 @@ export function withExtensionTools(session: AgentSessionLike, toolNames: string[
   const extensionToolNames = session
     .getAllTools()
     .map((t) => t.name)
-    .filter((name) => !codingToolNames.has(name) && !isBrowserToolName(name));
+    .filter((name) => !codingToolNames.has(name));
 
   return filterDesktopToolNames([...toolNames, ...extensionToolNames]);
 }
@@ -214,13 +207,7 @@ export class AgentSessionWrapper {
       this.inner.setActiveToolsByName([]);
       return;
     }
-    const current = this.inner.getActiveToolNames().filter((name) => !isBrowserToolName(name));
-    const browserTools = browserToolNamesForSnapshot(browserCapabilityRuntime.getSnapshot());
-    this.inner.setActiveToolsByName(filterDesktopToolNames([...current, ...browserTools]));
-  }
-
-  syncBrowserToolActivation(): void {
-    this.syncDesktopToolActivation();
+    this.inner.setActiveToolsByName(filterDesktopToolNames(this.inner.getActiveToolNames()));
   }
 
   setToolchainSummary(revision: number, summary: readonly string[]): void {
@@ -447,7 +434,6 @@ export class AgentSessionWrapper {
             : undefined;
         const promptImages = command.images as Array<{ type: "image"; data: string; mimeType: string }> | undefined;
         const streamingBehavior = command.streamingBehavior as "steer" | "followUp" | undefined;
-        if (!streamingBehavior) browserAgentRuntime.beginTurn(this.sessionId, "local");
         const invokePrompt = () => {
           return this.inner.prompt(command.message as string, {
             ...(promptImages?.length ? { images: promptImages } : {}),
@@ -764,7 +750,6 @@ export class AgentSessionWrapper {
   destroy(): void {
     if (!this._alive) return;
     this._alive = false;
-    browserAgentRuntime.clearSession(this.sessionId);
     if (this.idleTimer) clearTimeout(this.idleTimer);
     this.unsubscribe?.();
     this.unsubscribe = null;
@@ -1203,10 +1188,6 @@ export async function disposeAllRpcSessions(reason = "host-shutdown"): Promise<v
   await Promise.all([...getRegistry().values()].map((session) => session.dispose({ abort: true, reason })));
 }
 
-export function syncBrowserToolsForAllSessions(): void {
-  syncDesktopToolsForAllSessions();
-}
-
 export function syncDesktopToolsForAllSessions(): void {
   for (const session of getRegistry().values()) session.syncDesktopToolActivation();
 }
@@ -1309,7 +1290,7 @@ export async function startRpcSession(
       : SessionManager.create(cwd, undefined);
     // Unknown provenance is fail-closed for desktop tools. A session becomes
     // local only at this explicit desktop-owned construction boundary.
-    setBrowserSessionSource(sessionManager, "local");
+    setAgentSessionSource(sessionManager, "local");
 
     // Desktop-owned session choices live outside Pi's shared JSONL so the CLI
     // remains unaffected. Read the old custom entry only for one-way migration.
@@ -1338,12 +1319,10 @@ export async function startRpcSession(
       executionContext,
       toolchainRuntime,
       services.settingsManager.getShellCommandPrefix(),
-      (command) => browserAgentRuntime.guardBash(sessionManager.getSessionId(), command),
     );
     const customTools = [
       createBashToolDefinition(cwd, bashOptions),
       ...createDesktopSearchToolDefinitions(cwd, executionContext, toolchainRuntime),
-      ...createBrowserToolDefinitions(),
     ] as unknown as NonNullable<CreateAgentSessionFromServicesOptions["customTools"]>;
     const { session: inner } = await createAgentSessionFromServices({
       services,
