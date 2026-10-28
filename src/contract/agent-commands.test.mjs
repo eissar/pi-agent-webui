@@ -65,7 +65,7 @@ for (const separator of ["/", "\\"])
       isFixture(file)
         ? ts.createSourceFile(file, source, languageVersion, true)
         : originalGetSourceFile(file, languageVersion, onError, shouldCreateNewSourceFile);
-    const program = ts.createProgram([filename, path.join(root, "src/renderer/global.d.ts")], options, host);
+    const program = ts.createProgram([filename], options, host);
     assert.ok(program.getSourceFile(filename), "the virtual fixture must be included in type checking");
     const diagnostics = ts.getPreEmitDiagnostics(program);
     assert.equal(

@@ -88,7 +88,7 @@ test("forced deletion waits for Agent shutdown before unlinking and publishing",
   assert.deepEqual(fixture.order, ["dispose", "disposed", "unbind"]);
   assert.deepEqual(fixture.index.removed, [fixture.file]);
   assert.deepEqual(fixture.reader.invalidated, ["session"]);
-  assert.deepEqual(fixture.main.calls, [["browser.sessionEnded", { sessionId: "session" }]]);
+  assert.deepEqual(fixture.main.calls, []);
   assert.deepEqual(fixture.events, [
     ["sessions.changed", "session", { cwd: "/fixture", sessionId: "session", deleted: true }],
   ]);

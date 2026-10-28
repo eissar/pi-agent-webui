@@ -33,7 +33,6 @@ import { getSessionContentSnapshot, invalidateSessionContent } from "../session-
 import { buildSessionStats } from "../session-stats";
 import { sessionIndex } from "../session-index";
 import { emitIndexedSessionChange } from "../session-change";
-import { callMain } from "../parent-rpc";
 
 type SessionHandlers = {
   list: NonNullable<ApiHandler["sessions.list"]>;
@@ -275,7 +274,6 @@ export function createSessionHandlers({
       invalidateSessionContent(filePath);
       const deletedSession = sessionIndex.removePath(filePath);
       invalidateSessionPathCache(id);
-      void callMain("browser.sessionEnded", { sessionId: id }).catch(() => undefined);
       server.emit("sessions.changed", id, {
         cwd: deletedSession?.cwd ?? null,
         sessionId: id,

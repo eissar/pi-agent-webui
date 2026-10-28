@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect, useCallback, type SetStateAction } from "react";
 import {
   DraftPersistenceController,
-  MAX_PERSISTED_DRAFT_FILES,
   MAX_PERSISTED_DRAFT_IMAGES,
   MAX_PERSISTED_DRAFT_IMAGE_BYTES,
   getDraft,
@@ -9,7 +8,7 @@ import {
   type ChatDraftImage,
 } from "@/lib/draft-store";
 import { processImageFileBatch } from "@/lib/image-file-processing";
-import { localFilePathKey, type LocalFileReference } from "@/lib/file-url";
+import type { LocalFileReference } from "@/lib/file-url";
 import {
   failedComposerSubmissionAction,
   mergeFailedSubmissionFiles,
@@ -44,12 +43,10 @@ function revokeImagePreview(image: AttachedImage): void {
 export function useComposerDraft({
   draftKey,
   draftPromotionFrom,
-  cwd,
   onReplace,
 }: {
   draftKey?: string;
   draftPromotionFrom?: string;
-  cwd?: string | null;
   onReplace: () => void;
 }) {
   const [value, setValueState] = useState(() => (draftKey ? (getDraft(draftKey)?.value ?? "") : ""));
@@ -59,9 +56,6 @@ export function useComposerDraft({
   const [attachedFiles, setAttachedFilesState] = useState<LocalFileReference[]>(() =>
     draftKey ? (getDraft(draftKey)?.files?.map((file) => ({ ...file })) ?? []) : [],
   );
-  const [fileInspectionByPath, setFileInspectionByPath] = useState<
-    Map<string, { exists: boolean; isFile: boolean; insideCwd: boolean }>
-  >(new Map());
   const [imageAttachNotice, setImageAttachNotice] = useState<string | null>(null);
   const [submissionNotice, setSubmissionNotice] = useState<string | null>(null);
   const draftKeyRef = useRef(draftKey);
@@ -150,48 +144,12 @@ export function useComposerDraft({
     [setAttachedImages],
   );
 
-  const processLocalFileReferences = useCallback(
-    (files: File[]): string[] => {
-      if (files.length === 0) return [];
-      const notices: string[] = [];
-      const newFiles: LocalFileReference[] = [];
-      let pathlessCount = 0;
-      for (const file of files) {
-        const absolutePath = window.piBridge?.getPathForFile?.(file) ?? "";
-        if (absolutePath) newFiles.push({ name: file.name, path: absolutePath });
-        else pathlessCount += 1;
-      }
-      if (pathlessCount > 0) {
-        notices.push("{count} files had no local path and were not added".replace("{count}", String(pathlessCount)));
-      }
-      if (newFiles.length === 0) return notices;
-
-      const next = [...attachedFilesRef.current];
-      const seen = new Set(next.map((file) => localFilePathKey(file.path)));
-      let limitReached = false;
-      for (const file of newFiles) {
-        const key = localFilePathKey(file.path);
-        if (!key || seen.has(key)) continue;
-        if (next.length >= MAX_PERSISTED_DRAFT_FILES) {
-          limitReached = true;
-          break;
-        }
-        seen.add(key);
-        next.push(file);
-      }
-      setAttachedFiles(next);
-      if (limitReached) {
-        notices.push(
-          "A maximum of {count} local file references can be added".replace(
-            "{count}",
-            String(MAX_PERSISTED_DRAFT_FILES),
-          ),
-        );
-      }
-      return notices;
-    },
-    [setAttachedFiles],
-  );
+  // Browsers do not expose local filesystem paths for dropped or picked files,
+  // so non-image files cannot be referenced by path.
+  const processLocalFileReferences = useCallback((files: File[]): string[] => {
+    if (files.length === 0) return [];
+    return ["{count} files had no local path and were not added".replace("{count}", String(files.length))];
+  }, []);
 
   const processFiles = useCallback(
     async (files: File[]) => {
@@ -324,33 +282,6 @@ export function useComposerDraft({
   }, [draftKey, draftPromotionFrom, onReplace, setAttachedFiles, setAttachedImages, setValue]);
 
   useEffect(() => {
-    let cancelled = false;
-    if (attachedFiles.length === 0 || !window.piBridge?.inspectLocalFiles) {
-      setFileInspectionByPath(new Map());
-      return () => {
-        cancelled = true;
-      };
-    }
-    void window.piBridge
-      .inspectLocalFiles({ paths: attachedFiles.map((file) => file.path), cwd: cwd ?? undefined })
-      .then((inspections) => {
-        if (cancelled) return;
-        const next = new Map<string, { exists: boolean; isFile: boolean; insideCwd: boolean }>();
-        inspections.forEach((inspection, index) => {
-          const file = attachedFiles[index];
-          if (file) next.set(localFilePathKey(file.path), inspection);
-        });
-        setFileInspectionByPath(next);
-      })
-      .catch(() => {
-        if (!cancelled) setFileInspectionByPath(new Map());
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [attachedFiles, cwd]);
-
-  useEffect(() => {
     for (const image of attachedImages) pendingImagePreviewsRef.current.delete(image.previewUrl);
   }, [attachedImages]);
 
@@ -367,29 +298,10 @@ export function useComposerDraft({
     };
   }, [commitCurrentDraft]);
 
+  // File references can only come from restored drafts; the backend resolves them.
   const validateLocalFileReferences = useCallback(
-    async (files: readonly LocalFileReference[]): Promise<boolean> => {
-      if (files.length === 0) return true;
-      const inspections = await window.piBridge?.inspectLocalFiles?.({
-        paths: files.map((file) => file.path),
-        cwd: cwd ?? undefined,
-      });
-      if (!inspections || inspections.length !== files.length) {
-        setSubmissionNotice("Local file references could not be validated.");
-        return false;
-      }
-      const invalidNames = files
-        .filter((_file, index) => !inspections[index]?.exists || !inspections[index]?.isFile)
-        .map((file) => file.name);
-      if (invalidNames.length > 0) {
-        setSubmissionNotice(
-          "These local files are missing or unavailable: {files}".replace("{files}", invalidNames.join(", ")),
-        );
-        return false;
-      }
-      return true;
-    },
-    [cwd],
+    (_files: readonly LocalFileReference[]): Promise<boolean> => Promise.resolve(true),
+    [],
   );
 
   const getRevision = useCallback(() => inputRevisionRef.current, []);
@@ -398,7 +310,6 @@ export function useComposerDraft({
     setValue,
     attachedImages,
     attachedFiles,
-    fileInspectionByPath,
     imageAttachNotice,
     setImageAttachNotice,
     submissionNotice,

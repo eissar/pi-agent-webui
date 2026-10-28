@@ -69,26 +69,6 @@ export function ProjectPicker({
     }
   }, [setSelectedCwd]);
 
-  /** Desktop-native directory picker (design §6.1). Falls back to path input. */
-  const handlePickDirectory = useCallback(async () => {
-    try {
-      const dir = await window.piBridge?.selectDirectory?.();
-      if (!dir) return;
-      const result = await call("system.validateCwd", { path: dir });
-      if (!result.ok) {
-        setCustomPathError(result.error ?? "Invalid directory");
-        return;
-      }
-      setSelectedCwd(result.path ?? dir);
-      setCustomPathOpen(false);
-      setCustomPathValue("");
-      setCustomPathError(null);
-      setDropdownOpen(false);
-    } catch (e) {
-      setCustomPathError(e instanceof Error ? e.message : String(e));
-    }
-  }, [setSelectedCwd]);
-
   // Close dropdowns on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -292,44 +272,6 @@ export function ProjectPicker({
               <path d="M1 3A1 1 0 0 1 2 2H4L5 3.5H8.5a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-.5.5h-7A.5.5 0 0 1 1 8V3Z" />
             </svg>
             <span>{"Use default directory"}</span>
-          </button>
-        )}
-
-        {/* Native directory picker (desktop) */}
-        {!customPathOpen && typeof window !== "undefined" && !!window.piBridge && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              void handlePickDirectory();
-            }}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 7,
-              width: "100%",
-              padding: "8px 10px",
-              background: "none",
-              border: "none",
-              color: "var(--text-muted)",
-              cursor: "pointer",
-              textAlign: "left",
-              fontSize: 11,
-            }}
-          >
-            <svg
-              width="10"
-              height="10"
-              viewBox="0 0 10 10"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.1"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              style={{ flexShrink: 0 }}
-            >
-              <path d="M1 3A1 1 0 0 1 2 2H4L5 3.5H8.5a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-.5.5h-7A.5.5 0 0 1 1 8V3Z" />
-            </svg>
-            <span>{"Browse folder…"}</span>
           </button>
         )}
 

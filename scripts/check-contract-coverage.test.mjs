@@ -1,4 +1,3 @@
-import { existsSync } from "node:fs";
 import assert from "node:assert/strict";
 import path from "node:path";
 import test from "node:test";
@@ -6,7 +5,6 @@ import { fileURLToPath } from "node:url";
 import {
   assertContractCoverage,
   exactCoverageFailures,
-  extractBrowserDispatchMethods,
   extractInterfaceProperties,
   extractServerHandlers,
   extractStreamTopics,
@@ -54,34 +52,9 @@ test("stream coverage reports a contract topic with no real server emitter", () 
   assert.match(exactCoverageFailures("Streams topics", contract, emitted).join("\n"), /Missing.*missing\.topic/);
 });
 
-test("Browser dispatch extraction reads equality guards and switch cases only from the dispatch method", () => {
-  const source = `
-    class BrowserService {
-      unrelated(method) { if (method === "browser.fake") return; }
-      dispatchHostRequest(method) {
-        if (method === "browser.capabilities") return;
-        switch (method) {
-          case "browser.open": return;
-          default: return;
-        }
-      }
-    }
-  `;
-  assert.deepEqual(extractBrowserDispatchMethods("browser-service.ts", source), [
-    "browser.capabilities",
-    "browser.open",
-  ]);
+test("the repository contract has non-empty exact AST coverage", () => {
+  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+  const counts = assertContractCoverage(loadContractSources(root));
+  assert.ok(counts.apiMethods > 0);
+  assert.ok(counts.streamTopics > 0);
 });
-
-test(
-  "the repository contract has non-empty exact AST coverage",
-  { skip: !existsSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../src/preload/preload.ts")) },
-  () => {
-    const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-    const counts = assertContractCoverage(loadContractSources(root));
-    assert.ok(counts.apiMethods > 0);
-    assert.ok(counts.streamTopics > 0);
-    assert.ok(counts.bridgeMethods > 0);
-    assert.ok(counts.browserHostMethods > 0);
-  },
-);

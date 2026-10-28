@@ -42,7 +42,6 @@ export function AppShell({
   const [sessionKey, setSessionKey] = useState(0);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsInitialTab, setSettingsInitialTab] = useState<SettingsTab>("general");
-  const [settingsNavigationRequestId, setSettingsNavigationRequestId] = useState(0);
   const [modelsRefreshKey, setModelsRefreshKey] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileSidebarReady, setMobileSidebarReady] = useState(false);
@@ -82,63 +81,6 @@ export function AppShell({
   const [initialSessionRestored, setInitialSessionRestored] = useState<boolean>(() => !initialSessionId);
   // Suppresses sessionKey bump in handleCwdChange during the initial URL restore
   const suppressCwdBumpRef = useRef(false);
-
-  // Deep link + menu actions from Electron main
-  useEffect(() => {
-    const offDeep = window.piBridge?.onDeepLinkSession?.((sessionId) => {
-      void (async () => {
-        try {
-          const sessions = await sessionList.refresh();
-          const found = sessions.find((s) => s.id === sessionId);
-          if (found) {
-            setNewSessionCwd(null);
-            setSelectedSession(found as SessionInfo);
-            setSessionKey((k) => k + 1);
-            router.replace(`?session=${encodeURIComponent(sessionId)}`);
-          }
-        } catch (error) {
-          console.error("deep link open failed", error);
-        }
-      })();
-    });
-    const offNew = window.piBridge?.onMenu?.("new-session", () => {
-      if (activeCwd) {
-        setSelectedSession(null);
-        setNewSessionCwd(activeCwd);
-        setSessionKey((k) => k + 1);
-      }
-    });
-    const offSettings = window.piBridge?.onMenu?.("settings", () => {
-      setSettingsInitialTab("general");
-      setSettingsNavigationRequestId((id) => id + 1);
-      setSettingsOpen(true);
-    });
-    const offCheckForUpdates = window.piBridge?.onMenu?.("check-for-updates", () => {
-      setSettingsInitialTab("about");
-      setSettingsNavigationRequestId((id) => id + 1);
-      setSettingsOpen(true);
-      void window.piBridge.checkForUpdates().catch(() => undefined);
-    });
-    const offShowUpdate = window.piBridge?.onMenu?.("show-update", () => {
-      setSettingsInitialTab("about");
-      setSettingsNavigationRequestId((id) => id + 1);
-      setSettingsOpen(true);
-    });
-    // ISSUE-016: Switch Session palette — focus sidebar / open project list
-    const offSwitch = window.piBridge?.onMenu?.("switch-session", () => {
-      setSidebarOpen(true);
-      void sessionList.refresh().catch(() => {});
-      setWorktreesRefreshKey((k) => k + 1);
-    });
-    return () => {
-      offDeep?.();
-      offNew?.();
-      offSettings?.();
-      offCheckForUpdates?.();
-      offShowUpdate?.();
-      offSwitch?.();
-    };
-  }, [activeCwd, router, sessionList]);
 
   const handleCwdChange = useCallback(
     (cwd: string | null, projectRoot?: string | null) => {
@@ -707,7 +649,6 @@ export function AppShell({
           cwd={activeCwd ?? selectedSession?.cwd ?? newSessionCwd ?? null}
           sessionId={selectedSession?.id ?? null}
           initialTab={settingsInitialTab}
-          navigationRequestId={settingsNavigationRequestId}
           onClose={() => {
             setSettingsOpen(false);
             setSettingsInitialTab("general");

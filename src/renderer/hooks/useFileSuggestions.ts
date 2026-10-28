@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { fileIndex } from "@/lib/api-client";
+import { clientPlatform } from "@/lib/web-platform";
 import { LatestAbortableRequest } from "@/lib/latest-abortable-request";
 import type { AtQueryMatch, FileIndexEntry } from "@/lib/file-fuzzy";
 import {
@@ -37,7 +38,7 @@ export function useFileSuggestions(cwd: string | null | undefined, atQuery: AtQu
     const fetchCwd = cwd;
     const query = atQueryText;
     const tokenKey = atTokenKey;
-    const platform = window.piBridge?.platform ?? "linux";
+    const platform = clientPlatform;
     const cacheKey = fileSuggestionCacheKey(fetchCwd, query, platform);
     const cached = fileSuggestionCacheRef.current.get(cacheKey);
     if (cached) {

@@ -948,7 +948,6 @@ export function PluginsConfig({
               <div style={{ marginBottom: 14 }}>
                 <CapabilityRequired
                   issue={capabilityIssue}
-                  cwd={cwd}
                   onContinue={retryCapabilityOperation}
                   onCancel={() => {
                     setCapabilityIssue(null);

@@ -8,7 +8,7 @@ import { buildAtInsertText, extractAtQuery, type AtQueryMatch, type FileIndexEnt
 import { useFileSuggestions } from "@/hooks/useFileSuggestions";
 import { FolderIcon, getFileIcon } from "./FileIcons";
 import { useIsMobile } from "@/hooks/useIsMobile";
-import { localFilePathKey, splitLocalFileReferenceMarkdown } from "@/lib/file-url";
+import { splitLocalFileReferenceMarkdown } from "@/lib/file-url";
 
 export type { AttachedImage } from "@/hooks/useComposerDraft";
 
@@ -204,13 +204,12 @@ const ChatInputComponent = forwardRef<ChatInputHandle, Props>(function ChatInput
   const slashItemRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const atItemRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const resetAtQuery = useCallback(() => setAtQuery(null), []);
-  const draft = useComposerDraft({ draftKey, draftPromotionFrom, cwd, onReplace: resetAtQuery });
+  const draft = useComposerDraft({ draftKey, draftPromotionFrom, onReplace: resetAtQuery });
   const {
     value,
     setValue,
     attachedImages,
     attachedFiles,
-    fileInspectionByPath,
     imageAttachNotice,
     setImageAttachNotice,
     submissionNotice,
@@ -944,29 +943,7 @@ const ChatInputComponent = forwardRef<ChatInputHandle, Props>(function ChatInput
               {attachedFiles.map((file, i) => (
                 <div
                   key={`${file.path}-${i}`}
-                  title={`${file.path}${
-                    fileInspectionByPath.get(localFilePathKey(file.path))?.insideCwd === false
-                      ? ` — ${"Outside project"}`
-                      : ""
-                  }`}
-                  onClick={() => void window.piBridge?.showItemInFolder?.(file.path)}
-                  onContextMenu={(event) => {
-                    event.preventDefault();
-                    const request = window.piBridge.showFileContextMenu({
-                      href: file.path,
-                      cwd: cwd ?? undefined,
-                      source: "local-file-reference",
-                    });
-                    void request
-                      .then((result) => {
-                        if (!result.shown) {
-                          setSubmissionNotice("The file menu could not be opened.");
-                        }
-                      })
-                      .catch(() => {
-                        setSubmissionNotice("The file menu could not be opened.");
-                      });
-                  }}
+                  title={file.path}
                   style={{
                     display: "inline-flex",
                     alignItems: "center",
@@ -974,13 +951,8 @@ const ChatInputComponent = forwardRef<ChatInputHandle, Props>(function ChatInput
                     maxWidth: 260,
                     padding: "4px 6px 4px 8px",
                     borderRadius: 6,
-                    border: `1px solid ${
-                      fileInspectionByPath.get(localFilePathKey(file.path))?.exists === false
-                        ? "var(--danger)"
-                        : "var(--border)"
-                    }`,
+                    border: "1px solid var(--border)",
                     background: "var(--bg-panel)",
-                    cursor: "pointer",
                     fontSize: scaledChatFont(12),
                   }}
                 >
@@ -1001,11 +973,6 @@ const ChatInputComponent = forwardRef<ChatInputHandle, Props>(function ChatInput
                   <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {file.name}
                   </span>
-                  {fileInspectionByPath.get(localFilePathKey(file.path))?.insideCwd === false && (
-                    <span style={{ color: "var(--warning)", fontSize: scaledChatFont(10), whiteSpace: "nowrap" }}>
-                      {"Outside project"}
-                    </span>
-                  )}
                   <button
                     onClick={(event) => {
                       event.stopPropagation();

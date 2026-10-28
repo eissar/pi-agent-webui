@@ -40,7 +40,6 @@ function startSystemThemeFollow(): void {
     if (stored === "light" || stored === "dark") return;
     const dark = systemPrefersDark();
     applyDocumentTheme(dark ? "dark" : "light");
-    void window.piBridge?.setThemeSource?.("system");
   };
   applySystem();
   window.matchMedia?.("(prefers-color-scheme: dark)")?.addEventListener?.("change", applySystem);
@@ -63,7 +62,6 @@ export function useTheme() {
       } catch {
         // ignore storage errors (private mode, quota, etc.)
       }
-      void window.piBridge?.setThemeSource?.(next);
     };
 
     const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;

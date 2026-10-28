@@ -422,7 +422,6 @@ function AddSkillPanel({ cwd, onInstalled }: { cwd: string; onInstalled: () => v
         {capabilityIssue && pendingInstallPackage && (
           <CapabilityRequired
             issue={capabilityIssue}
-            cwd={cwd}
             onContinue={() => install(pendingInstallPackage)}
             onCancel={() => {
               setCapabilityIssue(null);

@@ -1,6 +1,6 @@
 /**
- * Transport facade — all renderer → Host communication goes through here.
- * Components call these helpers; they never touch MessagePort directly.
+ * Transport facade — all renderer → backend communication goes through here.
+ * Components call these helpers; they never touch the WebSocket directly.
  */
 import { createRpcClient, type PiRpc } from "@contract/rpc";
 import type { ApiMethod, ApiParams, ApiResult, StreamTopic, Streams } from "@contract/api";
@@ -10,18 +10,6 @@ import { createWebSocketPort, getStoredToken, resolveRpcUrl } from "./ws-transpo
 let rpc: PiRpc | null = null;
 let connectPromise: Promise<PiRpc> | null = null;
 
-/** Drop RPC client so the next ensureRpc() re-connects (Host crash recovery). */
-export function resetRpc(): void {
-  try {
-    rpc?.close();
-  } catch {
-    /* ignore */
-  }
-  rpc = null;
-  connectPromise = null;
-}
-
-const HOST_READY_TIMEOUT_MS = 30_000;
 const PORT_TIMEOUT_MS = 15_000;
 const PING_TIMEOUT_MS = 10_000;
 
@@ -41,8 +29,6 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
   });
 }
 
-/** Receive Host MessagePort transferred from preload via window.postMessage. */
-
 /** Standalone browser mode: connect to the Node backend over WebSocket. */
 async function connectOverWebSocket(): Promise<PiRpc> {
   const { port, opened } = createWebSocketPort(resolveRpcUrl(), getStoredToken());
@@ -53,96 +39,11 @@ async function connectOverWebSocket(): Promise<PiRpc> {
   return client;
 }
 
-function requestHostPort(): Promise<MessagePort> {
-  return new Promise((resolve, reject) => {
-    if (!window.piBridge) {
-      reject(new Error("piBridge not available — not running inside Electron?"));
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      window.removeEventListener("message", onMessage);
-      reject(new Error("Timed out waiting for host MessagePort"));
-    }, PORT_TIMEOUT_MS);
-
-    const onMessage = (event: MessageEvent) => {
-      // Only accept messages from our own window (preload → page)
-      if (event.source !== window) return;
-      const data = event.data as { channel?: string } | string | null;
-      const isPortMsg =
-        data === "pi-desktop-host-port" || (typeof data === "object" && data?.channel === "pi-desktop-host-port");
-      if (!isPortMsg) return;
-      const port = event.ports[0];
-      if (!port) return;
-      clearTimeout(timer);
-      window.removeEventListener("message", onMessage);
-      resolve(port);
-    };
-
-    window.addEventListener("message", onMessage);
-    window.piBridge.requestHostPort();
-  });
-}
-
-async function waitForHostReady(): Promise<void> {
-  if (!window.piBridge) {
-    throw new Error("piBridge not available — not running inside Electron?");
-  }
-  let status = await window.piBridge.getHostStatus();
-  if (status === "ready") return;
-  if (status === "crashed") {
-    throw new Error("Agent Host crashed before UI connected");
-  }
-
-  await new Promise<void>((resolve, reject) => {
-    const timer = setTimeout(() => {
-      off();
-      reject(new Error(`Agent Host not ready (status=${status})`));
-    }, HOST_READY_TIMEOUT_MS);
-
-    const off = window.piBridge!.onHostStatus((s) => {
-      status = s.status;
-      if (s.status === "ready") {
-        clearTimeout(timer);
-        off();
-        resolve();
-      } else if (s.status === "crashed") {
-        clearTimeout(timer);
-        off();
-        reject(new Error(s.detail || "Agent Host crashed"));
-      }
-    });
-
-    // Race: status may flip ready between getHostStatus and subscribe
-    void window.piBridge!.getHostStatus().then((s) => {
-      if (s === "ready") {
-        clearTimeout(timer);
-        off();
-        resolve();
-      } else if (s === "crashed") {
-        clearTimeout(timer);
-        off();
-        reject(new Error("Agent Host crashed"));
-      }
-    });
-  });
-}
-
 export async function ensureRpc(): Promise<PiRpc> {
   if (rpc) return rpc;
   if (connectPromise) return connectPromise;
 
-  connectPromise = (async () => {
-    if (!window.piBridge?.isDesktop) {
-      return connectOverWebSocket();
-    }
-    await waitForHostReady();
-    const port = await requestHostPort();
-    const client = createRpcClient(port);
-    await withTimeout(client.call("host.ping"), PING_TIMEOUT_MS, "host.ping failed");
-    rpc = client;
-    return client;
-  })();
+  connectPromise = connectOverWebSocket();
 
   try {
     return await connectPromise;

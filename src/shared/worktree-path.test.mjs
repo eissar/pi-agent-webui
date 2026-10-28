@@ -23,17 +23,14 @@ test("Windows worktree paths compare independent of slash, drive case, path case
   assert.equal(normalizeWorktreePathForComparison("C:\\", "win32"), "c:/");
 });
 
-test("comparison helpers work without a process global, as in the sandboxed renderer", async () => {
-  // The renderer main world is sandboxed: no `process`, and the platform
-  // arrives via piBridge from the preload. Simulate that environment in a
-  // child Node process — the parent test runner cannot drop its own process.
+test("comparison helpers work without a process global, as in the browser", async () => {
+  // Browsers have no `process` global. Simulate that in a child Node process —
+  // the parent test runner cannot drop its own process.
   const moduleUrl = new URL("./worktree-path.ts", import.meta.url).href;
   const source = `
     delete globalThis.process;
-    globalThis.piBridge = { platform: "win32" };
     const { worktreePathsEqual } = await import(${JSON.stringify(moduleUrl)});
-    if (!worktreePathsEqual("C:/Repo", "c:/repo")) throw new Error("piBridge platform not honored");
-    delete globalThis.piBridge;
+    if (!worktreePathsEqual("C:/Repo", "c:/repo", "win32")) throw new Error("explicit platform not honored");
     if (worktreePathsEqual("C:/Repo", "c:/repo")) throw new Error("expected case-sensitive fallback");
   `;
   await execFileAsync(

@@ -3,12 +3,6 @@ import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import "./globals.css";
 import { ensureRpc } from "./lib/api-client";
-import { installBrowserBridge } from "./lib/browser-bridge";
-
-// In a plain browser there is no Electron preload; install the browser-mode
-// bridge shim (localStorage-backed UI state, desktop-only features disabled)
-// before anything touches window.piBridge.
-installBrowserBridge();
 
 // Boot RPC early so the first UI interactions are ready
 void ensureRpc().catch((err) => {

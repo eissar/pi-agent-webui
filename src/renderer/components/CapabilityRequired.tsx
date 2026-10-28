@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { ToolCapabilityId, ToolchainActionRequest } from "@shared/toolchains/types";
+import type { ToolCapabilityId } from "@shared/toolchains/types";
 import { isToolCapabilityId } from "@shared/toolchains/types";
 
 export interface CapabilityIssue {
@@ -27,59 +27,22 @@ export function parseCapabilityIssue(value: unknown): CapabilityIssue | null {
 
 export function CapabilityRequired({
   issue,
-  cwd,
   onContinue,
   onCancel,
 }: {
   issue: CapabilityIssue;
-  cwd: string;
   onContinue: () => void | Promise<void>;
   onCancel: () => void;
 }) {
-  const [pending, setPending] = useState<"install" | "rescan" | "choose" | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const installAction = installActionForIssue(issue);
+  const [pending, setPending] = useState(false);
   const label = capabilityLabel(issue.capability);
 
-  const installAndContinue = async (): Promise<void> => {
-    if (!installAction) return;
-    setPending("install");
-    setError(null);
+  const retry = async (): Promise<void> => {
+    setPending(true);
     try {
-      await window.piBridge.performToolchainAction(installAction);
       await onContinue();
-    } catch (caught) {
-      if (String(caught).includes("TOOLCHAIN_CANCELLED")) return;
-      setError("The required tools could not be installed. Nothing was added to system PATH.");
     } finally {
-      setPending(null);
-    }
-  };
-
-  const rescan = async (): Promise<void> => {
-    setPending("rescan");
-    setError(null);
-    try {
-      await window.piBridge.rescanToolchains(cwd);
-    } catch {
-      setError("Tool rescan failed. Existing selections were not changed.");
-    } finally {
-      setPending(null);
-    }
-  };
-
-  const chooseExisting = async (): Promise<void> => {
-    if (!issue.capability) return;
-    setPending("choose");
-    setError(null);
-    try {
-      await window.piBridge.performToolchainAction({ action: "choose-custom-tool", capability: issue.capability });
-      onCancel();
-    } catch (caught) {
-      if (String(caught).includes("TOOLCHAIN_CANCELLED")) return;
-      setError("The selected executable did not provide the required healthy tool.");
-    } finally {
-      setPending(null);
+      setPending(false);
     }
   };
 
@@ -98,24 +61,13 @@ export function CapabilityRequired({
         {"{tool} is required for this operation.".replace("{tool}", label)}
       </div>
       <p style={{ margin: "5px 0 10px", fontSize: 11, lineHeight: 1.55, color: "var(--text-muted)" }}>
-        {"No verified tool satisfying this operation was found. Pi Desktop will not download one in the background."}
+        {issue.message ?? "No usable tool was found on the server."} {"Install it on the server, then retry."}
       </p>
-      {error && <p style={{ margin: "0 0 9px", fontSize: 11, color: "#f87171" }}>{error}</p>}
       <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
-        {installAction && (
-          <PromptButton primary disabled={pending !== null} onClick={() => void installAndContinue()}>
-            {pending === "install" ? "Installing…" : "Install and continue"}
-          </PromptButton>
-        )}
-        <PromptButton disabled={pending !== null} onClick={() => void rescan()}>
-          {pending === "rescan" ? "Scanning…" : "Rescan"}
+        <PromptButton primary disabled={pending} onClick={() => void retry()}>
+          {pending ? "Retrying…" : "Retry"}
         </PromptButton>
-        {issue.capability && (
-          <PromptButton disabled={pending !== null} onClick={() => void chooseExisting()}>
-            {pending === "choose" ? "Checking…" : "Choose existing…"}
-          </PromptButton>
-        )}
-        <PromptButton disabled={pending !== null} onClick={onCancel}>
+        <PromptButton disabled={pending} onClick={onCancel}>
           {"Cancel"}
         </PromptButton>
       </div>
@@ -166,20 +118,6 @@ function capabilityFromCode(code: string): ToolCapabilityId | undefined {
     TOOLCHAIN_BASH_REQUIRED: "shell.bash",
   };
   return values[code];
-}
-
-export function installActionForIssue(
-  issue: CapabilityIssue,
-): Extract<ToolchainActionRequest, { action: "install-profile" | "install-component" }> | undefined {
-  if (issue.capability === "js.bun") return { action: "install-component", componentId: "bun" };
-  if (["js.node", "js.npm", "js.npx"].includes(issue.capability ?? "")) {
-    return { action: "install-profile", profileId: "javascript-essentials" };
-  }
-  if (issue.capability?.startsWith("python.")) {
-    return { action: "install-profile", profileId: "python-essentials" };
-  }
-  if (issue.capability === "data.jq") return { action: "install-profile", profileId: "cli-essentials" };
-  return undefined;
 }
 
 function capabilityLabel(capability: ToolCapabilityId | undefined): string {

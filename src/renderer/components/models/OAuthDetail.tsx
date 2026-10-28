@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { SectionTitle } from "../form-controls";
 import { call, subscribeAuthLogin } from "@/lib/api-client";
+import { openExternal } from "@/lib/web-platform";
 import type { ProviderStatus as OAuthProvider, LoginProgressEvent } from "@contract/types";
 import { type ModelSelectionControl, ManagedModelsControl } from "./ManagedModelsControl";
 
@@ -105,13 +106,7 @@ export function OAuthDetail({
         if (data.type === "auth") {
           acceptChallenge(data.token);
           setLoginState({ phase: "auth", url: data.url, instructions: data.instructions ?? null, token: data.token });
-          // Single open path (ISSUE-008): prefer desktop openExternal
-          if (data.url) {
-            void (
-              window.piBridge?.openExternal(data.url) ??
-              Promise.resolve(window.open(data.url, "_blank", "noopener,noreferrer"))
-            );
-          }
+          if (data.url) openExternal(data.url);
         } else if (data.type === "device_code") {
           setLoginState({
             phase: "device_code",
@@ -120,12 +115,7 @@ export function OAuthDetail({
             intervalSeconds: data.intervalSeconds ?? null,
             expiresInSeconds: data.expiresInSeconds ?? null,
           });
-          if (data.verificationUri) {
-            void (
-              window.piBridge?.openExternal(data.verificationUri) ??
-              Promise.resolve(window.open(data.verificationUri, "_blank", "noopener,noreferrer"))
-            );
-          }
+          if (data.verificationUri) openExternal(data.verificationUri);
         } else if (data.type === "prompt_request") {
           acceptChallenge(data.token);
           setLoginState({

@@ -2,14 +2,11 @@
 // Keep this module free of Node.js dependencies — the renderer bundles it.
 import { normalizeSlashes } from "./allowed-roots.ts";
 
-// The sandboxed renderer main world has no `process` global (accessing it
-// throws), so the platform must come from piBridge, which the preload
-// exposes, when running there. Without either source, "" keeps comparison
-// case-sensitive instead of crashing.
+// Browsers have no `process` global. There we fall back to "" (case-sensitive
+// comparison); callers that know the server platform should pass it explicitly.
 function detectComparisonPlatform(): NodeJS.Platform | "" {
   if (typeof process !== "undefined" && process.platform) return process.platform;
-  const bridge = (globalThis as { piBridge?: { platform?: NodeJS.Platform } }).piBridge;
-  return bridge?.platform ?? "";
+  return "";
 }
 
 export function normalizeWorktreePathForComparison(

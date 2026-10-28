@@ -4,16 +4,15 @@ import { useIsMobile } from "@/hooks/useIsMobile";
 import { ModelsConfig } from "./ModelsConfig";
 import { SkillsConfig, type SkillsConfigHandle } from "./SkillsConfig";
 import { PluginsConfig } from "./PluginsConfig";
-import { ToolchainsConfig } from "./ToolchainsConfig";
 import type { ChatAppearancePreferences, ChatAssistantWidth, ChatFontSize, ChatLayout } from "@shared/chat-appearance";
 import { APP_WEBSITE_URL } from "@shared/app-links";
-import type { DesktopUpdateState } from "../../contract/desktop";
+import { openExternal } from "@/lib/web-platform";
 import { APP_AUTHOR, APP_DISPLAY_NAME, APP_GITHUB_URL, APP_VERSION, PI_VERSION } from "@/lib/app-version";
 import appIconUrl from "../../../build/icon.png";
 import { isAutoSessionTitleEnabled, setAutoSessionTitleEnabled } from "../lib/auto-session-title";
 import { getCacheWarmingStatus, setCacheWarmingMode } from "../lib/api-client";
 
-export type SettingsTab = "general" | "models" | "tools" | "skills" | "plugins" | "about";
+export type SettingsTab = "general" | "models" | "skills" | "plugins" | "about";
 
 interface SettingsConfigProps {
   cwd: string | null;
@@ -85,7 +84,6 @@ export function SettingsConfig({
     { id: "models", label: "Models" },
     { id: "skills", label: "Skills" },
     { id: "plugins", label: "Plugins" },
-    { id: "tools", label: "Developer Tools" },
     { id: "about", label: "About" },
   ];
 
@@ -289,7 +287,6 @@ export function SettingsConfig({
             {activeTab === "models" && (
               <ModelsConfig embedded cwd={cwd} onClose={() => undefined} onChanged={onModelsChanged} />
             )}
-            {activeTab === "tools" && <ToolchainsConfig cwd={cwd} />}
             {activeTab === "skills" &&
               (cwd ? (
                 <SkillsConfig ref={skillsConfigRef} embedded cwd={cwd} onClose={() => undefined} />
@@ -308,7 +305,7 @@ export function SettingsConfig({
               ) : (
                 <ProjectRequired />
               ))}
-            {activeTab === "about" && <AboutSettings onClose={onClose} />}
+            {activeTab === "about" && <AboutSettings />}
           </div>
         </div>
       </div>
@@ -316,7 +313,7 @@ export function SettingsConfig({
   );
 }
 
-function AboutSettings({ onClose }: { onClose: () => void }) {
+function AboutSettings() {
   return (
     <div
       style={{
@@ -374,7 +371,7 @@ function AboutSettings({ onClose }: { onClose: () => void }) {
                 <button
                   type="button"
                   title={"Open official website"}
-                  onClick={() => void window.piBridge.openExternal(APP_WEBSITE_URL)}
+                  onClick={() => openExternal(APP_WEBSITE_URL)}
                   style={{
                     maxWidth: "100%",
                     padding: 0,
@@ -398,7 +395,7 @@ function AboutSettings({ onClose }: { onClose: () => void }) {
                 <button
                   type="button"
                   title={"Open GitHub repository"}
-                  onClick={() => void window.piBridge.openExternal(APP_GITHUB_URL)}
+                  onClick={() => openExternal(APP_GITHUB_URL)}
                   style={{
                     maxWidth: "100%",
                     padding: 0,
@@ -419,459 +416,10 @@ function AboutSettings({ onClose }: { onClose: () => void }) {
             />
           </div>
         </section>
-
-        <SoftwareUpdate onClose={onClose} />
       </div>
     </div>
   );
 }
-
-type UpdateAction = "status" | "check" | "download" | "install" | "automatic" | "logs";
-
-function SoftwareUpdate({ onClose }: { onClose: () => void }) {
-  const [state, setState] = useState<DesktopUpdateState | null>(null);
-  const [pendingAction, setPendingAction] = useState<UpdateAction | null>(null);
-  const [actionFailed, setActionFailed] = useState(false);
-  const headingId = useId();
-  const automaticChecksControlId = useId();
-  const automaticChecksDescriptionId = useId();
-
-  useEffect(() => {
-    let disposed = false;
-    let receivedStateEvent = false;
-    const unsubscribe = window.piBridge.onUpdateState((nextState) => {
-      if (disposed) return;
-      receivedStateEvent = true;
-      setState(nextState);
-      setActionFailed(false);
-    });
-
-    void window.piBridge
-      .getUpdateState()
-      .then((nextState) => {
-        if (!disposed && !receivedStateEvent) setState(nextState);
-      })
-      .catch(() => {
-        if (!disposed && !receivedStateEvent) setActionFailed(true);
-      });
-
-    return () => {
-      disposed = true;
-      unsubscribe();
-    };
-  }, []);
-
-  const performAction = async (action: UpdateAction, operation: () => Promise<unknown>): Promise<void> => {
-    setPendingAction(action);
-    setActionFailed(false);
-    try {
-      await operation();
-    } catch {
-      setActionFailed(true);
-    } finally {
-      setPendingAction(null);
-    }
-  };
-
-  const phase = state?.phase;
-  const isBusy = pendingAction !== null;
-  const statusTitle = getUpdateStatusTitle(state);
-
-  return (
-    <section aria-labelledby={headingId} style={{ marginTop: 28 }}>
-      <h2 id={headingId} style={{ margin: "0 0 6px", fontSize: 14, color: "var(--text)" }}>
-        {"Software update"}
-      </h2>
-      <p style={{ margin: "0 0 12px", fontSize: 12, lineHeight: 1.6, color: "var(--text-dim)" }}>
-        {"Check stable releases and choose when a downloaded update is installed."}
-      </p>
-
-      <div
-        style={{
-          border: "1px solid var(--border)",
-          borderRadius: 8,
-          background: "var(--bg-panel)",
-          overflow: "hidden",
-        }}
-      >
-        <div style={{ padding: 16 }}>
-          <div
-            role="status"
-            aria-live="polite"
-            aria-atomic="true"
-            style={{ display: "flex", alignItems: "flex-start", gap: 10 }}
-          >
-            <span
-              aria-hidden="true"
-              style={{
-                width: 8,
-                height: 8,
-                marginTop: 5,
-                borderRadius: "50%",
-                flexShrink: 0,
-                background: updateStatusColor(phase),
-              }}
-            />
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 650, color: "var(--text)" }}>{statusTitle}</div>
-              {state && (
-                <div style={{ marginTop: 3, fontSize: 11, color: "var(--text-dim)" }}>
-                  {"Current version"}: {displayVersion(state.currentVersion)}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {state?.checkedAt && (phase === "up-to-date" || phase === "idle") && (
-            <p style={updateDetailStyle}>
-              {"Last checked"}: {formatUpdateDate(state.checkedAt)}
-            </p>
-          )}
-
-          {phase === "disabled" && (
-            <p style={updateDetailStyle}>
-              {"Software updates are available only in installed production builds on supported platforms."}
-            </p>
-          )}
-
-          {state && (phase === "available" || phase === "downloading" || phase === "downloaded") && (
-            <UpdateReleaseDetails state={state} />
-          )}
-
-          {state && phase === "downloading" && <UpdateDownloadProgress state={state} />}
-
-          {state && phase === "downloaded" && (
-            <p style={updateDetailStyle}>
-              {state.installBlockedByActiveSessions
-                ? "Active Agent tasks must finish before restart. Choose Later to install when you next fully quit."
-                : "Restart now, or choose Later to install when you next fully quit the app."}
-            </p>
-          )}
-
-          {state?.phase === "error" && state.error && (
-            <div role="alert" aria-atomic="true" style={{ marginTop: 12 }}>
-              <p style={{ margin: 0, fontSize: 12, lineHeight: 1.55, color: "#f87171" }}>
-                {getUpdateErrorMessage(state.error)}
-              </p>
-              <code style={{ display: "block", marginTop: 5, fontSize: 10, color: "var(--text-dim)" }}>
-                {state.error.code}
-              </code>
-            </div>
-          )}
-
-          {actionFailed && (
-            <p role="alert" style={{ margin: "12px 0 0", fontSize: 12, lineHeight: 1.55, color: "#f87171" }}>
-              {"The update action could not be completed. Try again or open the logs."}
-            </p>
-          )}
-
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 16 }}>
-            {(phase === "idle" || phase === "up-to-date") && (
-              <UpdateButton
-                primary
-                disabled={isBusy}
-                busy={pendingAction === "check"}
-                label={"Check for updates"}
-                onClick={() => void performAction("check", () => window.piBridge.checkForUpdates())}
-              />
-            )}
-            {phase === "checking" && (
-              <UpdateButton primary disabled busy label={"Checking for updates…"} onClick={() => undefined} />
-            )}
-            {phase === "available" && (
-              <UpdateButton
-                primary
-                disabled={isBusy}
-                busy={pendingAction === "download"}
-                label={"Download update"}
-                onClick={() => void performAction("download", () => window.piBridge.downloadUpdate())}
-              />
-            )}
-            {state && phase === "downloaded" && (
-              <>
-                <UpdateButton
-                  primary
-                  disabled={isBusy || state.installBlockedByActiveSessions}
-                  busy={pendingAction === "install"}
-                  label={"Restart and install"}
-                  onClick={() => void performAction("install", () => window.piBridge.installUpdate())}
-                />
-                <UpdateButton disabled={isBusy} label={"Later"} onClick={onClose} />
-              </>
-            )}
-            {state?.phase === "error" && state.canRetry && (
-              <UpdateButton
-                primary
-                disabled={isBusy}
-                busy={pendingAction === "check"}
-                label={"Retry"}
-                onClick={() => void performAction("check", () => window.piBridge.checkForUpdates())}
-              />
-            )}
-            {!state && actionFailed && (
-              <UpdateButton
-                primary
-                disabled={isBusy}
-                busy={pendingAction === "status"}
-                label={"Retry"}
-                onClick={() =>
-                  void performAction("status", async () => {
-                    setState(await window.piBridge.getUpdateState());
-                  })
-                }
-              />
-            )}
-            {(phase === "error" || actionFailed) && (
-              <UpdateButton
-                disabled={isBusy}
-                busy={pendingAction === "logs"}
-                label={"Open logs"}
-                onClick={() => void performAction("logs", () => window.piBridge.openLogs())}
-              />
-            )}
-          </div>
-        </div>
-
-        <div
-          style={{
-            minHeight: 56,
-            padding: "10px 14px",
-            borderTop: "1px solid var(--border)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 16,
-          }}
-        >
-          <div>
-            <label htmlFor={automaticChecksControlId} style={{ fontSize: 12, color: "var(--text)" }}>
-              {"Automatically check for updates"}
-            </label>
-            <div
-              id={automaticChecksDescriptionId}
-              style={{ marginTop: 3, fontSize: 10, lineHeight: 1.45, color: "var(--text-dim)" }}
-            >
-              {"Checks periodically without downloading updates automatically."}
-            </div>
-          </div>
-          <input
-            id={automaticChecksControlId}
-            type="checkbox"
-            aria-describedby={automaticChecksDescriptionId}
-            checked={state?.automaticChecksEnabled ?? false}
-            disabled={!state || phase === "disabled" || isBusy}
-            onChange={(event) => {
-              const enabled = event.target.checked;
-              void performAction("automatic", async () => {
-                const nextState = await window.piBridge.setAutomaticUpdateChecks(enabled);
-                setState(nextState);
-              });
-            }}
-            style={{ width: 18, height: 18, margin: 0, accentColor: "var(--accent)", cursor: "pointer" }}
-          />
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function UpdateReleaseDetails({ state }: { state: DesktopUpdateState }) {
-  return (
-    <div style={{ marginTop: 12, fontSize: 12, lineHeight: 1.55, color: "var(--text-muted)" }}>
-      {state.availableVersion && (
-        <div>
-          {"Available version"}: {displayVersion(state.availableVersion)}
-        </div>
-      )}
-      {state.releaseName && <div>{state.releaseName}</div>}
-      {state.releaseDate && (
-        <div>
-          {"Released"}: {formatUpdateDate(state.releaseDate)}
-        </div>
-      )}
-      {state.releaseNotes && (
-        <div style={{ marginTop: 10 }}>
-          <div style={{ marginBottom: 5, fontWeight: 650, color: "var(--text)" }}>{"Release notes"}</div>
-          <pre
-            tabIndex={0}
-            aria-label={"Release notes"}
-            style={{
-              margin: 0,
-              maxHeight: 180,
-              overflowY: "auto",
-              padding: 10,
-              border: "1px solid var(--border)",
-              borderRadius: 6,
-              background: "var(--bg)",
-              color: "var(--text-muted)",
-              fontFamily: "inherit",
-              fontSize: 11,
-              lineHeight: 1.55,
-              whiteSpace: "pre-wrap",
-              overflowWrap: "anywhere",
-            }}
-          >
-            {state.releaseNotes}
-          </pre>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function UpdateDownloadProgress({ state }: { state: DesktopUpdateState }) {
-  const percent = Number.isFinite(state.percent) ? Math.max(0, Math.min(100, state.percent ?? 0)) : 0;
-  const progressText = `${percent.toFixed(1)}%`;
-  return (
-    <div style={{ marginTop: 14 }}>
-      <progress
-        max={100}
-        value={percent}
-        aria-label={"Update download progress"}
-        aria-valuetext={progressText}
-        style={{ width: "100%", height: 8, accentColor: "var(--accent)" }}
-      />
-      <div
-        style={{
-          marginTop: 5,
-          display: "flex",
-          flexWrap: "wrap",
-          justifyContent: "space-between",
-          gap: 8,
-          fontSize: 10,
-          color: "var(--text-dim)",
-        }}
-      >
-        <span>{progressText}</span>
-        <span>
-          {state.transferred !== undefined && state.total !== undefined
-            ? `${formatBytes(state.transferred)} / ${formatBytes(state.total)}`
-            : "Calculating size…"}
-          {state.bytesPerSecond !== undefined && state.bytesPerSecond > 0
-            ? ` · ${formatBytes(state.bytesPerSecond)}/${"s"}`
-            : ""}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function UpdateButton({
-  label,
-  onClick,
-  primary = false,
-  disabled = false,
-  busy = false,
-}: {
-  label: string;
-  onClick: () => void;
-  primary?: boolean;
-  disabled?: boolean;
-  busy?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      aria-busy={busy || undefined}
-      disabled={disabled}
-      onClick={onClick}
-      style={{
-        minHeight: 34,
-        padding: "7px 12px",
-        border: `1px solid ${primary ? "var(--accent)" : "var(--border)"}`,
-        borderRadius: 6,
-        background: primary ? "var(--accent)" : "var(--bg)",
-        color: primary ? "white" : "var(--text)",
-        fontSize: 12,
-        fontWeight: 600,
-        cursor: disabled ? "not-allowed" : "pointer",
-        opacity: disabled ? 0.6 : 1,
-      }}
-    >
-      {label}
-    </button>
-  );
-}
-
-function getUpdateStatusTitle(state: DesktopUpdateState | null): string {
-  if (!state) return "Loading update status…";
-  switch (state.phase) {
-    case "disabled":
-      return "Updates are unavailable in this build";
-    case "idle":
-      return "Ready to check for updates";
-    case "checking":
-      return "Checking for updates…";
-    case "up-to-date":
-      return "You are using the latest version";
-    case "available":
-      return "An update is available";
-    case "downloading":
-      return "Downloading update…";
-    case "downloaded":
-      return "Update ready to install";
-    case "installing":
-      return "Restarting to install the update…";
-    case "error":
-      return "Update failed";
-  }
-}
-
-function getUpdateErrorMessage(error: NonNullable<DesktopUpdateState["error"]>): string {
-  switch (error.code) {
-    case "UPDATE_OFFLINE":
-      return "Unable to reach the update service. Check your network and try again.";
-    case "UPDATE_NOT_PUBLISHED":
-      return "The update is not available yet and may still be under release review.";
-    case "UPDATE_METADATA_INVALID":
-      return "The update information is invalid or incomplete. This version was not changed.";
-    case "UPDATE_SIGNATURE_INVALID":
-      return "Update signature verification failed. Installation was stopped.";
-    case "UPDATE_DOWNLOAD_FAILED":
-      return "The download failed. You can continue using this version and try again.";
-    case "UPDATE_BUSY":
-      return "Another update task is already in progress.";
-    case "UPDATE_INVALID_STATE":
-      return "This update action is not available in the current state.";
-    case "UPDATE_UNSUPPORTED":
-      return "This build or platform does not support automatic updates.";
-    case "UPDATE_UNKNOWN":
-      return "An unexpected update error occurred. This version was not changed.";
-  }
-}
-
-function updateStatusColor(phase: DesktopUpdateState["phase"] | undefined): string {
-  if (phase === "error") return "#f87171";
-  if (phase === "available" || phase === "downloaded") return "var(--accent)";
-  if (phase === "up-to-date") return "#4ade80";
-  return "var(--text-dim)";
-}
-
-function displayVersion(version: string): string {
-  return version.startsWith("v") ? version : `v${version}`;
-}
-
-function formatUpdateDate(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(date);
-}
-
-function formatBytes(value: number): string {
-  if (!Number.isFinite(value) || value <= 0) return "0 B";
-  const units = ["B", "KB", "MB", "GB"];
-  const unitIndex = Math.max(0, Math.min(Math.floor(Math.log(value) / Math.log(1024)), units.length - 1));
-  const amount = value / 1024 ** unitIndex;
-  return `${new Intl.NumberFormat(undefined, { maximumFractionDigits: unitIndex === 0 ? 0 : 1 }).format(amount)} ${units[unitIndex]}`;
-}
-
-const updateDetailStyle: React.CSSProperties = {
-  margin: "12px 0 0",
-  fontSize: 12,
-  lineHeight: 1.55,
-  color: "var(--text-muted)",
-};
 
 function AboutRow({ label, value, last = false }: { label: string; value: React.ReactNode; last?: boolean }) {
   return (
