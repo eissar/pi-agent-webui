@@ -18,8 +18,6 @@ type Binding = {
 /** One registry owns subscriptions for one Host RPC server lifetime. */
 export function createSessionEventBindings(
   server: Pick<RpcServer, "emit">,
-  // Plain Node: no Electron parent process to notify on agent end.
-  notifyEnd: (sessionId: string) => void = () => {},
   batchOptions: SessionEventBatchOptions = {},
 ) {
   const byId = new Map<string, Binding>(),
@@ -58,7 +56,6 @@ export function createSessionEventBindings(
         const batcher = new SessionEventBatcher((event) => {
           if (!binding.active || byId.get(id) !== binding) return;
           server.emit("agent.events", id, event as never);
-          if (event.type === "agent_end") notifyEnd(id);
         }, batchOptions);
         binding.discardPending = () => batcher.dispose();
         const eventOff = source.onEvent((event) => batcher.push(event));

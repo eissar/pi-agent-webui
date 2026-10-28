@@ -3,22 +3,15 @@ export interface ChatDraftImage {
   mimeType: string;
 }
 
-export interface ChatDraftFile {
-  name: string;
-  path: string;
-}
-
 export interface ChatDraft {
   value: string;
   images: ChatDraftImage[];
-  files?: ChatDraftFile[];
 }
 
 interface PersistedChatDraftV2 {
   schemaVersion: typeof CHAT_DRAFT_SCHEMA_VERSION;
   value: string;
   images: ChatDraftImage[];
-  files: ChatDraftFile[];
   updatedAt: number;
 }
 
@@ -26,13 +19,10 @@ const drafts = new Map<string, ChatDraft | null>();
 const LS_PREFIX = "pi-desktop-draft:";
 export const CHAT_DRAFT_SCHEMA_VERSION = 2;
 export const MAX_PERSISTED_DRAFT_IMAGES = 4;
-export const MAX_PERSISTED_DRAFT_FILES = 8;
-// Decoded image bytes stored in localStorage. Electron's quota is typically ~10MB;
+// Decoded image bytes stored in localStorage. Browser localStorage quota is typically ~5-10MB;
 // 4MB decoded (~5.3MB JSON) leaves headroom for text drafts and other keys.
 // Attachments are compressed first so typical retina / screenshot-tool PNGs fit.
 export const MAX_PERSISTED_DRAFT_IMAGE_BYTES = 4 * 1024 * 1024;
-export const MAX_DRAFT_FILE_NAME_CHARS = 512;
-export const MAX_DRAFT_FILE_PATH_CHARS = 32_768;
 
 export type DraftImageRejectionReason = "count" | "bytes";
 
@@ -45,12 +35,11 @@ function cloneDraft(draft: ChatDraft): ChatDraft {
   return {
     value: draft.value,
     images: draft.images.map((image) => ({ ...image })),
-    files: (draft.files ?? []).map((file) => ({ ...file })),
   };
 }
 
 function isEmptyDraft(draft: ChatDraft): boolean {
-  return !draft.value && draft.images.length === 0 && (draft.files?.length ?? 0) === 0;
+  return !draft.value && draft.images.length === 0;
 }
 
 function persistKey(key: string): string {
@@ -100,37 +89,6 @@ export function persistableDraftImages(images: readonly ChatDraftImage[]): ChatD
   return selected;
 }
 
-export function isAbsoluteDraftFilePath(filePath: string): boolean {
-  if (!filePath || filePath.includes("\0") || filePath.length > MAX_DRAFT_FILE_PATH_CHARS) return false;
-  return (
-    filePath.startsWith("/") ||
-    filePath.startsWith("\\\\") ||
-    filePath.startsWith("//") ||
-    /^[a-zA-Z]:[\\/]/.test(filePath)
-  );
-}
-
-function draftFileDedupeKey(filePath: string): string {
-  const normalized = filePath.replace(/\\/g, "/");
-  return /^[a-zA-Z]:\//.test(normalized) || normalized.startsWith("//") ? normalized.toLowerCase() : normalized;
-}
-
-export function persistableDraftFiles(files: readonly ChatDraftFile[]): ChatDraftFile[] {
-  const selected: ChatDraftFile[] = [];
-  const seen = new Set<string>();
-  for (const file of files) {
-    if (selected.length >= MAX_PERSISTED_DRAFT_FILES) break;
-    if (!file || typeof file.name !== "string" || typeof file.path !== "string") continue;
-    const name = file.name.trim();
-    if (!name || name.length > MAX_DRAFT_FILE_NAME_CHARS || !isAbsoluteDraftFilePath(file.path)) continue;
-    const key = draftFileDedupeKey(file.path);
-    if (seen.has(key)) continue;
-    seen.add(key);
-    selected.push({ name, path: file.path });
-  }
-  return selected;
-}
-
 function loadFromStorage(key: string): ChatDraft | null {
   if (typeof localStorage === "undefined") return null;
   try {
@@ -144,7 +102,6 @@ function loadFromStorage(key: string): ChatDraft | null {
     return {
       value: parsed.value,
       images: persistableDraftImages(Array.isArray(parsed.images) ? parsed.images : []),
-      files: persistableDraftFiles(Array.isArray(parsed.files) ? parsed.files : []),
     };
   } catch {
     return null;
@@ -161,19 +118,17 @@ function saveToStorage(key: string, draft: ChatDraft | null): boolean {
     // Select images before JSON.stringify so oversized base64 is never included
     // in the synchronous serialization work performed on the renderer thread.
     const images = persistableDraftImages(draft.images);
-    const files = persistableDraftFiles(draft.files ?? []);
     const toStore: PersistedChatDraftV2 = {
       schemaVersion: CHAT_DRAFT_SCHEMA_VERSION,
       value: draft.value,
       images,
-      files,
       updatedAt: Date.now(),
     };
     localStorage.setItem(persistKey(key), JSON.stringify(toStore));
-    // The text and valid references are still saved, but report the partial
+    // The text and valid images are still saved, but report the partial
     // persistence so the composer can tell the user that some attachments
     // will not survive a reload.
-    return images.length === draft.images.length && files.length === (draft.files?.length ?? 0);
+    return images.length === draft.images.length;
   } catch {
     return false;
   }

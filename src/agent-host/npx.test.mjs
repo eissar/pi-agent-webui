@@ -6,36 +6,10 @@ import test from "node:test";
 import { ToolchainRuntime } from "./toolchain-runtime.ts";
 import { runNpxWithRuntime } from "./npx.ts";
 
-function createRuntime(descriptor, revision = 5) {
-  const snapshot = {
-    revision,
-    generatedAt: new Date().toISOString(),
-    platform: process.platform,
-    arch: process.arch,
-    candidates: [],
-    defaults: { "js.npx": descriptor },
-    publicState: {
-      schemaVersion: 1,
-      revision,
-      platform: process.platform,
-      arch: process.arch,
-      coreReady: true,
-      capabilities: {},
-      components: {},
-      operations: [],
-    },
-  };
-  const resolution = {
-    id: "npx-resolution",
-    inventoryRevision: revision,
-    workspaceKey: "workspace",
-    requirementsHash: "requirements",
-    commands: { "js.npx": descriptor },
-    summary: [],
-  };
+function createRuntime(descriptor) {
   return new ToolchainRuntime({
-    fetchSnapshot: async () => snapshot,
-    resolveProject: async () => resolution,
+    baseEnv: { ...process.env, PI_TEST_CONTEXT_MARKER: "context" },
+    resolve: () => ({ commands: { "js.npx": descriptor }, summary: [] }),
   });
 }
 
@@ -45,12 +19,11 @@ test("runs the resolved absolute Node and npx CLI with the resolution environmen
     const cli = path.join(directory, "npx-cli.cjs");
     writeFileSync(
       cli,
-      "process.stdout.write(JSON.stringify({args:process.argv.slice(2),revision:process.env.PI_DESKTOP_TOOLCHAIN_REVISION,maxSockets:process.env.npm_config_maxsockets,yes:process.env.npm_config_yes,updateNotifier:process.env.npm_config_update_notifier}))",
+      "process.stdout.write(JSON.stringify({args:process.argv.slice(2),marker:process.env.PI_TEST_CONTEXT_MARKER,maxSockets:process.env.npm_config_maxsockets,yes:process.env.npm_config_yes,updateNotifier:process.env.npm_config_update_notifier}))",
       "utf8",
     );
     const descriptor = {
       capability: "js.npx",
-      provider: "system",
       executable: process.execPath,
       argvPrefix: [cli],
       binDir: path.dirname(process.execPath),
@@ -62,7 +35,7 @@ test("runs the resolved absolute Node and npx CLI with the resolution environmen
     const result = await runNpxWithRuntime(["skills", "find", "hello world"], { cwd: directory }, runtime);
     assert.deepEqual(JSON.parse(result.stdout), {
       args: ["skills", "find", "hello world"],
-      revision: "5",
+      marker: "context",
       yes: "true",
       updateNotifier: "false",
     });
@@ -82,7 +55,6 @@ test("retries a network failure once with an isolated cache and one registry soc
     );
     const descriptor = {
       capability: "js.npx",
-      provider: "system",
       executable: process.execPath,
       argvPrefix: [cli],
       binDir: path.dirname(process.execPath),
@@ -112,7 +84,6 @@ test("does not retry a non-recoverable CLI failure", async () => {
     );
     const descriptor = {
       capability: "js.npx",
-      provider: "system",
       executable: process.execPath,
       argvPrefix: [cli],
       binDir: path.dirname(process.execPath),
@@ -136,7 +107,6 @@ test("reports an actionable error when the developer command times out", async (
     writeFileSync(cli, "setInterval(() => {}, 1000)", "utf8");
     const descriptor = {
       capability: "js.npx",
-      provider: "system",
       executable: process.execPath,
       argvPrefix: [cli],
       binDir: path.dirname(process.execPath),
@@ -153,35 +123,8 @@ test("reports an actionable error when the developer command times out", async (
   }
 });
 
-test("fails with TOOLCHAIN_NODE_REQUIRED and never falls back to Electron or PATH", async () => {
-  const runtime = new ToolchainRuntime({
-    fetchSnapshot: async () => ({
-      revision: 1,
-      generatedAt: new Date().toISOString(),
-      platform: process.platform,
-      arch: process.arch,
-      candidates: [],
-      defaults: {},
-      publicState: {
-        schemaVersion: 1,
-        revision: 1,
-        platform: process.platform,
-        arch: process.arch,
-        coreReady: true,
-        capabilities: {},
-        components: {},
-        operations: [],
-      },
-    }),
-    resolveProject: async () => ({
-      id: "missing",
-      inventoryRevision: 1,
-      workspaceKey: "workspace",
-      requirementsHash: "requirements",
-      commands: {},
-      summary: [],
-    }),
-  });
+test("fails with TOOLCHAIN_NODE_REQUIRED when npx is not available", async () => {
+  const runtime = new ToolchainRuntime({ resolve: () => ({ commands: {}, summary: [] }) });
   await assert.rejects(
     runNpxWithRuntime(["skills", "find", "test"], { cwd: process.cwd() }, runtime),
     (error) => error.code === "TOOLCHAIN_NODE_REQUIRED" && error.capability === "js.npx",

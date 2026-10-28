@@ -7,13 +7,11 @@ export interface ComposerSubmissionImage {
 export interface ComposerSubmissionSnapshot {
   value: string;
   images: ComposerSubmissionImage[];
-  files: LocalFileReference[];
 }
 
 export function captureComposerSubmission(
   value: string,
   images: readonly ComposerSubmissionImage[],
-  files: readonly LocalFileReference[] = [],
 ): ComposerSubmissionSnapshot {
   return {
     value,
@@ -21,7 +19,6 @@ export function captureComposerSubmission(
       ...image,
       previewUrl: `data:${image.mimeType};base64,${image.data}`,
     })),
-    files: files.map((file) => ({ ...file })),
   };
 }
 
@@ -47,29 +44,6 @@ export function mergeFailedSubmissionImages(
   return merged;
 }
 
-export function mergeFailedSubmissionFiles(
-  current: readonly LocalFileReference[],
-  failed: readonly LocalFileReference[],
-): LocalFileReference[] {
-  const existing = new Set(current.map((file) => localFileReferenceKey(file.path)));
-  const merged = current.map((file) => ({ ...file }));
-  for (const file of failed) {
-    const key = localFileReferenceKey(file.path);
-    if (!key || existing.has(key)) continue;
-    existing.add(key);
-    merged.push({ ...file });
-  }
-  return merged;
-}
-
-export function localFileReferenceKey(filePath: string): string {
-  const normalized = filePath.replace(/\\/g, "/").replace(/\/{2,}/g, (slashes, offset) => (offset === 0 ? "//" : "/"));
-  return /^[a-zA-Z]:\//.test(normalized) || normalized.startsWith("//") ? normalized.toLowerCase() : normalized;
-}
-
 function imageKey(image: ComposerSubmissionImage): string {
   return `${image.mimeType}\0${image.data}`;
 }
-import type { LocalFileReference } from "../../shared/file-url";
-
-export type { LocalFileReference } from "../../shared/file-url";

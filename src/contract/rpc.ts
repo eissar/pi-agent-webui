@@ -261,9 +261,8 @@ export type StreamSink = {
 
 /**
  * Port shape that works in both:
- * - Renderer DOM MessagePort (addEventListener + MessageEvent.data)
- * - utilityProcess / Node worker_threads MessagePort (EventEmitter .on('message'))
- * - Electron MessagePortMain (.on('message', (e) => e.data))
+ * - DOM MessagePort-like objects (addEventListener + MessageEvent.data), e.g. the WebSocket shim
+ * - Node worker_threads MessagePort / EventEmitter-style ports (.on('message'))
  */
 export type AnyMessagePort = {
   postMessage: (message: unknown, transfer?: unknown[]) => void;
@@ -284,7 +283,7 @@ export interface RpcServer {
 }
 
 function extractMessageData(arg: unknown): unknown {
-  // DOM MessageEvent / Electron MessagePortMain event: { data }
+  // DOM MessageEvent-style event: { data }
   if (arg && typeof arg === "object" && "data" in arg && !("kind" in arg)) {
     return (arg as { data: unknown }).data;
   }

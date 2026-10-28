@@ -52,7 +52,7 @@ async function createFixture(t, initialTools, additionalExtensions = []) {
   // Desktop narrows the active set after construction so tools can be enabled later.
   session.setActiveToolsByName(initialTools);
   const wrapper = new AgentSessionWrapper(session, initialTools, () => undefined, policy);
-  wrapper.setToolchainSummary(7, ["Use the resolved toolchain"]);
+  wrapper.setToolchainSummary(["Use the resolved toolchain"]);
   const requests = [];
   session.agent.streamFunction = (requestModel, context) => {
     requests.push(context);
@@ -107,22 +107,22 @@ test("Desktop toolchain prompt reaches real SDK requests after user extensions a
   await session.prompt("first", { source: "rpc" });
   const first = requestPrompt(requests.at(-1));
   assert.match(first, /^User extension prompt/);
-  assert.match(first, /<pi-desktop-toolchain revision="7">/);
-  assert.equal(first.match(/<pi-desktop-toolchain revision=/g)?.length, 1);
+  assert.match(first, /<pi-desktop-toolchain>\nUse the resolved toolchain/);
+  assert.equal(first.match(/<pi-desktop-toolchain>/g)?.length, 1);
   assert.deepEqual(requestToolNames(requests.at(-1)), ["read"]);
 
-  wrapper.setToolchainSummary(8, ["Use the updated toolchain"]);
+  wrapper.setToolchainSummary(["Use the updated toolchain"]);
   await session.prompt("second", { source: "rpc" });
   const second = requestPrompt(requests.at(-1));
-  assert.match(second, /revision="8"/);
-  assert.doesNotMatch(second, /revision="7"/);
-  assert.equal(second.match(/<pi-desktop-toolchain revision=/g)?.length, 1);
+  assert.match(second, /Use the updated toolchain/);
+  assert.doesNotMatch(second, /Use the resolved toolchain/);
+  assert.equal(second.match(/<pi-desktop-toolchain>/g)?.length, 1);
 
   await wrapper.send({ type: "reload" });
   await session.prompt("after reload", { source: "rpc" });
   const reloaded = requestPrompt(requests.at(-1));
-  assert.match(reloaded, /revision="8"/);
-  assert.equal(reloaded.match(/<pi-desktop-toolchain revision=/g)?.length, 1);
+  assert.match(reloaded, /Use the updated toolchain/);
+  assert.equal(reloaded.match(/<pi-desktop-toolchain>/g)?.length, 1);
 
   const firstUser = session.sessionManager
     .getEntries()
@@ -132,8 +132,8 @@ test("Desktop toolchain prompt reaches real SDK requests after user extensions a
   assert.equal(navigation.cancelled, false);
   await session.prompt("after branch navigation", { source: "rpc" });
   const branched = requestPrompt(requests.at(-1));
-  assert.match(branched, /revision="8"/);
-  assert.equal(branched.match(/<pi-desktop-toolchain revision=/g)?.length, 1);
+  assert.match(branched, /Use the updated toolchain/);
+  assert.equal(branched.match(/<pi-desktop-toolchain>/g)?.length, 1);
 });
 
 test("zero-tool prompt remains empty through tool changes without mutating AgentState", async (t) => {
@@ -144,7 +144,7 @@ test("zero-tool prompt remains empty through tool changes without mutating Agent
 
   await wrapper.send({ type: "set_tools", toolNames: ["read"] });
   await session.prompt("with read", { source: "rpc" });
-  assert.match(requestPrompt(requests.at(-1)), /<pi-desktop-toolchain revision="7">/);
+  assert.match(requestPrompt(requests.at(-1)), /<pi-desktop-toolchain>\nUse the resolved toolchain/);
   assert.deepEqual(requestToolNames(requests.at(-1)), ["read"]);
 
   await wrapper.send({ type: "set_tools", toolNames: [] });

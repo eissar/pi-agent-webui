@@ -8,26 +8,20 @@ import {
   assertSuccessfulSpawn,
   createProjectBuildTemp,
   projectNodePath,
-  resolveElectronBinary,
   resolvePackageFile,
   terminateProcessTree,
 } from "./process-utils.mjs";
 
 const root = path.resolve(import.meta.dirname, "..");
 
-test(
-  "script dependencies resolve to real package files and the Electron executable",
-  { skip: !existsSync(path.join(root, "node_modules", "electron")) },
-  () => {
-    const electron = resolveElectronBinary(root);
-    const esbuild = resolvePackageFile(root, "esbuild", "bin/esbuild");
-    const tsup = resolvePackageFile(root, "tsup", "dist/cli-default.js");
-    for (const executable of [electron, esbuild, tsup]) {
-      assert.equal(existsSync(executable), true, executable);
-      assert.equal(executable.endsWith(".cmd"), false, executable);
-    }
-  },
-);
+test("script dependencies resolve to real package files", () => {
+  const esbuild = resolvePackageFile(root, "esbuild", "bin/esbuild");
+  const tsup = resolvePackageFile(root, "tsup", "dist/cli-default.js");
+  for (const executable of [esbuild, tsup]) {
+    assert.equal(existsSync(executable), true, executable);
+    assert.equal(executable.endsWith(".cmd"), false, executable);
+  }
+});
 
 test("external dependency builds use the OS temp directory with explicit project resolution", () => {
   const temporaryDirectory = createProjectBuildTemp(root, "pi-process-utils-test-");

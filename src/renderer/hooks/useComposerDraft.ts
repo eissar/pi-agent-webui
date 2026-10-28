@@ -8,10 +8,8 @@ import {
   type ChatDraftImage,
 } from "@/lib/draft-store";
 import { processImageFileBatch } from "@/lib/image-file-processing";
-import type { LocalFileReference } from "@/lib/file-url";
 import {
   failedComposerSubmissionAction,
-  mergeFailedSubmissionFiles,
   mergeFailedSubmissionImages,
   type ComposerSubmissionSnapshot,
 } from "@/lib/composer-submission";
@@ -53,15 +51,11 @@ export function useComposerDraft({
   const [attachedImages, setAttachedImagesState] = useState<AttachedImage[]>(() =>
     draftKey ? (getDraft(draftKey)?.images.map(draftImageToAttachedImage) ?? []) : [],
   );
-  const [attachedFiles, setAttachedFilesState] = useState<LocalFileReference[]>(() =>
-    draftKey ? (getDraft(draftKey)?.files?.map((file) => ({ ...file })) ?? []) : [],
-  );
   const [imageAttachNotice, setImageAttachNotice] = useState<string | null>(null);
   const [submissionNotice, setSubmissionNotice] = useState<string | null>(null);
   const draftKeyRef = useRef(draftKey);
   const valueRef = useRef(value);
   const attachedImagesRef = useRef(attachedImages);
-  const attachedFilesRef = useRef(attachedFiles);
   const imageBatchGenerationRef = useRef(0);
   const imageProcessingActiveRef = useRef(true);
   const pendingImagePreviewsRef = useRef(new Set<string>());
@@ -88,12 +82,6 @@ export function useComposerDraft({
     inputRevisionRef.current += 1;
     attachedImagesRef.current = resolved;
     setAttachedImagesState(resolved);
-  }, []);
-  const setAttachedFiles = useCallback((next: SetStateAction<LocalFileReference[]>) => {
-    const resolved = typeof next === "function" ? next(attachedFilesRef.current) : next;
-    inputRevisionRef.current += 1;
-    attachedFilesRef.current = resolved;
-    setAttachedFilesState(resolved);
   }, []);
 
   const processImageAttachments = useCallback(
@@ -144,25 +132,27 @@ export function useComposerDraft({
     [setAttachedImages],
   );
 
-  // Browsers do not expose local filesystem paths for dropped or picked files,
-  // so non-image files cannot be referenced by path.
-  const processLocalFileReferences = useCallback((files: File[]): string[] => {
-    if (files.length === 0) return [];
-    return ["{count} files had no local path and were not added".replace("{count}", String(files.length))];
-  }, []);
-
   const processFiles = useCallback(
     async (files: File[]) => {
       // Attaching is allowed while streaming; sending is gated separately,
       // so the user can prepare files for the next prompt while the agent runs.
       const imageFiles = files.filter((file) => file.type.startsWith("image/"));
-      const localFiles = files.filter((file) => !file.type.startsWith("image/"));
+      // Browsers do not expose local filesystem paths, so non-image files
+      // cannot be attached.
+      const otherFiles = files.filter((file) => !file.type.startsWith("image/"));
       const notices = await processImageAttachments(imageFiles);
       if (!imageProcessingActiveRef.current) return;
-      notices.push(...processLocalFileReferences(localFiles));
+      if (otherFiles.length > 0) {
+        notices.push(
+          "{count} non-image files were not added; only images can be attached in the browser".replace(
+            "{count}",
+            String(otherFiles.length),
+          ),
+        );
+      }
       setImageAttachNotice(notices.length > 0 ? notices.join(". ") : null);
     },
-    [processImageAttachments, processLocalFileReferences],
+    [processImageAttachments],
   );
 
   const removeImage = useCallback(
@@ -184,13 +174,6 @@ export function useComposerDraft({
     });
   }, [setAttachedImages]);
 
-  const removeFile = useCallback(
-    (index: number) => {
-      setAttachedFiles((prev) => prev.filter((_, i) => i !== index));
-    },
-    [setAttachedFiles],
-  );
-
   const clearDraft = useCallback(() => {
     setValue("");
     if (draftKey) draftPersistenceRef.current?.clear(draftKey);
@@ -198,8 +181,7 @@ export function useComposerDraft({
       draftPersistenceRef.current?.clear(draftKeyRef.current);
     }
     clearImages();
-    setAttachedFiles([]);
-  }, [clearImages, draftKey, setAttachedFiles, setValue]);
+  }, [clearImages, draftKey, setValue]);
 
   const restoreFailedSubmission = useCallback(
     (snapshot: ComposerSubmissionSnapshot, clearedAtRevision: number, kind: "send" | "queue") => {
@@ -207,13 +189,9 @@ export function useComposerDraft({
       if (action === "restore") {
         setValue(snapshot.value);
         setAttachedImages(snapshot.images);
-        setAttachedFiles(snapshot.files ?? []);
       } else {
         if (snapshot.images.length > 0) {
           setAttachedImages((current) => mergeFailedSubmissionImages(current, snapshot.images));
-        }
-        if (snapshot.files.length > 0) {
-          setAttachedFiles((current) => mergeFailedSubmissionFiles(current, snapshot.files));
         }
       }
       setSubmissionNotice(
@@ -226,7 +204,7 @@ export function useComposerDraft({
             : "The previous message could not be queued. Your newer draft was kept.",
       );
     },
-    [setAttachedFiles, setAttachedImages, setValue],
+    [setAttachedImages, setValue],
   );
 
   const commitCurrentDraft = useCallback(() => {
@@ -235,7 +213,6 @@ export function useComposerDraft({
     draftPersistenceRef.current?.commit(currentDraftKey, {
       value: valueRef.current,
       images: attachedImagesRef.current.map(imageToDraftImage),
-      files: attachedFilesRef.current,
     });
   }, []);
 
@@ -244,9 +221,8 @@ export function useComposerDraft({
     draftPersistenceRef.current?.schedule(draftKey, {
       value,
       images: attachedImages.map(imageToDraftImage),
-      files: attachedFiles,
     });
-  }, [attachedFiles, attachedImages, draftKey, value]);
+  }, [attachedImages, draftKey, value]);
 
   useEffect(() => {
     const previousDraftKey = draftKeyRef.current;
@@ -256,7 +232,6 @@ export function useComposerDraft({
       draftPersistenceRef.current?.promote(previousDraftKey, draftKey, {
         value: valueRef.current,
         images: attachedImagesRef.current.map(imageToDraftImage),
-        files: attachedFilesRef.current,
       });
       draftKeyRef.current = draftKey;
       return;
@@ -266,7 +241,6 @@ export function useComposerDraft({
       draftPersistenceRef.current?.commit(previousDraftKey, {
         value: valueRef.current,
         images: attachedImagesRef.current.map(imageToDraftImage),
-        files: attachedFilesRef.current,
       });
     }
 
@@ -278,8 +252,7 @@ export function useComposerDraft({
       prev.forEach(revokeImagePreview);
       return draft?.images.map(draftImageToAttachedImage) ?? [];
     });
-    setAttachedFiles(draft?.files?.map((file) => ({ ...file })) ?? []);
-  }, [draftKey, draftPromotionFrom, onReplace, setAttachedFiles, setAttachedImages, setValue]);
+  }, [draftKey, draftPromotionFrom, onReplace, setAttachedImages, setValue]);
 
   useEffect(() => {
     for (const image of attachedImages) pendingImagePreviewsRef.current.delete(image.previewUrl);
@@ -298,29 +271,20 @@ export function useComposerDraft({
     };
   }, [commitCurrentDraft]);
 
-  // File references can only come from restored drafts; the backend resolves them.
-  const validateLocalFileReferences = useCallback(
-    (_files: readonly LocalFileReference[]): Promise<boolean> => Promise.resolve(true),
-    [],
-  );
-
   const getRevision = useCallback(() => inputRevisionRef.current, []);
   return {
     value,
     setValue,
     attachedImages,
-    attachedFiles,
     imageAttachNotice,
     setImageAttachNotice,
     submissionNotice,
     setSubmissionNotice,
     processFiles,
     removeImage,
-    removeFile,
     clearDraft,
     restoreFailedSubmission,
     commitCurrentDraft,
-    validateLocalFileReferences,
     getRevision,
   };
 }

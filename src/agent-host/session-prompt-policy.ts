@@ -1,6 +1,7 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
-const TOOLCHAIN_SECTION = /\n*<pi-desktop-toolchain revision="\d+">[\s\S]*?<\/pi-desktop-toolchain>\n*/g;
+// Older prompts carried a revision attribute; strip both forms.
+const TOOLCHAIN_SECTION = /\n*<pi-desktop-toolchain(?: revision="\d+")?>[\s\S]*?<\/pi-desktop-toolchain>\n*/g;
 
 /** Session-local prompt policy. The SDK owns the transcript and provider prompt. */
 export class SessionPromptPolicy {
@@ -15,12 +16,8 @@ export class SessionPromptPolicy {
     this.forceEmpty = forceEmpty;
   }
 
-  setToolchainSummary(revision: number, summary: readonly string[]): void {
-    this.toolchainPrompt = [
-      `<pi-desktop-toolchain revision="${revision}">`,
-      ...summary,
-      "</pi-desktop-toolchain>",
-    ].join("\n");
+  setToolchainSummary(summary: readonly string[]): void {
+    this.toolchainPrompt = ["<pi-desktop-toolchain>", ...summary, "</pi-desktop-toolchain>"].join("\n");
   }
 
   resolve(systemPrompt: string): string {

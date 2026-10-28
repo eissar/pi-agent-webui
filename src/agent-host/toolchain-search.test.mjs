@@ -9,7 +9,6 @@ import { ToolchainRuntime } from "./toolchain-runtime.ts";
 function command(capability, script) {
   return {
     capability,
-    provider: "bundled",
     executable: process.execPath,
     argvPrefix: ["-e", script, "--"],
     binDir: path.dirname(process.execPath),
@@ -21,10 +20,8 @@ function command(capability, script) {
 
 function context(commands) {
   return {
-    inventoryRevision: 4,
-    resolutionId: "search-test",
-    nativeEnv: { ...process.env, PI_DESKTOP_TOOLCHAIN_REVISION: "4" },
-    shellEnv: { ...process.env, PI_DESKTOP_TOOLCHAIN_REVISION: "4" },
+    nativeEnv: { ...process.env, PI_TEST_CONTEXT_MARKER: "4" },
+    shellEnv: { ...process.env, PI_TEST_CONTEXT_MARKER: "4" },
     commands,
     summary: [],
   };

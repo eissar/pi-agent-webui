@@ -28,9 +28,7 @@ function spawnEnvironment(context: ToolExecutionContext): NodeJS.ProcessEnv {
   for (const [key, value] of Object.entries(context.nativeEnv)) {
     if (typeof value === "string") env[key] = value;
   }
-  env.ELECTRON_RUN_AS_NODE = "1";
   env.PI_DESKTOP_PLUGIN_WORKER = "1";
-  env.PI_DESKTOP_TOOLCHAIN_REVISION = String(context.inventoryRevision);
   return env;
 }
 

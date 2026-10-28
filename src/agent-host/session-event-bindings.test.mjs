@@ -20,20 +20,16 @@ function source(id = "session") {
   return { instance, calls, emit: (value) => event(value), destroy: () => destroy() };
 }
 
-test("one source binds once and only SDK agent_end sends the completion notification", () => {
+test("one source binds once and forwards each event once", () => {
   const events = [],
-    notifications = [],
     fixture = source();
-  const registry = createSessionEventBindings({ emit: (...event) => events.push(event) }, (id) =>
-    notifications.push(id),
-  );
+  const registry = createSessionEventBindings({ emit: (...event) => events.push(event) });
   registry.ensure(fixture.instance, "fallback");
   registry.ensure(fixture.instance, "fallback");
   fixture.emit({ type: "prompt_done" });
   fixture.emit({ type: "agent_end" });
   assert.equal(fixture.calls.events, 1);
   assert.equal(events.length, 2);
-  assert.deepEqual(notifications, ["session"]);
   registry.close();
   registry.close();
   assert.equal(fixture.calls.closed, 1);
@@ -44,7 +40,7 @@ test("late events or destruction from the old wrapper cannot retire its replacem
   const events = [],
     first = source(),
     next = source();
-  const registry = createSessionEventBindings({ emit: (...event) => events.push(event) }, () => {});
+  const registry = createSessionEventBindings({ emit: (...event) => events.push(event) });
   registry.ensure(first.instance, "session");
   registry.ensure(next.instance, "session");
   first.destroy();
@@ -66,7 +62,7 @@ test("late events or destruction from the old wrapper cannot retire its replacem
 test("a synchronous destroy during installation still releases both returned handles", () => {
   let eventsClosed = 0,
     destroyClosed = 0;
-  const registry = createSessionEventBindings({ emit() {} }, () => {});
+  const registry = createSessionEventBindings({ emit() {} });
   registry.ensure(
     {
       sessionId: "session",
@@ -86,7 +82,7 @@ test("a synchronous destroy during installation still releases both returned han
 });
 
 test("failed installation can retry and one bad release does not prevent other cleanup", () => {
-  const registry = createSessionEventBindings({ emit() {} }, () => {});
+  const registry = createSessionEventBindings({ emit() {} });
   const broken = source("broken"),
     valid = source("valid");
   const original = broken.instance.onEvent;
@@ -118,7 +114,7 @@ test("bindings batch updates but flush completion immediately and cancel a retir
       return () => timers.delete(callback);
     },
   };
-  const registry = createSessionEventBindings({ emit: (...args) => emitted.push(args[2]) }, () => {}, options);
+  const registry = createSessionEventBindings({ emit: (...args) => emitted.push(args[2]) }, options);
   const first = source();
   registry.ensure(first.instance, "session");
   for (let i = 0; i < 100; i++) first.emit({ type: "message_update", message: { content: String(i) } });

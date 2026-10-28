@@ -10,7 +10,7 @@ const fixtureModule = await importTestBundle("session-handler-order", {
   packages: "external",
   stdin: {
     contents:
-      'export {createSessionHandlers} from "./sessions.ts"; export * as runtime from "../rpc-manager"; export * as reader from "../session-reader"; export * as index from "../session-index"; export * as main from "../parent-rpc";',
+      'export {createSessionHandlers} from "./sessions.ts"; export * as runtime from "../rpc-manager"; export * as reader from "../session-reader"; export * as index from "../session-index";',
     resolveDir: import.meta.dirname,
     loader: "ts",
   },
@@ -19,7 +19,7 @@ const fixtureModule = await importTestBundle("session-handler-order", {
       name: "controlled-session-services",
       setup(build) {
         build.onResolve(
-          { filter: /(?:^|\/)(rpc-manager|session-reader|session-index|parent-rpc)(?:\.ts)?$/ },
+          { filter: /(?:^|\/)(rpc-manager|session-reader|session-index)(?:\.ts)?$/ },
           ({ path: specifier }) => ({
             path: path.basename(specifier).replace(/\.ts$/, ""),
             namespace: "session-services",
@@ -34,7 +34,6 @@ const fixtureModule = await importTestBundle("session-handler-order", {
               "let file; export const invalidated = []; export const setFile = value => {file=value; invalidated.length=0;}; export const resolveSessionPath = async () => file; export const invalidateSessionPathCache = id => invalidated.push(id); export const listAllSessions = async () => []; export const getSessionIndexMetrics = () => ({}); export const buildSessionContext = () => ({}); export const buildSessionInfoFromManager = async () => ({}); const unexpected = () => {throw new Error('Unexpected history conversion');}; export {unexpected as entryToUiMessage, unexpected as parseChannelSourceMarker, unexpected as parseRunId, unexpected as withUserMessageSource};",
             "session-index":
               "export const removed = []; export const sessionIndex = {removePath(file) {removed.push(file); return {cwd:'/fixture'};}, async refreshPath() {return null;}};",
-            "parent-rpc": "export const calls = []; export const callMain = async (...args) => {calls.push(args);};",
           }[name],
         }));
       },
@@ -47,9 +46,9 @@ function createFixture(t) {
   const file = path.join(directory, "session.jsonl");
   fs.writeFileSync(file, "owned fixture");
   t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
-  const { runtime, reader, index, main, createSessionHandlers } = fixtureModule;
+  const { runtime, reader, index, createSessionHandlers } = fixtureModule;
   reader.setFile(file);
-  index.removed.length = main.calls.length = 0;
+  index.removed.length = 0;
   const disposing = createDeferred(),
     finishDispose = createDeferred();
   const order = [],
@@ -73,7 +72,7 @@ function createFixture(t) {
       order.push("unbind");
     },
   });
-  return { file, handlers, disposing, finishDispose, order, events, index, reader, main };
+  return { file, handlers, disposing, finishDispose, order, events, index, reader };
 }
 
 test("forced deletion waits for Agent shutdown before unlinking and publishing", async (t) => {
@@ -88,7 +87,6 @@ test("forced deletion waits for Agent shutdown before unlinking and publishing",
   assert.deepEqual(fixture.order, ["dispose", "disposed", "unbind"]);
   assert.deepEqual(fixture.index.removed, [fixture.file]);
   assert.deepEqual(fixture.reader.invalidated, ["session"]);
-  assert.deepEqual(fixture.main.calls, []);
   assert.deepEqual(fixture.events, [
     ["sessions.changed", "session", { cwd: "/fixture", sessionId: "session", deleted: true }],
   ]);

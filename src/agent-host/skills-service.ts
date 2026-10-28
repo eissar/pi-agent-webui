@@ -1,5 +1,5 @@
 /**
- * Skills search / install via skills.sh API or ELECTRON_RUN_AS_NODE npx.
+ * Skills search / install via the skills.sh API or npx.
  */
 import { runNpx } from "./npx";
 import type { SkillSearchResult } from "../shared/api-types";

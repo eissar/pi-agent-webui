@@ -1,8 +1,3 @@
-export interface LocalFileReference {
-  name: string;
-  path: string;
-}
-
 function containsUnsafePathText(value: string): boolean {
   return !value || value.includes("\0") || /[\r\n]/.test(value);
 }
@@ -82,14 +77,8 @@ export function fileUrlToLocalPath(value: string): string | null {
   }
 }
 
-export function localFileReferenceToMarkdown(file: LocalFileReference): string | null {
-  const href = localFilePathToUrl(file.path);
-  if (!href) return null;
-  const safeName = file.name.replace(/([\\[\]])/g, "\\$1");
-  return `[${safeName}](${href})`;
-}
-
-export type LocalFileMarkdownSegment = { text: string; file: null } | { text: string; file: LocalFileReference };
+export type LocalFileMarkdownSegment =
+  { text: string; file: null } | { text: string; file: { name: string; path: string } };
 
 export function splitLocalFileReferenceMarkdown(value: string): LocalFileMarkdownSegment[] {
   const segments: LocalFileMarkdownSegment[] = [];

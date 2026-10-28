@@ -18,7 +18,6 @@ interface SettingsConfigProps {
   cwd: string | null;
   sessionId: string | null;
   initialTab?: SettingsTab;
-  navigationRequestId?: number;
   onClose: () => void;
   onModelsChanged: () => void;
   onPluginsReloaded: () => void;
@@ -31,7 +30,6 @@ export function SettingsConfig({
   cwd,
   sessionId,
   initialTab = "general",
-  navigationRequestId = 0,
   onClose,
   onModelsChanged,
   onPluginsReloaded,
@@ -61,8 +59,7 @@ export function SettingsConfig({
 
   useEffect(() => {
     if (initialTab !== activeTabRef.current) requestSettingsTransition(() => setActiveTab(initialTab));
-    // navigationRequestId intentionally retries an externally requested tab after a cancelled dirty-editor prompt.
-  }, [initialTab, navigationRequestId, requestSettingsTransition]);
+  }, [initialTab, requestSettingsTransition]);
 
   useEffect(() => {
     const returnFocus = returnFocusRef.current;
@@ -77,7 +74,7 @@ export function SettingsConfig({
     if (dialog && !dialog.contains(document.activeElement)) {
       document.getElementById(`settings-tab-${activeTab}`)?.focus();
     }
-  }, [activeTab, navigationRequestId]);
+  }, [activeTab]);
 
   const tabs: { id: SettingsTab; label: string }[] = [
     { id: "general", label: "General" },

@@ -32,7 +32,6 @@
     "check:contract": "node scripts/check-contract-coverage.mjs",
     "check:pi-compat": "node scripts/check-pi-compatibility.mjs",
     "check:dependencies": "node scripts/check-dependency-contract.mjs",
-    "test:build-watch": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/test-tsup-watch.mjs",
     "verify": "node scripts/verify.mjs"
   },
   "dependencies": {

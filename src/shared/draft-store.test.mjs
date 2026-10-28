@@ -4,13 +4,11 @@ import test from "node:test";
 import {
   CHAT_DRAFT_SCHEMA_VERSION,
   DraftPersistenceController,
-  MAX_PERSISTED_DRAFT_FILES,
   MAX_PERSISTED_DRAFT_IMAGE_BYTES,
   clearDraft,
   decodedBase64ByteLength,
   flushDraft,
   getDraft,
-  persistableDraftFiles,
   persistableDraftImages,
   selectDraftImageAdditions,
   setDraft,
@@ -64,25 +62,6 @@ test("image additions are rejected with distinct count and byte-limit reasons", 
   assert.equal(byteSelection.rejected[0].reason, "bytes");
 });
 
-test("draft files require absolute paths, are deduplicated, and share the persisted limit", () => {
-  const files = [
-    { name: "one", path: "/tmp/one.txt" },
-    { name: "duplicate", path: "/tmp/one.txt" },
-    { name: "relative", path: "tmp/two.txt" },
-    ...Array.from({ length: MAX_PERSISTED_DRAFT_FILES + 2 }, (_, index) => ({
-      name: `file-${index}`,
-      path: `C:\\work\\file-${index}.txt`,
-    })),
-  ];
-  const persisted = persistableDraftFiles(files);
-  assert.equal(persisted.length, MAX_PERSISTED_DRAFT_FILES);
-  assert.equal(persisted[0].path, "/tmp/one.txt");
-  assert.equal(
-    persisted.some((file) => file.path === "tmp/two.txt"),
-    false,
-  );
-});
-
 test("loads legacy drafts, rejects future schemas, and validates restored fields", (t) => {
   const previousStorage = globalThis.localStorage;
   const values = new Map();
@@ -105,16 +84,13 @@ test("loads legacy drafts, rejects future schemas, and validates restored fields
         { data: "YQ==", mimeType: "image/png" },
         { data: "bad", mimeType: "text/plain" },
       ],
-      files: [
-        { name: "ok", path: "/tmp/ok.txt" },
-        { name: "bad", path: "relative.txt" },
-      ],
+      // Legacy drafts may carry a files field; it is ignored.
+      files: [{ name: "ok", path: "/tmp/ok.txt" }],
     }),
   );
   assert.deepEqual(getDraft(legacyKey.slice("pi-desktop-draft:".length)), {
     value: "legacy",
     images: [{ data: "YQ==", mimeType: "image/png" }],
-    files: [{ name: "ok", path: "/tmp/ok.txt" }],
   });
 
   const futureKey = `pi-desktop-draft:future-${Date.now()}`;
@@ -155,7 +131,7 @@ test("draft controller reports persistence failures", () => {
     },
     (key) => errors.push(key),
   );
-  assert.equal(controller.commit("one", { value: "draft", images: [], files: [] }), false);
+  assert.equal(controller.commit("one", { value: "draft", images: [] }), false);
   assert.equal(controller.clear("two"), false);
   assert.deepEqual(errors, ["one", "two"]);
 });

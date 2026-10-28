@@ -71,8 +71,8 @@ export interface RunNpxResult {
 }
 
 /**
- * Execute the Main-resolved Node + npx-cli.js pair. Discovery belongs to Main;
- * the Host never scans PATH, guesses npm layout, or treats Electron as Node.
+ * Run npx using the Node/npx found by the toolchain runtime, rather than
+ * guessing npm's layout.
  */
 export async function runNpx(args: string[], opts: RunNpxOptions = {}): Promise<RunNpxResult> {
   return runNpxWithRuntime(args, opts, toolchainRuntime);

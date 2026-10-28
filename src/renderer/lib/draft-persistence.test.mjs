@@ -108,7 +108,7 @@ test("staging a draft performs no synchronous localStorage write until flush", (
     assert.equal(stored.schemaVersion, CHAT_DRAFT_SCHEMA_VERSION);
     assert.equal(stored.value, "draft");
     assert.deepEqual(stored.images, []);
-    assert.deepEqual(stored.files, []);
+    assert.equal("files" in stored, false);
     assert.equal(typeof stored.updatedAt, "number");
   } finally {
     if (descriptor) Object.defineProperty(globalThis, "localStorage", descriptor);
@@ -143,9 +143,7 @@ test("composer draft ownership schedules edits and commits exact refs on key swi
   assert.match(source, /draftPersistenceRef\.current\?\.schedule\(draftKey/);
   assert.match(source, /draftPersistenceRef\.current\?\.commit\(previousDraftKey/);
   assert.match(source, /draftPersistenceRef\.current\?\.commit\(currentDraftKey/);
-  assert.match(source, /files: attachedFilesRef\.current/);
-  assert.match(source, /mergeFailedSubmissionFiles\(current, snapshot\.files\)/);
-  assert.match(source, /const setAttachedFiles = useCallback[\s\S]*?inputRevisionRef\.current \+= 1/);
+  assert.match(source, /const setAttachedImages = useCallback[\s\S]*?inputRevisionRef\.current \+= 1/);
   assert.match(source, /draftPersistenceRef\.current\?\.clear\(draftKey\)/);
   assert.match(submission, /commitCurrentDraft\(\);\s*clearInput\(\)/);
 });

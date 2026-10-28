@@ -1,7 +1,6 @@
 import { useCallback } from "react";
 import type { BuiltinSlashCommandResult } from "@/hooks/useAgentSession";
 import type { AttachedImage, useComposerDraft } from "@/hooks/useComposerDraft";
-import { localFileReferenceToMarkdown } from "@/lib/file-url";
 import { captureComposerSubmission } from "@/lib/composer-submission";
 
 export type ComposerSendResult = void | { ok?: boolean };
@@ -21,14 +20,7 @@ export interface ComposerActions {
 
 type SubmissionDraft = Pick<
   ReturnType<typeof useComposerDraft>,
-  | "value"
-  | "attachedImages"
-  | "attachedFiles"
-  | "getRevision"
-  | "validateLocalFileReferences"
-  | "setSubmissionNotice"
-  | "commitCurrentDraft"
-  | "restoreFailedSubmission"
+  "value" | "attachedImages" | "getRevision" | "setSubmissionNotice" | "commitCurrentDraft" | "restoreFailedSubmission"
 >;
 
 /** Submit a captured draft through one command path and restore failures by revision. */
@@ -43,36 +35,21 @@ export function useComposerSubmission({
   onBuiltinCommand,
   onAudioUnlock,
 }: ComposerActions & { draft: SubmissionDraft; clearInput: () => void; isStreaming: boolean }) {
-  const {
-    value,
-    attachedImages,
-    attachedFiles,
-    getRevision,
-    validateLocalFileReferences,
-    setSubmissionNotice,
-    commitCurrentDraft,
-    restoreFailedSubmission,
-  } = draft;
+  const { value, attachedImages, getRevision, setSubmissionNotice, commitCurrentDraft, restoreFailedSubmission } =
+    draft;
 
   const handleSend = useCallback(async () => {
-    const text = value.trim();
-    const msg = [text, ...attachedFiles.map(localFileReferenceToMarkdown)].filter(Boolean).join(" ");
+    const msg = value.trim();
     if (!msg && !attachedImages.length) return;
     if (isStreaming) return;
-    const validationRevision = getRevision();
-    if (!(await validateLocalFileReferences(attachedFiles))) return;
-    if (validationRevision !== getRevision()) {
-      setSubmissionNotice("The draft changed while files were checked. Send again.");
-      return;
-    }
     onAudioUnlock?.();
-    const snapshot = captureComposerSubmission(value, attachedImages, attachedFiles);
+    const snapshot = captureComposerSubmission(value, attachedImages);
     setSubmissionNotice(null);
     commitCurrentDraft();
     clearInput();
     const clearedAtRevision = getRevision();
     try {
-      if (!attachedImages.length && !attachedFiles.length && msg.startsWith("/") && onBuiltinCommand) {
+      if (!attachedImages.length && msg.startsWith("/") && onBuiltinCommand) {
         const result = await onBuiltinCommand(msg);
         if (result.handled) {
           if (result.error) restoreFailedSubmission(snapshot, clearedAtRevision, "send");
@@ -88,7 +65,6 @@ export function useComposerSubmission({
       restoreFailedSubmission(snapshot, clearedAtRevision, "send");
     }
   }, [
-    attachedFiles,
     attachedImages,
     clearInput,
     commitCurrentDraft,
@@ -99,7 +75,6 @@ export function useComposerSubmission({
     onSend,
     restoreFailedSubmission,
     setSubmissionNotice,
-    validateLocalFileReferences,
     value,
   ]);
 
@@ -112,16 +87,10 @@ export function useComposerSubmission({
         setSubmissionNotice("Image messages can be sent after the current response finishes.");
         return;
       }
-      const msg = [value.trim(), ...attachedFiles.map(localFileReferenceToMarkdown)].filter(Boolean).join(" ");
+      const msg = value.trim();
       if (!msg && !attachedImages.length) return;
-      const validationRevision = getRevision();
-      if (!(await validateLocalFileReferences(attachedFiles))) return;
-      if (validationRevision !== getRevision()) {
-        setSubmissionNotice("The draft changed while files were checked. Send again.");
-        return;
-      }
       onAudioUnlock?.();
-      const snapshot = captureComposerSubmission(value, attachedImages, attachedFiles);
+      const snapshot = captureComposerSubmission(value, attachedImages);
       const streamingBehavior = mode === "steer" ? "steer" : "followUp";
       setSubmissionNotice(null);
       commitCurrentDraft();
@@ -142,7 +111,6 @@ export function useComposerSubmission({
       }
     },
     [
-      attachedFiles,
       attachedImages,
       clearInput,
       commitCurrentDraft,
@@ -153,7 +121,6 @@ export function useComposerSubmission({
       onSteer,
       restoreFailedSubmission,
       setSubmissionNotice,
-      validateLocalFileReferences,
       value,
     ],
   );

@@ -210,8 +210,8 @@ export class AgentSessionWrapper {
     this.inner.setActiveToolsByName(filterDesktopToolNames(this.inner.getActiveToolNames()));
   }
 
-  setToolchainSummary(revision: number, summary: readonly string[]): void {
-    this.promptPolicy.setToolchainSummary(revision, summary);
+  setToolchainSummary(summary: readonly string[]): void {
+    this.promptPolicy.setToolchainSummary(summary);
   }
 
   setRuntimeDiagnostics(diagnostics: readonly AgentSessionRuntimeDiagnostic[]): void {
@@ -1313,7 +1313,6 @@ export async function startRpcSession(
     const executionContext = await toolchainRuntime.createExecutionContext({
       cwd,
       intent: "agent-shell",
-      trusted: services.settingsManager.isProjectTrusted(),
     });
     const bashOptions = createToolchainBashOptions(
       executionContext,
@@ -1341,7 +1340,7 @@ export async function startRpcSession(
 
     const wrapper = new AgentSessionWrapper(inner, sessionToolNames, undefined, promptPolicy);
     wrapper.setRuntimeDiagnostics(services.diagnostics);
-    wrapper.setToolchainSummary(executionContext.inventoryRevision, executionContext.summary);
+    wrapper.setToolchainSummary(executionContext.summary);
     wrapper.start();
     wrapper.syncDesktopToolActivation();
 

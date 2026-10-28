@@ -14,13 +14,6 @@ export function resolvePackageFile(root, packageName, relativePath) {
   return path.join(packageRoot, relativePath);
 }
 
-export function resolveElectronBinary(root) {
-  const value = createProjectRequire(root)("electron");
-  if (typeof value !== "string" || value.length === 0)
-    throw new Error("electron package did not resolve an executable");
-  return value;
-}
-
 export function createProjectBuildTemp(root, prefix, options = {}) {
   const fileSystem = options.fileSystem ?? fs;
   const temporaryRoot = options.temporaryRoot ?? os.tmpdir();

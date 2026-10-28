@@ -7,14 +7,12 @@ import { runPluginWorker } from "./plugin-worker-client.ts";
 
 const MARKER = "PI_DESKTOP_PLUGIN_WORKER_RESULT:";
 
-function context(revision = 9) {
+function context(marker = "context") {
   return {
-    inventoryRevision: revision,
-    resolutionId: `resolution-${revision}`,
     cwd: process.cwd(),
     intent: "plugin-install",
     commands: {},
-    nativeEnv: { PATH: process.env.PATH ?? "" },
+    nativeEnv: { PATH: process.env.PATH ?? "", PI_TEST_CONTEXT_MARKER: marker },
     shellEnv: { PATH: process.env.PATH ?? "" },
   };
 }
@@ -32,20 +30,20 @@ function fakeWorker(directory, responseExpression) {
   return file;
 }
 
-test("runs Plugins in an isolated process with the selected npm command and revision", async () => {
+test("runs Plugins in an isolated process with the selected npm command and context environment", async () => {
   const directory = mkdtempSync(path.join(os.tmpdir(), "pi-plugin-worker-"));
   try {
     const entryPath = fakeWorker(
       directory,
-      `{ok:true,result:{packages:[],totals:{extensions:0,skills:0,prompts:0,themes:0},diagnostics:[{type:"warning",message:request.npmCommand.join("|")+":"+process.env.PI_DESKTOP_TOOLCHAIN_REVISION}]}}`,
+      `{ok:true,result:{packages:[],totals:{extensions:0,skills:0,prompts:0,themes:0},diagnostics:[{type:"warning",message:request.npmCommand.join("|")+":"+process.env.PI_TEST_CONTEXT_MARKER}]}}`,
     );
     const result = await runPluginWorker(
       { body: { action: "update", cwd: directory }, npmCommand: [process.execPath, "/npm-cli.js"] },
-      context(12),
+      context("ctx-12"),
       { entryPath, execPath: process.execPath, timeoutMs: 5_000 },
     );
-    assert.equal(result.diagnostics[0].message, `${process.execPath}|/npm-cli.js:12`);
-    assert.equal(process.env.PI_DESKTOP_TOOLCHAIN_REVISION, undefined);
+    assert.equal(result.diagnostics[0].message, `${process.execPath}|/npm-cli.js:ctx-12`);
+    assert.equal(process.env.PI_TEST_CONTEXT_MARKER, undefined);
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }

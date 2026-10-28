@@ -26,28 +26,7 @@ import { createRpcServer } from "../src/contract/rpc";
 import { registerHandlers } from "../src/agent-host/handlers";
 import { toolchainRuntime } from "../src/agent-host/toolchain-runtime";
 import { installToolchainGitRunner } from "../src/agent-host/toolchain-git";
-import type { ToolchainSnapshot } from "../src/shared/toolchains/types";
-import { installStandaloneToolchainResolution } from "./standalone-toolchain";
 import { WebSocketMessagePort } from "./ws-port";
-
-const EMPTY_TOOLCHAIN_SNAPSHOT: ToolchainSnapshot = {
-  revision: 1,
-  inventoryRevision: 1,
-  resolutionId: "standalone-init",
-  platform: process.platform,
-  arch: process.arch,
-  coreReady: true,
-  state: {
-    schemaVersion: 1,
-    revision: 1,
-    platform: process.platform,
-    arch: process.arch,
-    coreReady: true,
-    capabilities: {},
-    components: {},
-    operations: [],
-  },
-};
 
 function parseCliOptions(argv: string[]): { host?: string; port?: string; "static-root"?: string } {
   try {
@@ -110,11 +89,7 @@ const loopback = isLoopbackHost(HOST);
 // RPC host
 // ---------------------------------------------------------------------------
 const server = createRpcServer();
-const restoreGitRunner = installToolchainGitRunner(toolchainRuntime, () => {
-  server.emit("sessions.changed", "*", { cwd: null, projectInfoChanged: true });
-});
-toolchainRuntime.apply(EMPTY_TOOLCHAIN_SNAPSHOT);
-installStandaloneToolchainResolution(EMPTY_TOOLCHAIN_SNAPSHOT);
+const restoreGitRunner = installToolchainGitRunner(toolchainRuntime);
 const stopHandlers = registerHandlers(server);
 
 // ---------------------------------------------------------------------------

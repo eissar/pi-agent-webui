@@ -4,13 +4,11 @@ import { createToolchainBashOptions } from "./toolchain-bash.ts";
 
 function context(commands) {
   return {
-    inventoryRevision: 21,
-    resolutionId: "resolution-21",
     cwd: "/workspace",
     intent: "agent-shell",
     commands,
     nativeEnv: { PATH: "/native" },
-    shellEnv: { PATH: "/resolved/bin:/usr/bin", PI_DESKTOP_TOOLCHAIN_REVISION: "21" },
+    shellEnv: { PATH: "/resolved/bin:/usr/bin", PI_TEST_CONTEXT_MARKER: "21" },
     summary: [],
   };
 }
@@ -18,7 +16,6 @@ function context(commands) {
 test("pins Agent Bash to the resolved executable and context-local environment", () => {
   const descriptor = {
     capability: "shell.bash",
-    provider: "system",
     executable: "/resolved/bin/bash",
     argvPrefix: [],
     binDir: "/resolved/bin",
@@ -33,15 +30,14 @@ test("pins Agent Bash to the resolved executable and context-local environment",
   assert.deepEqual(spawned.env, {
     KEEP: "yes",
     PATH: "/resolved/bin:/usr/bin",
-    PI_DESKTOP_TOOLCHAIN_REVISION: "21",
+    PI_TEST_CONTEXT_MARKER: "21",
   });
-  assert.equal(process.env.PI_DESKTOP_TOOLCHAIN_REVISION, undefined);
+  assert.equal(process.env.PI_TEST_CONTEXT_MARKER, undefined);
 });
 
 test("removes host credentials from Agent Bash environment", () => {
   const descriptor = {
     capability: "shell.bash",
-    provider: "system",
     executable: "/resolved/bin/bash",
     argvPrefix: [],
     binDir: "/resolved/bin",

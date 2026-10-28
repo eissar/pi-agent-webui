@@ -7,10 +7,9 @@ import type {
   ToolCapabilityId,
   ToolExecutionContext,
   ToolchainResolution,
-  ToolchainSnapshot,
 } from "../shared/toolchains/types";
 import { ToolchainError } from "../shared/toolchains/errors.ts";
-import { callMain } from "./parent-rpc.ts";
+import { resolveToolchainFromPath } from "./toolchain-path-resolver.ts";
 import { sanitizeToolEnvironment } from "./tool-environment.ts";
 
 const execFileAsync = promisify(execFile);
@@ -34,8 +33,8 @@ const ENV_COMMAND_ORDER: readonly ToolCapabilityId[] = [
 export interface ToolchainRuntimeOptions {
   platform?: NodeJS.Platform;
   baseEnv?: NodeJS.ProcessEnv;
-  fetchSnapshot?: () => Promise<ToolchainSnapshot>;
-  resolveProject?: (cwd: string, intent: ExecutionIntent, trusted: boolean) => Promise<ToolchainResolution>;
+  /** Defaults to scanning PATH of `baseEnv`. Called once; the result is cached. */
+  resolve?: () => ToolchainResolution;
 }
 
 export interface SpawnResolvedOptions {
@@ -44,7 +43,6 @@ export interface SpawnResolvedOptions {
   env?: NodeJS.ProcessEnv;
   stdio?: "pipe" | "ignore" | "inherit";
   windowsHide?: boolean;
-  trusted?: boolean;
 }
 
 export interface ExecuteFromContextOptions {
@@ -68,7 +66,6 @@ function cloneDescriptor(descriptor: CommandDescriptor): CommandDescriptor {
 
 function cloneResolution(resolution: ToolchainResolution): ToolchainResolution {
   return {
-    ...resolution,
     commands: Object.fromEntries(
       Object.entries(resolution.commands).map(([capability, descriptor]) => [
         capability,
@@ -137,86 +134,19 @@ function missingCapabilityError(capability: ToolCapabilityId): ToolchainError {
 export class ToolchainRuntime {
   private readonly platform: NodeJS.Platform;
   private readonly baseEnv: NodeJS.ProcessEnv;
-  private readonly fetchSnapshot: () => Promise<ToolchainSnapshot>;
-  private readonly resolveProject: (
-    cwd: string,
-    intent: ExecutionIntent,
-    trusted: boolean,
-  ) => Promise<ToolchainResolution>;
-  private snapshot: ToolchainSnapshot | null = null;
-  private readonly revisionListeners = new Set<() => void>();
-  private readonly resolutions = new Map<string, ToolchainResolution>();
-  private readonly resolutionByRequest = new Map<string, ToolchainResolution>();
+  private readonly resolveTools: () => ToolchainResolution;
+  private resolution: ToolchainResolution | null = null;
 
   constructor(options: ToolchainRuntimeOptions = {}) {
     this.platform = options.platform ?? process.platform;
     this.baseEnv = sanitizeToolEnvironment(options.baseEnv ?? process.env);
-    this.fetchSnapshot =
-      options.fetchSnapshot ?? (() => callMain<ToolchainSnapshot>("toolchain.getSnapshot", undefined, 15_000));
-    this.resolveProject =
-      options.resolveProject ??
-      ((cwd, intent, trusted) => callMain<ToolchainResolution>("toolchain.resolve", { cwd, intent, trusted }, 15_000));
+    this.resolveTools = options.resolve ?? (() => resolveToolchainFromPath(this.baseEnv, this.platform));
   }
 
-  subscribeRevision(listener: () => void): () => void {
-    this.revisionListeners.add(listener);
-    return () => {
-      this.revisionListeners.delete(listener);
-    };
-  }
-
-  apply(snapshot: ToolchainSnapshot): boolean {
-    if (!snapshot || !Number.isSafeInteger(snapshot.revision) || snapshot.revision < 0) {
-      throw new ToolchainError({ code: "TOOLCHAIN_INTERNAL", message: "Invalid toolchain snapshot" });
-    }
-    if (this.snapshot && snapshot.revision < this.snapshot.revision) return false;
-    const revisionChanged = this.snapshot?.revision !== snapshot.revision;
-    this.snapshot = structuredClone(snapshot);
-    if (revisionChanged) {
-      this.resolutions.clear();
-      this.resolutionByRequest.clear();
-      for (const listener of [...this.revisionListeners]) listener();
-    }
-    return true;
-  }
-
-  peekSnapshot(): ToolchainSnapshot | null {
-    return this.snapshot ? structuredClone(this.snapshot) : null;
-  }
-
-  getSnapshot(): ToolchainSnapshot {
-    if (!this.snapshot) {
-      throw new ToolchainError({ code: "TOOLCHAIN_INTERNAL", message: "Toolchain snapshot is not initialized" });
-    }
-    return structuredClone(this.snapshot);
-  }
-
-  applyResolution(resolution: ToolchainResolution): void {
-    if (!this.snapshot || resolution.inventoryRevision !== this.snapshot.revision) {
-      throw new ToolchainError({
-        code: "TOOLCHAIN_INTERNAL",
-        message: "Toolchain resolution does not match the active inventory revision",
-      });
-    }
-    const cloned = cloneResolution(resolution);
-    this.resolutions.set(cloned.workspaceKey, cloned);
-  }
-
-  async prepare(cwd: string, intent: ExecutionIntent, trusted = false): Promise<ToolchainResolution> {
-    if (!this.snapshot) this.apply(await this.fetchSnapshot());
-    const requestKey = `${cwd}\0${intent}\0${trusted ? "trusted" : "untrusted"}\0${this.snapshot!.revision}`;
-    const cached = this.resolutionByRequest.get(requestKey);
-    if (cached) return cloneResolution(cached);
-
-    let resolution = await this.resolveProject(cwd, intent, trusted);
-    if (resolution.inventoryRevision !== this.snapshot!.revision) {
-      this.apply(await this.fetchSnapshot());
-      resolution = await this.resolveProject(cwd, intent, trusted);
-    }
-    this.applyResolution(resolution);
-    const cloned = cloneResolution(resolution);
-    this.resolutionByRequest.set(requestKey, cloned);
-    return cloneResolution(cloned);
+  /** Tools are looked up once per process; restart the server to pick up newly installed tools. */
+  prepare(): ToolchainResolution {
+    this.resolution ??= cloneResolution(this.resolveTools());
+    return cloneResolution(this.resolution);
   }
 
   require(capability: ToolCapabilityId, resolution: ToolchainResolution): CommandDescriptor {
@@ -225,8 +155,9 @@ export class ToolchainRuntime {
     return cloneDescriptor(descriptor);
   }
 
-  async createExecutionContext(request: ExecutionContextRequest): Promise<ToolExecutionContext> {
-    const resolution = await this.prepare(request.cwd, request.intent, request.trusted === true);
+  // The request is kept for call-site clarity; resolution does not depend on cwd or intent.
+  async createExecutionContext(_request: ExecutionContextRequest): Promise<ToolExecutionContext> {
+    const resolution = this.prepare();
     const nativeDirectories: string[] = [];
     const shellDirectories: string[] = [];
     for (const capability of ENV_COMMAND_ORDER) {
@@ -247,16 +178,12 @@ export class ToolchainRuntime {
       const descriptor = resolution.commands[capability];
       if (descriptor) nativeEnv = { ...nativeEnv, ...descriptor.envPatch };
     }
-    nativeEnv.PI_DESKTOP_TOOLCHAIN_REVISION = String(resolution.inventoryRevision);
-    nativeEnv.PI_DESKTOP_TOOLCHAIN_RESOLUTION = resolution.id;
     let shellEnv = prependPath(nativeEnv, shellDirectories, this.platform);
     for (const capability of ENV_COMMAND_ORDER) {
       const descriptor = resolution.commands[capability];
       if (descriptor?.shellEnvPatch) shellEnv = { ...shellEnv, ...descriptor.shellEnvPatch };
     }
     return {
-      inventoryRevision: resolution.inventoryRevision,
-      resolutionId: resolution.id,
       nativeEnv,
       shellEnv,
       commands: Object.fromEntries(
@@ -285,14 +212,9 @@ export class ToolchainRuntime {
       timeout?: number;
       maxBuffer?: number;
       encoding?: BufferEncoding;
-      trusted?: boolean;
     },
   ): Promise<{ stdout: string; stderr: string; context: ToolExecutionContext }> {
-    const context = await this.createExecutionContext({
-      cwd: options.cwd,
-      intent: options.intent,
-      trusted: options.trusted,
-    });
+    const context = await this.createExecutionContext({ cwd: options.cwd, intent: options.intent });
     const result = await this.execFromContext(capability, args, context, options);
     return { ...result, context };
   }
@@ -324,11 +246,7 @@ export class ToolchainRuntime {
     args: string[],
     options: SpawnResolvedOptions,
   ): Promise<{ child: ChildProcess; context: ToolExecutionContext }> {
-    const context = await this.createExecutionContext({
-      cwd: options.cwd,
-      intent: options.intent,
-      trusted: options.trusted,
-    });
+    const context = await this.createExecutionContext({ cwd: options.cwd, intent: options.intent });
     const child = this.spawnFromContext(capability, args, context, options);
     return { child, context };
   }
@@ -337,7 +255,7 @@ export class ToolchainRuntime {
     capability: ToolCapabilityId,
     args: string[],
     context: ToolExecutionContext,
-    options: Omit<SpawnResolvedOptions, "intent" | "trusted">,
+    options: Omit<SpawnResolvedOptions, "intent">,
   ): ChildProcess {
     const descriptor = this.requireFromContext(capability, context);
     return spawn(descriptor.executable, [...descriptor.argvPrefix, ...args], {

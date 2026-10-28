@@ -209,14 +209,12 @@ const ChatInputComponent = forwardRef<ChatInputHandle, Props>(function ChatInput
     value,
     setValue,
     attachedImages,
-    attachedFiles,
     imageAttachNotice,
     setImageAttachNotice,
     submissionNotice,
     setSubmissionNotice,
     processFiles,
     removeImage,
-    removeFile,
     clearDraft,
   } = draft;
   const clearInput = useCallback(() => {
@@ -346,7 +344,7 @@ const ChatInputComponent = forwardRef<ChatInputHandle, Props>(function ChatInput
         ? "{count} matches".replace("{count}", String(filteredSlashCommands.length))
         : "{count} commands".replace("{count}", String(filteredSlashCommands.length));
   const hasInputText = Boolean(value.trim());
-  const canQueueStreamingMessage = hasInputText || attachedFiles.length > 0 || attachedImages.length > 0;
+  const canQueueStreamingMessage = hasInputText || attachedImages.length > 0;
 
   const updateAtQuery = useCallback(
     (text: string, cursor: number | null) => {
@@ -936,88 +934,6 @@ const ChatInputComponent = forwardRef<ChatInputHandle, Props>(function ChatInput
           </div>
         )}
 
-        {/* File attachment chips */}
-        {attachedFiles.length > 0 && (
-          <div style={{ marginBottom: 6 }}>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-              {attachedFiles.map((file, i) => (
-                <div
-                  key={`${file.path}-${i}`}
-                  title={file.path}
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 6,
-                    maxWidth: 260,
-                    padding: "4px 6px 4px 8px",
-                    borderRadius: 6,
-                    border: "1px solid var(--border)",
-                    background: "var(--bg-panel)",
-                    fontSize: scaledChatFont(12),
-                  }}
-                >
-                  <svg
-                    width="12"
-                    height="12"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    style={{ flexShrink: 0, color: "var(--text-muted)" }}
-                  >
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                    <polyline points="14 2 14 8 20 8" />
-                  </svg>
-                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {file.name}
-                  </span>
-                  <button
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      removeFile(i);
-                    }}
-                    title={"Remove"}
-                    style={{
-                      width: 16,
-                      height: 16,
-                      borderRadius: "50%",
-                      background: "transparent",
-                      border: "none",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      cursor: "pointer",
-                      padding: 0,
-                      color: "var(--text-muted)",
-                      flexShrink: 0,
-                    }}
-                  >
-                    <svg
-                      width="8"
-                      height="8"
-                      viewBox="0 0 8 8"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                    >
-                      <line x1="1" y1="1" x2="7" y2="7" />
-                      <line x1="7" y1="1" x2="1" y2="7" />
-                    </svg>
-                  </button>
-                </div>
-              ))}
-            </div>
-            <div style={{ marginTop: 4, fontSize: scaledChatFont(10.5), color: "var(--text-dim)" }}>
-              {
-                "Local file paths stay on this device and are saved with this session draft until it is sent or removed."
-              }
-            </div>
-          </div>
-        )}
-
         {/* Main input */}
         <div style={{ position: "relative" }}>
           {slashMenuOpen && slashQuery !== null && (
@@ -1424,7 +1340,7 @@ const ChatInputComponent = forwardRef<ChatInputHandle, Props>(function ChatInput
             ) : (
               <button
                 onClick={handleSend}
-                disabled={!value.trim() && !attachedImages.length && !attachedFiles.length}
+                disabled={!value.trim() && !attachedImages.length}
                 style={{
                   flexShrink: 0,
                   alignSelf: "flex-end",
@@ -1432,21 +1348,17 @@ const ChatInputComponent = forwardRef<ChatInputHandle, Props>(function ChatInput
                   alignItems: "center",
                   gap: 6,
                   padding: "10px 18px",
-                  background:
-                    value.trim() || attachedImages.length || attachedFiles.length ? "var(--accent)" : "var(--bg-hover)",
+                  background: value.trim() || attachedImages.length ? "var(--accent)" : "var(--bg-hover)",
                   border: "none",
                   borderRadius: 9,
-                  color:
-                    value.trim() || attachedImages.length || attachedFiles.length
-                      ? "var(--on-accent)"
-                      : "var(--text-dim)",
-                  cursor: value.trim() || attachedImages.length || attachedFiles.length ? "pointer" : "not-allowed",
+                  color: value.trim() || attachedImages.length ? "var(--on-accent)" : "var(--text-dim)",
+                  cursor: value.trim() || attachedImages.length ? "pointer" : "not-allowed",
                   fontSize: scaledChatFont(12.5),
                   fontWeight: 700,
                   fontFamily: "var(--font-mono)",
                   letterSpacing: "-0.01em",
                   boxShadow:
-                    value.trim() || attachedImages.length || attachedFiles.length
+                    value.trim() || attachedImages.length
                       ? "0 1px 3px color-mix(in srgb, var(--accent) 30%, transparent)"
                       : "none",
                   transition: "background 0.15s, box-shadow 0.15s",
@@ -1485,7 +1397,7 @@ const ChatInputComponent = forwardRef<ChatInputHandle, Props>(function ChatInput
             onSoundToggle,
           }}
           isMobile={isMobile}
-          hasAttachments={attachedImages.length > 0 || attachedFiles.length > 0}
+          hasAttachments={attachedImages.length > 0}
           onAttach={openAttachmentPicker}
         />
       </div>

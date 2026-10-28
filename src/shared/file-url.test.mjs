@@ -5,7 +5,6 @@ import {
   fileUrlToLocalPath,
   isLocalFilePathWithin,
   localFilePathToUrl,
-  localFileReferenceToMarkdown,
   normalizeLocalFilePath,
   splitLocalFileReferenceMarkdown,
 } from "./file-url.ts";
@@ -31,15 +30,8 @@ test("rejects relative, escaping, malformed, and four-slash file paths", () => {
   assert.equal(fileUrlToLocalPath("file:///tmp/a.txt?query"), null);
 });
 
-test("markdown serialization escapes labels and emits the canonical URL", () => {
-  assert.equal(
-    localFileReferenceToMarkdown({ name: "a[b].txt", path: "/tmp/a b.txt" }),
-    "[a\\[b\\].txt](file:///tmp/a%20b.txt)",
-  );
-});
-
-test("serialized local file references parse back into structured queue segments", () => {
-  const markdown = localFileReferenceToMarkdown({ name: "a[b].txt", path: "/tmp/a b.txt" });
+test("local file markdown parses into structured queue segments", () => {
+  const markdown = "[a\\[b\\].txt](file:///tmp/a%20b.txt)";
   assert.deepEqual(splitLocalFileReferenceMarkdown(`read ${markdown} next`), [
     { text: "read ", file: null },
     { text: "a[b].txt", file: { name: "a[b].txt", path: "/tmp/a b.txt" } },

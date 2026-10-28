@@ -29,5 +29,5 @@ test("bounds low-level cause codes and normalizes unknown failures", () => {
     code: "TOOLCHAIN_INTERNAL",
     message: "failed",
   });
-  assert.equal(new ToolchainError({ code: "TOOLCHAIN_CANCELLED", message: "Cancelled" }).name, "ToolchainError");
+  assert.equal(new ToolchainError({ code: "TOOLCHAIN_INTERNAL", message: "Failed" }).name, "ToolchainError");
 });
