@@ -10,12 +10,7 @@ import {
   setAllowedRootsCacheIfCurrent,
 } from "../shared/allowed-roots";
 import { listAllSessions } from "./session-reader";
-export {
-  allowFileRoot,
-  normalizeSlashes,
-  invalidateAllowedRootsCache,
-  setAllowedRootsWatcherHealthy,
-} from "../shared/allowed-roots";
+export { allowFileRoot, normalizeSlashes, invalidateAllowedRootsCache } from "../shared/allowed-roots";
 export { canonicalPath, isFilePathAllowed, isWindowsAbsolutePath } from "./file-access-core";
 
 // Cache avoids re-scanning every session for each file request. The TTL is

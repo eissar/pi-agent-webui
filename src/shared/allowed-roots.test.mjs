@@ -9,21 +9,10 @@ import {
   invalidateAllowedRootsCache,
   setAllowedRootsCache,
   setAllowedRootsCacheIfCurrent,
-  setAllowedRootsWatcherHealthy,
 } from "./allowed-roots.ts";
 
-test("TTL is short without a healthy watcher and long with one", () => {
-  setAllowedRootsWatcherHealthy(false);
-  const fallback = allowedRootsCacheTtlMs();
-
-  setAllowedRootsWatcherHealthy(true);
-  const watched = allowedRootsCacheTtlMs();
-
-  assert.equal(fallback, 5_000);
-  assert.ok(watched > fallback, "watched TTL must exceed the fallback TTL");
-
-  setAllowedRootsWatcherHealthy(false);
-  assert.equal(allowedRootsCacheTtlMs(), fallback);
+test("allowed-roots cache uses a short TTL", () => {
+  assert.equal(allowedRootsCacheTtlMs(), 5_000);
 });
 
 test("allowFileRoot updates the live cache and invalidates an in-flight scan generation", () => {

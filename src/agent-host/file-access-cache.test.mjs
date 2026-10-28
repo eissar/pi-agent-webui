@@ -31,7 +31,6 @@ const {
   getSessionScanCount,
   invalidateAllowedRootsCache,
   releaseFirstSessionScan,
-  setAllowedRootsWatcherHealthy,
 } = await importTestBundle("src/agent-host/file-access-cache", {
   stdin: {
     contents: `
@@ -39,8 +38,7 @@ const {
       export {
         getAllowedRootsCache,
         invalidateAllowedRootsCache,
-        setAllowedRootsWatcherHealthy,
-      } from "../shared/allowed-roots.ts";
+            } from "../shared/allowed-roots.ts";
       export { getSessionScanCount, releaseFirstSessionScan } from "roots-test-control";
     `,
     resolveDir: import.meta.dirname,
@@ -69,7 +67,6 @@ const {
 });
 
 test("an invalidation during a roots scan retries and never caches the stale snapshot", async () => {
-  setAllowedRootsWatcherHealthy(true);
   invalidateAllowedRootsCache();
 
   const pendingRoots = getAllowedFileRoots();
@@ -85,6 +82,5 @@ test("an invalidation during a roots scan retries and never caches the stale sna
   assert.equal(getAllowedRootsCache().roots.has("/fresh"), true);
   assert.equal(getAllowedRootsCache().roots.has("/stale"), false);
 
-  setAllowedRootsWatcherHealthy(false);
   invalidateAllowedRootsCache();
 });

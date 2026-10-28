@@ -47,24 +47,16 @@ export function allowFileRoot(root: string): void {
   if (added) allowedRootsGeneration++;
 }
 
-/** Drop TTL cache so next getAllowedFileRoots() re-scans sessions (watcher-driven). */
+/** Drop the TTL cache so the next getAllowedFileRoots() re-scans sessions. */
 export function invalidateAllowedRootsCache(): void {
   allowedRootsCache = undefined;
   allowedRootsGeneration++;
 }
 
-// TTL policy: with a healthy session watcher every mutation path invalidates
-// the cache explicitly, so the TTL is only a safety net. Without a watcher
-// (fs.watch failed or degraded), keep the short TTL so session cwds created by
-// an external Pi CLI still appear promptly.
-const WATCHED_TTL_MS = 10 * 60_000;
-const FALLBACK_TTL_MS = 5_000;
-let watcherHealthy = false;
-
-export function setAllowedRootsWatcherHealthy(healthy: boolean): void {
-  watcherHealthy = healthy;
-}
+// Sessions are not watched, so keep the TTL short: session cwds created by an
+// external Pi CLI still appear promptly.
+const ALLOWED_ROOTS_TTL_MS = 5_000;
 
 export function allowedRootsCacheTtlMs(): number {
-  return watcherHealthy ? WATCHED_TTL_MS : FALLBACK_TTL_MS;
+  return ALLOWED_ROOTS_TTL_MS;
 }
