@@ -163,6 +163,8 @@ function collectContentCandidates(messages: AgentMessage[], entryIds: string[]):
       });
       return;
     }
+    // Some roles (e.g. bashExecution) carry no content array.
+    if (!Array.isArray(message.content)) return;
     message.content.forEach((block, blockIndex) => {
       if (block.type === "text") {
         const original = block.text;

@@ -1025,5 +1025,13 @@ span.linenumber {
     transform: translateX(-100%);
     box-shadow: none;
   }
-
+  /* Before hydration resolves the breakpoint, keep the drawer hidden (no open-then-close flash). */
+  .sidebar-overlay-backdrop.sidebar-mobile-pending {
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+  .sidebar-container.sidebar-mobile-pending.sidebar-open {
+    transform: translateX(-100%);
+    box-shadow: none;
+  }
 }

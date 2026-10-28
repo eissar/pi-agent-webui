@@ -218,16 +218,15 @@ function UserMessageView({
   const content =
     typeof message.content === "string"
       ? message.content
-      : message.content
+      : (message.content ?? [])
           .filter((b): b is TextContent => b.type === "text")
           .map((b) => b.text)
           .join("\n");
   const skillInvocation = useMemo(() => parseSkillInvocation(content), [content]);
 
-  const imageBlocks: ImageContent[] =
-    typeof message.content === "string"
-      ? []
-      : message.content.filter((b): b is ImageContent => b.type === "image" && !b.deferredContent);
+  const imageBlocks: ImageContent[] = !Array.isArray(message.content)
+    ? []
+    : message.content.filter((b): b is ImageContent => b.type === "image" && !b.deferredContent);
 
   const visibleContent = skillInvocation ? (skillInvocation.userMessage ?? "") : content;
   const skillCommand = skillInvocation ? skillInvocationCommandText(content) : null;
