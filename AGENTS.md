@@ -2,7 +2,7 @@
 
 The live frontend runs on port 5173 and proxies `/rpc` and `/healthz` to the backend on 127.0.0.1:7860.
 
-The backend is supervised independently by the piagent user systemd service `pi-webui-backend.service`. Do not kill its PID, run broad pkill commands, or replace it with an agent-managed process. In particular, an agent hosted by this backend must not attempt to restart its own host via a process tool: stopping the backend interrupts that tool and can leave the UI offline.
+The backend is supervised independently by the piagent user systemd service `pi-webui-backend.service`.
 
 For maintenance from an independent terminal:
 
