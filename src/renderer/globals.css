@@ -363,7 +363,13 @@ code {
   font-family: var(--font-mono);
 }
 
-/* react-markdown output styles */
+/* Markdown output styles (@pierre/words) */
+.markdown-body [data-markdown="root"] {
+  line-height: 1.7;
+}
+.markdown-body [data-markdown="root"] :is(p, ul, ol, blockquote, table, [data-markdown="code-block"]) {
+  margin-block: 8px;
+}
 .markdown-body {
   font-size: calc(14px * var(--chat-font-scale, 1));
   line-height: 1.7;
@@ -463,7 +469,8 @@ code {
   font-size: calc(12px * var(--chat-font-scale, 1));
   font-family: var(--font-mono);
 }
-.markdown-body .markdown-inline-code {
+.markdown-body .markdown-inline-code,
+.markdown-body [data-markdown="code"] {
   background: var(--bg-subtle);
   border-radius: 5px;
   padding: 1px 5px;
@@ -471,6 +478,30 @@ code {
   font-family: var(--font-mono);
   font-size: 0.92em;
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border) 70%, transparent);
+}
+.markdown-body [data-markdown="code-block"] {
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg) 92%, var(--bg-panel));
+  margin: 10px 0;
+}
+.markdown-body [data-markdown="code-header"] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 11px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-panel);
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: calc(11.5px * var(--chat-font-scale, 1));
+}
+.markdown-body [data-markdown="code-block"] pre {
+  margin: 0;
+  padding: 11px 13px;
+  font-family: var(--font-mono);
+  font-size: calc(12.5px * var(--chat-font-scale, 1));
+  line-height: 1.62;
+  background: transparent;
 }
 .markdown-body .contains-task-list {
   padding-left: 0;
@@ -570,7 +601,8 @@ code {
 .markdown-user-message strong {
   color: var(--user-fg);
 }
-.markdown-user-message .markdown-inline-code {
+.markdown-user-message .markdown-inline-code,
+.markdown-user-message [data-markdown="code"] {
   background: color-mix(in srgb, var(--user-fg) 12%, transparent);
   color: var(--user-fg);
 }
@@ -610,7 +642,8 @@ code {
   padding: 4px 8px;
 }
 .markdown-custom-message .markdown-table-wrap,
-.markdown-custom-message .markdown-code-block {
+.markdown-custom-message .markdown-code-block,
+.markdown-custom-message [data-markdown="code-block"] {
   margin: 4px 0;
 }
 

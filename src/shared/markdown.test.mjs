@@ -1,23 +1,22 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import rehypeRaw from "rehype-raw";
-import rehypeSanitize from "rehype-sanitize";
-import remarkGfm from "remark-gfm";
 import {
+  linkifyLocalFileHtml,
   linkifyLocalFileText,
-  markdownRehypePlugins,
-  markdownRemarkPlugins,
-  remarkLocalFileLinks,
 } from "./markdown.ts";
 
-test("Markdown plugins preserve GFM, add AST path links, and sanitize raw HTML", () => {
-  assert.deepEqual(markdownRemarkPlugins, [remarkGfm, remarkLocalFileLinks]);
-  assert.equal(markdownRehypePlugins[0], rehypeRaw);
-  assert.equal(markdownRehypePlugins[1][0], rehypeSanitize);
-  const schema = markdownRehypePlugins[1][1];
-  assert.deepEqual(schema.strip.slice(-4), ["iframe", "object", "style", "form"]);
-  assert.ok(schema.protocols.href.includes("file"));
+test("linkifyLocalFileHtml linkifies text nodes and skips links, code, pre, and tag attributes", () => {
+  const html =
+    '<p data-path="/tmp/attr.txt">See /tmp/plain.txt and <code>/tmp/inline.txt</code></p>' +
+    '<pre><code>/tmp/block.txt</code></pre>' +
+    '<a href="https://example.com/x">/tmp/existing.txt</a>';
+  const result = linkifyLocalFileHtml(html);
+  assert.match(result, /<a data-markdown="a" href="file:\/\/\/tmp\/plain\.txt">\/tmp\/plain\.txt<\/a>/);
+  assert.match(result, /data-path="\/tmp\/attr\.txt"/);
+  assert.match(result, /<code>\/tmp\/inline\.txt<\/code>/);
+  assert.match(result, /<pre><code>\/tmp\/block\.txt<\/code><\/pre>/);
+  assert.match(result, /<a href="https:\/\/example\.com\/x">\/tmp\/existing\.txt<\/a>/);
 });
 
 function linkTargets(value) {
@@ -69,24 +68,7 @@ test("links local filenames containing spaces and absolute directories without e
   ]);
 });
 
-test("AST transform skips existing links, images, code, inline code, and HTML", () => {
-  const tree = {
-    type: "root",
-    children: [
-      { type: "paragraph", children: [{ type: "text", value: "/tmp/plain.txt" }] },
-      { type: "link", url: "https://example.com", children: [{ type: "text", value: "/tmp/link.txt" }] },
-      { type: "image", url: "/tmp/image.png", children: [] },
-      { type: "code", value: "/tmp/code.txt" },
-      { type: "inlineCode", value: "/tmp/inline.txt" },
-      { type: "html", value: '<a href="https://example.com/x">x</a>' },
-    ],
-  };
-  remarkLocalFileLinks()(tree);
-  assert.equal(tree.children[0].children[0].type, "link");
-  assert.equal(tree.children[1].children[0].type, "text");
-  assert.equal(tree.children[1].children[0].value, "/tmp/link.txt");
-  assert.equal(tree.children[5].value, '<a href="https://example.com/x">x</a>');
-});
+
 
 test("does not treat web URLs, relative @ references, or bare drive roots as local paths", () => {
   assert.deepEqual(linkTargets("https://example.com/x @src/main.ts C:\\"), []);

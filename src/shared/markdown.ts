@@ -1,23 +1,6 @@
-import type { Options as ReactMarkdownOptions } from "react-markdown";
-import rehypeRaw from "rehype-raw";
-import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
-import remarkGfm from "remark-gfm";
 import { fileUrlToLocalPath, localFilePathToUrl } from "./file-url.ts";
 
-export const markdownSanitizeSchema = {
-  ...defaultSchema,
-  attributes: {
-    ...defaultSchema.attributes,
-    code: [["className", /^language-./]],
-  },
-  protocols: {
-    ...defaultSchema.protocols,
-    href: [...(defaultSchema.protocols?.href ?? []), "file"],
-  },
-  strip: [...(defaultSchema.strip || []), "iframe", "object", "style", "form"],
-};
-
-type MarkdownNode = {
+export type MarkdownNode = {
   type: string;
   value?: string;
   url?: string;
@@ -41,7 +24,91 @@ const BARE_LOCAL_PATH_RE = new RegExp(
   "gu",
 );
 
-const SKIPPED_MARKDOWN_NODE_TYPES = new Set(["link", "image", "code", "inlineCode", "html"]);
+const SKIPPED_HTML_TAGS = new Set(["a", "code", "pre", "svg", "math", "script", "style", "textarea"]);
+const VOID_HTML_TAGS = new Set(["area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"]);
+
+function escapeHtmlText(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function escapeHtmlAttr(value: string): string {
+  return escapeHtmlText(value).replace(/"/g, "&quot;");
+}
+
+function decodeBasicHtmlEntities(value: string): string {
+  return value
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&#x27;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&");
+}
+
+/**
+ * Linkifies bare local file paths inside rendered HTML text nodes while skipping
+ * existing links, code/pre blocks, SVG/MathML, and HTML tag attributes.
+ */
+export function linkifyLocalFileHtml(html: string): string {
+  if (!html) return html;
+  let out = "";
+  let cursor = 0;
+  let skipDepth = 0;
+  const tagPattern = /<(\/?)([A-Za-z][A-Za-z0-9:-]*)(?:\s[^>]*)?(\/?)>/g;
+
+  for (const match of html.matchAll(tagPattern)) {
+    const tagStart = match.index ?? 0;
+    if (tagStart > cursor) {
+      const textSegment = html.slice(cursor, tagStart);
+      if (skipDepth > 0) {
+        out += textSegment;
+      } else {
+        const nodes = linkifyLocalFileText(decodeBasicHtmlEntities(textSegment));
+        for (const node of nodes) {
+          if (node.type === "link" && node.url) {
+            const label = node.children?.[0]?.value ?? node.url;
+            out += `<a data-markdown="a" href="${escapeHtmlAttr(node.url)}">${escapeHtmlText(label)}</a>`;
+          } else if (node.value) {
+            out += escapeHtmlText(node.value);
+          }
+        }
+      }
+    }
+
+    const fullTag = match[0];
+    const isClosing = match[1] === "/";
+    const tagName = match[2].toLowerCase();
+    const isSelfClosing = match[3] === "/" || VOID_HTML_TAGS.has(tagName);
+    if (SKIPPED_HTML_TAGS.has(tagName)) {
+      if (isClosing) {
+        if (skipDepth > 0) skipDepth -= 1;
+      } else if (!isSelfClosing) {
+        skipDepth += 1;
+      }
+    }
+
+    out += fullTag;
+    cursor = tagStart + fullTag.length;
+  }
+
+  if (cursor < html.length) {
+    const tail = html.slice(cursor);
+    if (skipDepth > 0) {
+      out += tail;
+    } else {
+      const nodes = linkifyLocalFileText(decodeBasicHtmlEntities(tail));
+      for (const node of nodes) {
+        if (node.type === "link" && node.url) {
+          const label = node.children?.[0]?.value ?? node.url;
+          out += `<a data-markdown="a" href="${escapeHtmlAttr(node.url)}">${escapeHtmlText(label)}</a>`;
+        } else if (node.value) {
+          out += escapeHtmlText(node.value);
+        }
+      }
+    }
+  }
+
+  return out;
+}
 
 function splitLineSuffix(value: string): { path: string; suffix: string } {
   const match = /(:\d+(?::\d+)?)$/.exec(value);
@@ -84,31 +151,4 @@ export function linkifyLocalFileText(value: string): MarkdownNode[] {
   return nodes.length > 0 ? nodes : [{ type: "text", value }];
 }
 
-function transformLocalFileTextNodes(node: MarkdownNode, skipped = false): void {
-  const skipChildren = skipped || SKIPPED_MARKDOWN_NODE_TYPES.has(node.type);
-  if (skipChildren || !node.children) return;
-  const nextChildren: MarkdownNode[] = [];
-  for (const child of node.children) {
-    if (child.type === "text" && typeof child.value === "string") {
-      nextChildren.push(...linkifyLocalFileText(child.value));
-    } else {
-      transformLocalFileTextNodes(child, false);
-      nextChildren.push(child);
-    }
-  }
-  node.children = nextChildren;
-}
 
-export function remarkLocalFileLinks() {
-  return (tree: MarkdownNode) => transformLocalFileTextNodes(tree);
-}
-
-export const markdownRemarkPlugins: ReactMarkdownOptions["remarkPlugins"] = [
-  remarkGfm,
-  remarkLocalFileLinks,
-];
-
-export const markdownRehypePlugins: ReactMarkdownOptions["rehypePlugins"] = [
-  rehypeRaw,
-  [rehypeSanitize, markdownSanitizeSchema],
-];

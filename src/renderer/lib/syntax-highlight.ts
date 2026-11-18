@@ -1,24 +1,53 @@
-/**
- * Shared Prism highlighter that keeps the full language compatibility of the
- * original `Prism` export while moving refractor/all into an async chunk.
- */
-import { createElement, type ComponentProps } from "react";
-import { PrismAsync } from "react-syntax-highlighter";
-import vs from "react-syntax-highlighter/dist/esm/styles/prism/vs";
-import vscDarkPlus from "react-syntax-highlighter/dist/esm/styles/prism/vsc-dark-plus";
+import type { CodeHighlighterPlugin } from "@pierre/words/react";
+import { createHighlightsPlugin } from "@pierre/words/highlights";
+import pierreDark from "@pierre/highlights/themes/pierre-dark";
+import pierreLight from "@pierre/highlights/themes/pierre-light";
 
-import { normalizePrismLanguage } from "./syntax-highlight-data";
+import { shouldHighlightCode } from "./code-highlight-policy";
 
-type SyntaxHighlighterProps = ComponentProps<typeof PrismAsync>;
-type AsyncPrismHighlighter = typeof PrismAsync & { preload(): Promise<unknown> };
-
-function SyntaxHighlighter({ language, ...props }: SyntaxHighlighterProps) {
-  return createElement(PrismAsync, { ...props, language: normalizePrismLanguage(language) });
+function createBoundedHighlightsPlugin(theme: typeof pierreLight | typeof pierreDark): CodeHighlighterPlugin {
+  const inner = createHighlightsPlugin({ theme });
+  return {
+    highlight(options) {
+      if (!shouldHighlightCode(options.code)) return null;
+      return inner.highlight(options);
+    },
+    createSession() {
+      const session = inner.createSession?.();
+      if (!session) {
+        return {
+          highlight(options) {
+            return shouldHighlightCode(options.code) ? inner.highlight(options) : null;
+          },
+          dispose() {},
+        };
+      }
+      return {
+        highlight(options) {
+          return shouldHighlightCode(options.code) ? session.highlight(options) : null;
+        },
+        highlightLines: session.highlightLines
+          ? (options) => {
+              if (!shouldHighlightCode(options.code)) return null;
+              return session.highlightLines!(options);
+            }
+          : undefined,
+        dispose() {
+          session.dispose();
+        },
+      };
+    },
+  };
 }
 
-/** Exposed for the real-module SSR test; the app loads this automatically on mount. */
-export function preloadSyntaxHighlighter(): Promise<unknown> {
-  return (PrismAsync as AsyncPrismHighlighter).preload();
-}
+let cachedLightPlugin: CodeHighlighterPlugin | null = null;
+let cachedDarkPlugin: CodeHighlighterPlugin | null = null;
 
-export { SyntaxHighlighter, vs, vscDarkPlus };
+export function getMarkdownHighlightsPlugin(isDark: boolean): CodeHighlighterPlugin {
+  if (isDark) {
+    cachedDarkPlugin ??= createBoundedHighlightsPlugin(pierreDark);
+    return cachedDarkPlugin;
+  }
+  cachedLightPlugin ??= createBoundedHighlightsPlugin(pierreLight);
+  return cachedLightPlugin;
+}

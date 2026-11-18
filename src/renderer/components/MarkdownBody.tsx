@@ -1,23 +1,18 @@
+import { memo, useEffect, useMemo, useRef } from "react";
 import {
-  createContext,
-  memo,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type ImgHTMLAttributes,
-  type JSX,
-  type ReactNode,
-} from "react";
-import ReactMarkdown, { defaultUrlTransform, type Components } from "react-markdown";
-import { SyntaxHighlighter, vs, vscDarkPlus } from "@/lib/syntax-highlight";
+  Markdown,
+  defaultUrlTransform,
+  type Components,
+  type ControlsConfig,
+  type PluginConfig,
+} from "@pierre/words/react";
+import "@pierre/words/styles.css";
+
 import { useTheme } from "@/hooks/useTheme";
-import { useCopyFeedback } from "@/hooks/useCopyFeedback";
 import { resolveLocalFileHref } from "@/lib/file-links";
-import { markdownRehypePlugins, markdownRemarkPlugins } from "@/lib/markdown";
-import { shouldHighlightCode } from "@/lib/code-highlight-policy";
+import { linkifyLocalFileHtml } from "@/lib/markdown";
+import { getMarkdownHighlightsPlugin } from "@/lib/syntax-highlight";
 import { SessionProfiler } from "./SessionProfiler";
-import { scaledChatFont } from "@/lib/chat-appearance";
 
 interface MarkdownBodyProps {
   children: string;
@@ -28,72 +23,64 @@ interface MarkdownBodyProps {
   sourceSessionId?: string | null;
 }
 
-type MarkdownRenderContextValue = Pick<
-  MarkdownBodyProps,
-  "isStreaming" | "cwd" | "imageBasePath" | "sourceSessionId"
->;
-
-const MarkdownRenderContext = createContext<MarkdownRenderContextValue>({});
-
-type MarkdownComponentProps<Tag extends keyof JSX.IntrinsicElements> = JSX.IntrinsicElements[Tag] & {
-  node?: unknown;
+const CONTROLS_CONFIG: ControlsConfig = {
+  code: { copy: true, download: false },
 };
 
-function MarkdownCode({ className, children, node: _node, ...props }: MarkdownComponentProps<"code">) {
-  const { isStreaming } = useContext(MarkdownRenderContext);
-  const lang = className?.replace("language-", "").toLowerCase() ?? "";
-  const raw = String(children);
-  const isBlock = className?.includes("language-") || raw.includes("\n");
-  if (isBlock) {
-    return <CodeBlock code={raw.replace(/\n$/, "")} lang={lang} isStreaming={isStreaming} />;
-  }
-  return (
-    <code className="markdown-inline-code" {...props}>
-      {children}
-    </code>
-  );
+function decodeHtmlAttr(value: string): string {
+  return value
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&#x27;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&");
 }
 
-function MarkdownPre({ children }: MarkdownComponentProps<"pre">) {
-  return <>{children}</>;
+function escapeHtmlAttr(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
-function MarkdownImg({ src, alt, node: _node, ...props }: MarkdownComponentProps<"img">) {
-  const { cwd, imageBasePath, sourceSessionId } = useContext(MarkdownRenderContext);
-  return (
-    <MarkdownImage
-      src={src}
-      alt={alt}
-      cwd={cwd}
-      relativeBase={imageBasePath ?? cwd}
-      sourceSessionId={sourceSessionId}
-      {...props}
-    />
-  );
+function readHtmlAttr(tag: string, name: string): string | undefined {
+  const match = new RegExp(`\\b${name}=(?:"([^"]*)"|'([^']*)')`, "i").exec(tag);
+  if (!match) return undefined;
+  return decodeHtmlAttr(match[1] ?? match[2] ?? "");
 }
 
-function MarkdownTable({ children }: MarkdownComponentProps<"table">) {
-  return (
-    <div className="markdown-table-wrap">
-      <table>{children}</table>
-    </div>
-  );
+function createMarkdownComponents(
+  cwd: string | undefined,
+  relativeBase: string | undefined,
+): Components {
+  return {
+    p: linkifyLocalFileHtml,
+    li: linkifyLocalFileHtml,
+    td: linkifyLocalFileHtml,
+    th: linkifyLocalFileHtml,
+    blockquote: linkifyLocalFileHtml,
+    h1: linkifyLocalFileHtml,
+    h2: linkifyLocalFileHtml,
+    h3: linkifyLocalFileHtml,
+    h4: linkifyLocalFileHtml,
+    h5: linkifyLocalFileHtml,
+    h6: linkifyLocalFileHtml,
+    table: (html: string) => `<div class="markdown-table-wrap">${html}</div>`,
+    img: (html: string) => {
+      const src = readHtmlAttr(html, "src");
+      const alt = readHtmlAttr(html, "alt") ?? "";
+      const localPath = resolveLocalFileHref(src, cwd, relativeBase);
+      if (localPath) {
+        return `<span class="markdown-image-loading" data-local-image-src="${escapeHtmlAttr(localPath)}" data-local-image-alt="${escapeHtmlAttr(alt)}" aria-label="${escapeHtmlAttr(alt || "Loading image")}"></span>`;
+      }
+      if (!/\bloading=/i.test(html)) {
+        return html.replace(/<img\b/i, '<img loading="lazy" referrerpolicy="no-referrer"');
+      }
+      return html;
+    },
+  };
 }
-
-const markdownComponents: Components = {
-  code: MarkdownCode,
-  pre: MarkdownPre,
-  img: MarkdownImg,
-  table: MarkdownTable,
-};
-
-// react-markdown 10 strips non-web protocols from href/src via defaultUrlTransform
-// (file: becomes ""). Local file links are this app's core feature, so allow file:.
-type UrlTransform = (url: string, key: string, node: unknown) => string;
-const fileAwareUrlTransform: UrlTransform = (url, key, node) => {
-  if (/^file:/i.test(url)) return url;
-  return (defaultUrlTransform as UrlTransform)(url, key, node);
-};
 
 export const MarkdownBody = memo(function MarkdownBody({
   children,
@@ -103,167 +90,100 @@ export const MarkdownBody = memo(function MarkdownBody({
   imageBasePath,
   sourceSessionId,
 }: MarkdownBodyProps) {
-  // Bound synchronous parsing while content grows; settlement renders the original source in full.
-  const lightweightPreview = isStreaming && children.length > 2048;
-  const normalizedMarkdown = lightweightPreview ? "" : children;
-  const renderContext = useMemo(
-    () => ({ isStreaming, cwd, imageBasePath, sourceSessionId }),
-    [cwd, imageBasePath, isStreaming, sourceSessionId],
+  const { isDark } = useTheme();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const relativeBase = imageBasePath ?? cwd;
+
+  const plugins = useMemo<PluginConfig>(
+    () => ({ code: getMarkdownHighlightsPlugin(isDark) }),
+    [isDark],
   );
 
-  return (
-    <SessionProfiler id="MarkdownBody">
-      <MarkdownRenderContext.Provider value={renderContext}>
-        <div className={["markdown-body", className].filter(Boolean).join(" ")}>
-          {lightweightPreview ? (
-            <div data-streaming-preview style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
-              {children}
-            </div>
-          ) : (
-            <ReactMarkdown
-              remarkPlugins={markdownRemarkPlugins}
-              rehypePlugins={markdownRehypePlugins}
-              urlTransform={fileAwareUrlTransform}
-              components={markdownComponents}
-            >
-              {normalizedMarkdown}
-            </ReactMarkdown>
-          )}
-        </div>
-      </MarkdownRenderContext.Provider>
-    </SessionProfiler>
+  const components = useMemo<Components>(
+    () => createMarkdownComponents(cwd, relativeBase),
+    [cwd, relativeBase],
   );
-});
 
-export function getMarkdownComponentIdentityForTest(): Components {
-  return markdownComponents;
-}
-
-function MarkdownImage({
-  src,
-  alt,
-  cwd,
-  relativeBase,
-  sourceSessionId,
-  ...props
-}: ImgHTMLAttributes<HTMLImageElement> & {
-  cwd?: string;
-  relativeBase?: string;
-  sourceSessionId?: string | null;
-}) {
-  const localPath = useMemo(
-    () => resolveLocalFileHref(typeof src === "string" ? src : undefined, cwd, relativeBase),
-    [cwd, relativeBase, src],
+  const urlTransform = useMemo(
+    () => (url: string, key: "href" | "src") => {
+      if (/^file:/i.test(url)) return url;
+      if (key === "src" && resolveLocalFileHref(url, cwd, relativeBase)) return url;
+      return defaultUrlTransform(url);
+    },
+    [cwd, relativeBase],
   );
-  const [previewSrc, setPreviewSrc] = useState<string | null>(localPath ? null : typeof src === "string" ? src : null);
-  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
-    if (!localPath) {
-      setPreviewSrc(typeof src === "string" ? src : null);
-      setFailed(false);
-      return;
-    }
+    const root = containerRef.current;
+    if (!root) return;
 
     let disposed = false;
-    let revoke: (() => void) | null = null;
-    setPreviewSrc(null);
-    setFailed(false);
+    const revokers = new Set<() => void>();
+    const active = new WeakSet<HTMLElement>();
 
-    void import("@/lib/file-blob")
-      .then(({ fileToObjectUrl }) => fileToObjectUrl(localPath, sourceSessionId))
-      .then((result) => {
-        if (disposed) {
-          result.revoke();
-          return;
-        }
-        revoke = result.revoke;
-        setPreviewSrc(result.url);
-      })
-      .catch(() => {
-        if (!disposed) setFailed(true);
-      });
+    const hydrateLocalImages = () => {
+      const placeholders = root.querySelectorAll<HTMLElement>("[data-local-image-src]");
+      for (const placeholder of placeholders) {
+        if (active.has(placeholder)) continue;
+        const localPath = placeholder.getAttribute("data-local-image-src");
+        if (!localPath) continue;
+        const alt = placeholder.getAttribute("data-local-image-alt") ?? "";
+        active.add(placeholder);
+
+        void import("@/lib/file-blob")
+          .then(({ fileToObjectUrl }) => fileToObjectUrl(localPath, sourceSessionId))
+          .then((result) => {
+            if (disposed || !placeholder.isConnected) {
+              result.revoke();
+              return;
+            }
+            revokers.add(result.revoke);
+            const img = document.createElement("img");
+            img.src = result.url;
+            img.alt = alt;
+            img.loading = "lazy";
+            img.referrerPolicy = "no-referrer";
+            placeholder.replaceWith(img);
+          })
+          .catch(() => {
+            if (disposed || !placeholder.isConnected) return;
+            const err = document.createElement("span");
+            err.className = "markdown-image-error";
+            err.title = localPath;
+            err.textContent = alt || "Image failed to load";
+            placeholder.replaceWith(err);
+          });
+      }
+    };
+
+    hydrateLocalImages();
+    const observer = new MutationObserver(hydrateLocalImages);
+    observer.observe(root, { childList: true, subtree: true });
 
     return () => {
       disposed = true;
-      revoke?.();
+      observer.disconnect();
+      for (const revoke of revokers) revoke();
+      revokers.clear();
     };
-  }, [localPath, sourceSessionId, src]);
-
-  if (failed) {
-    return (
-      <span className="markdown-image-error" title={localPath ?? undefined}>
-        {alt || "Image failed to load"}
-      </span>
-    );
-  }
-
-  if (!previewSrc) {
-    return <span className="markdown-image-loading" aria-label={alt || "Loading image"} />;
-  }
-
-  return <img src={previewSrc} alt={alt ?? ""} loading="lazy" referrerPolicy="no-referrer" {...props} />;
-}
-
-const CodeBlock = memo(function CodeBlock({
-  code,
-  lang,
-  headerAction,
-  isStreaming,
-}: {
-  code: string;
-  lang: string;
-  headerAction?: ReactNode;
-  isStreaming?: boolean;
-}) {
-  const { isDark } = useTheme();
-  const { copied, copy } = useCopyFeedback();
+  }, [sourceSessionId]);
 
   return (
-    <div className="markdown-code-block">
-      <div className="markdown-code-header">
-        <span className="markdown-code-lang">{lang || "text"}</span>
-        <div className="markdown-code-actions">
-          {headerAction}
-          <button onClick={() => void copy(code)} className="markdown-code-action">
-            {copied ? "copied" : "copy"}
-          </button>
-        </div>
+    <SessionProfiler id="MarkdownBody">
+      <div ref={containerRef} className={["markdown-body", className].filter(Boolean).join(" ")}>
+        <Markdown
+          mode="streaming"
+          isAnimating={Boolean(isStreaming)}
+          cjk
+          lineNumbers
+          controls={CONTROLS_CONFIG}
+          plugins={plugins}
+          urlTransform={urlTransform}
+          components={components}
+        >
+          {children}
+        </Markdown>
       </div>
-      {!isStreaming && shouldHighlightCode(code) ? (
-        <SyntaxHighlighter
-          language={lang || "text"}
-          style={isDark ? vscDarkPlus : vs}
-          showLineNumbers
-          lineNumberStyle={{ color: "var(--text-dim)", fontStyle: "normal" }}
-          customStyle={{
-            margin: 0,
-            padding: "11px 13px",
-            fontSize: scaledChatFont(12.5),
-            lineHeight: 1.62,
-            borderRadius: 0,
-            background: "color-mix(in srgb, var(--bg) 92%, var(--bg-panel))",
-          }}
-          codeTagProps={{ style: { fontFamily: "var(--font-mono)" } }}
-        >
-          {code}
-        </SyntaxHighlighter>
-      ) : (
-        <pre
-          style={{
-            margin: 0,
-            padding: "11px 13px",
-            fontSize: scaledChatFont(12.5),
-            lineHeight: 1.62,
-            overflow: "auto",
-            whiteSpace: "pre",
-            fontFamily: "var(--font-mono)",
-            background: "color-mix(in srgb, var(--bg) 92%, var(--bg-panel))",
-          }}
-        >
-          <code>{code}</code>
-        </pre>
-      )}
-    </div>
+    </SessionProfiler>
   );
 });
