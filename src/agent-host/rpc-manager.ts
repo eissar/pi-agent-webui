@@ -2,6 +2,9 @@ import {
   createAgentSessionFromServices,
   createAgentSessionServices,
   createBashToolDefinition,
+  createCodemodeExtension,
+  createToolSearchExtension,
+  createMcpExtension,
   getAgentDir,
   SessionManager,
   type CreateAgentSessionFromServicesOptions,
@@ -105,14 +108,25 @@ export function getLegacySessionToolNames(sessionManager: Pick<SessionManager, "
   return undefined;
 }
 
+export function desktopBuiltinExtensions() {
+  return [
+    { name: "codemode", factory: createCodemodeExtension(), replaceable: true, builtin: true },
+    { name: "tool-search", factory: createToolSearchExtension(), replaceable: true, builtin: true },
+    { name: "mcp", factory: createMcpExtension(), replaceable: true, builtin: true },
+  ];
+}
+
 export function withExtensionTools(session: AgentSessionLike, toolNames: string[]): string[] {
   if (toolNames.length === 0) return [];
 
   const codingToolNames = new Set(CODING_TOOL_NAMES);
+  // These SDK built-ins register inactive unless settings or MCP enable them.
+  const inactiveByDefault = new Set(["codemode", "tool_search"]);
+  const activeTools = new Set(session.getActiveToolNames());
   const extensionToolNames = session
     .getAllTools()
     .map((t) => t.name)
-    .filter((name) => !codingToolNames.has(name));
+    .filter((name) => !codingToolNames.has(name) && (!inactiveByDefault.has(name) || activeTools.has(name)));
 
   return filterDesktopToolNames([...toolNames, ...extensionToolNames]);
 }
@@ -1307,9 +1321,22 @@ export async function startRpcSession(
       cwd,
       agentDir,
       resourceLoaderOptions: {
-        extensionFactories: [createDesktopPromptExtension(promptPolicy)],
+        extensionFactories: [
+          ...desktopBuiltinExtensions(),
+          createDesktopPromptExtension(promptPolicy),
+        ],
       },
     });
+    const extensionLoad = services.resourceLoader.getExtensions();
+    console.log(
+      `[pi-desktop] extensions loaded for session ${managerSessionId}: ${JSON.stringify(extensionLoad.extensions.map((extension) => extension.path))}`,
+    );
+    for (const { path, error } of extensionLoad.errors) {
+      console.error(`[pi-desktop] extension load failed for ${path}: ${error}`);
+    }
+    for (const { path, warning } of extensionLoad.warnings ?? []) {
+      console.warn(`[pi-desktop] extension load warning for ${path}: ${warning}`);
+    }
     const executionContext = await toolchainRuntime.createExecutionContext({
       cwd,
       intent: "agent-shell",

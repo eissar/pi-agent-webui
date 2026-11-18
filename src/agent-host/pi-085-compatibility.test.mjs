@@ -21,7 +21,7 @@ const { DesktopSessionToolStore } = await importTestBundle("pi-085-stores", {
   },
 });
 
-const { withExtensionTools, AgentSessionWrapper } = await importTestBundle("pi-085-tool-policy", {
+const { withExtensionTools, desktopBuiltinExtensions, AgentSessionWrapper } = await importTestBundle("pi-085-tool-policy", {
   packages: "external",
   entryPoints: [path.join(import.meta.dirname, "rpc-manager.ts")],
 });
@@ -33,8 +33,14 @@ function fixture(t) {
 }
 
 test("Desktop selections reject unsupported tools and preserve ordinary extension tools", async () => {
-  const inner = { getAllTools: () => ["read", "bash", "powershell", "extension"].map((name) => ({ name })) };
+  let active = ["read"];
+  const inner = {
+    getAllTools: () => ["read", "bash", "powershell", "extension", "codemode", "tool_search"].map((name) => ({ name })),
+    getActiveToolNames: () => active,
+  };
   assert.deepEqual(withExtensionTools(inner, ["read"]), ["read", "extension"]);
+  active = ["read", "tool_search"];
+  assert.deepEqual(withExtensionTools(inner, ["read"]), ["read", "extension", "tool_search"]);
   assert.deepEqual(withExtensionTools(inner, []), []);
   assert.throws(
     () => validateDesktopToolNames([" powershell "]),
@@ -52,6 +58,31 @@ test("Desktop selections reject unsupported tools and preserve ordinary extensio
   } finally {
     wrapper.destroy();
   }
+});
+
+test("desktop SDK built-ins load and bind without activating discovery tools by default", async (t) => {
+  const directory = fixture(t);
+  const services = await createAgentSessionServices({
+    cwd: directory,
+    agentDir: directory,
+    settingsManager: SettingsManager.inMemory(),
+    resourceLoaderOptions: {
+      noSkills: true, noPromptTemplates: true, noThemes: true, noContextFiles: true,
+      extensionFactories: desktopBuiltinExtensions(),
+    },
+  });
+  assert.deepEqual(services.resourceLoader.getExtensions().errors, []);
+  const { session } = await createAgentSessionFromServices({
+    services, sessionManager: SessionManager.inMemory(directory),
+  });
+  t.after(() => session.dispose());
+  const tools = session.getAllTools().map((tool) => tool.name);
+  assert.ok(tools.includes("codemode"));
+  assert.ok(tools.includes("tool_search"));
+  assert.ok(!session.getActiveToolNames().includes("codemode"));
+  assert.ok(!session.getActiveToolNames().includes("tool_search"));
+  await session.bindExtensions({ mode: "rpc" });
+  assert.ok(session.extensionRunner.getRegisteredCommands().some((command) => command.name === "mcp"));
 });
 
 test("SDK denylist survives defaultTools, same-name extension activation and reload", async (t) => {
