@@ -260,6 +260,8 @@ function UserMessageView({
             minWidth: 0,
             maxWidth: "100%",
             borderRadius: "10px 10px 2px 10px",
+            background: "var(--user-bg)",
+            color: "var(--user-fg)",
             padding: "9px 13px",
             fontSize: scaledChatFont(13.5),
             lineHeight: 1.55,
